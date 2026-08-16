@@ -17,11 +17,27 @@ import subprocess, sys
 # for execution on the device" on a P100 with a too-new torch build). Reinstall
 # a broadly-compatible torch (cu118 wheel covers Pascal/Turing/Ampere) BEFORE
 # importing torch anywhere else in this process.
-subprocess.run(
-    [sys.executable, "-m", "pip", "install", "-q",
-     "torch==2.1.2", "--index-url", "https://download.pytorch.org/whl/cu118"],
-    check=False,
+r = subprocess.run(
+    [sys.executable, "-m", "pip", "install", "--force-reinstall",
+     "torch==2.2.0", "--index-url", "https://download.pytorch.org/whl/cu118"],
+    capture_output=True, text=True,
 )
+print("torch reinstall returncode:", r.returncode, flush=True)
+if r.returncode != 0:
+    print("torch reinstall STDERR tail:", r.stderr[-2000:], flush=True)
+
+# torch==2.2.0 was built against the numpy<2 C ABI. Kaggle's preinstalled numpy is
+# newer (2.x), which breaks torch<->numpy interop ("_ARRAY_API not found" /
+# "RuntimeError: Numpy is not available" at torch.from_numpy time). Pin a compatible
+# numpy alongside the torch downgrade.
+r2 = subprocess.run(
+    [sys.executable, "-m", "pip", "install", "--force-reinstall", "numpy==1.26.4"],
+    capture_output=True, text=True,
+)
+print("numpy reinstall returncode:", r2.returncode, flush=True)
+if r2.returncode != 0:
+    print("numpy reinstall STDERR tail:", r2.stderr[-2000:], flush=True)
+
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "tiktoken"], check=False)
 
 import os, time, json, math
