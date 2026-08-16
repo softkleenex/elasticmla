@@ -326,8 +326,11 @@ val_data = np.memmap(VAL_BIN, dtype=np.uint16, mode="r")
 
 # ============ model / training config (114M-ish) ============
 VOCAB_SIZE = 50257
-BLOCK_SIZE = 512
-BATCH_SIZE = 48
+BLOCK_SIZE = 384        # reduced from 512: P100 16GB OOM'd on the first forward pass
+                         # at batch=48/block=512/122M params (activations, esp. attention
+                         # scores ~ batch*heads*T^2, dominate memory).
+BATCH_SIZE = 8           # reduced from 48 for the same reason.
+GRAD_ACCUM_STEPS = 6     # keep effective batch size ~48 (8*6) for training stability.
 D_MODEL = 768
 N_LAYERS = 12
 N_HEADS = 12
@@ -381,22 +384,27 @@ log_f = open(os.path.join(CKPT_DIR, "train_log.jsonl"), "w")
 t0 = time.time()
 model.train()
 scaler = torch.cuda.amp.GradScaler(enabled=(device == "cuda" and amp_dtype == torch.float16))
+opt.zero_grad(set_to_none=True)
 for step in range(1, MAX_STEPS + 1):
     lr = lr_at(step)
     for g in opt.param_groups:
         g["lr"] = lr
-    x, y = get_batch("train")
-    with torch.autocast(device_type=device, dtype=amp_dtype, enabled=(device == "cuda")):
-        _, loss = model(x, y)
-    opt.zero_grad(set_to_none=True)
-    scaler.scale(loss).backward()
+
+    accum_loss = 0.0
+    for micro in range(GRAD_ACCUM_STEPS):
+        x, y = get_batch("train")
+        with torch.autocast(device_type=device, dtype=amp_dtype, enabled=(device == "cuda")):
+            _, micro_loss = model(x, y)
+        scaler.scale(micro_loss / GRAD_ACCUM_STEPS).backward()
+        accum_loss += micro_loss.item() / GRAD_ACCUM_STEPS
     scaler.unscale_(opt)
     torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
     scaler.step(opt)
     scaler.update()
+    opt.zero_grad(set_to_none=True)
 
     if step % 20 == 0:
-        log_f.write(json.dumps({"step": step, "train_loss": loss.item(), "lr": lr,
+        log_f.write(json.dumps({"step": step, "train_loss": accum_loss, "lr": lr,
                                   "elapsed_s": round(time.time() - t0, 1)}) + "\n")
         log_f.flush()
 
@@ -405,7 +413,7 @@ for step in range(1, MAX_STEPS + 1):
         log_f.write(json.dumps({"step": step, "val_loss": val_loss,
                                   "elapsed_s": round(time.time() - t0, 1)}) + "\n")
         log_f.flush()
-        print(f"step {step}/{MAX_STEPS}  train_loss={loss.item():.4f}  val_loss={val_loss:.4f}  "
+        print(f"step {step}/{MAX_STEPS}  train_loss={accum_loss:.4f}  val_loss={val_loss:.4f}  "
               f"elapsed={time.time()-t0:.1f}s", flush=True)
         torch.save({"model": model.state_dict(),
                      "config": dict(vocab_size=VOCAB_SIZE, d_model=D_MODEL, n_layers=N_LAYERS,
