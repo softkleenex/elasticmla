@@ -370,16 +370,23 @@ def evaluate():
     model.train()
     return float(np.mean(losses))
 
+# bf16 needs Ampere+ (sm80+); Pascal (P100, sm60) only supports fp16 autocast.
+# Pick automatically based on the actual CUDA capability of the assigned GPU.
+amp_dtype = torch.float16
+if device == "cuda" and torch.cuda.get_device_capability(0)[0] >= 8:
+    amp_dtype = torch.bfloat16
+print("amp dtype:", amp_dtype, flush=True)
+
 log_f = open(os.path.join(CKPT_DIR, "train_log.jsonl"), "w")
 t0 = time.time()
 model.train()
-scaler = torch.cuda.amp.GradScaler(enabled=(device == "cuda"))
+scaler = torch.cuda.amp.GradScaler(enabled=(device == "cuda" and amp_dtype == torch.float16))
 for step in range(1, MAX_STEPS + 1):
     lr = lr_at(step)
     for g in opt.param_groups:
         g["lr"] = lr
     x, y = get_batch("train")
-    with torch.autocast(device_type=device, dtype=torch.bfloat16, enabled=(device == "cuda")):
+    with torch.autocast(device_type=device, dtype=amp_dtype, enabled=(device == "cuda")):
         _, loss = model(x, y)
     opt.zero_grad(set_to_none=True)
     scaler.scale(loss).backward()
