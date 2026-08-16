@@ -11,6 +11,17 @@ and pull output with
   kaggle kernels output softkleenex/elastic-mla-exp1-scaleup -p ./kaggle_output
 """
 import subprocess, sys
+
+# Kaggle's preinstalled torch can lack compiled kernels for the GPU actually
+# assigned to the session (observed: "CUDA error: no kernel image is available
+# for execution on the device" on a P100 with a too-new torch build). Reinstall
+# a broadly-compatible torch (cu118 wheel covers Pascal/Turing/Ampere) BEFORE
+# importing torch anywhere else in this process.
+subprocess.run(
+    [sys.executable, "-m", "pip", "install", "-q",
+     "torch==2.1.2", "--index-url", "https://download.pytorch.org/whl/cu118"],
+    check=False,
+)
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "tiktoken"], check=False)
 
 import os, time, json, math
@@ -18,6 +29,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+print("torch version:", torch.__version__, flush=True)
+if torch.cuda.is_available():
+    print("cuda device:", torch.cuda.get_device_name(0), flush=True)
+    print("cuda capability:", torch.cuda.get_device_capability(0), flush=True)
 
 # ============ elastic_mla/mla.py (inlined) ============
 """
@@ -243,6 +259,18 @@ from datasets import load_dataset
 torch.manual_seed(1337)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print("device:", device, flush=True)
+
+# Fail fast with a clear message if the GPU still can't run kernels after the
+# torch reinstall, instead of burning the whole session on data download first.
+if device == "cuda":
+    try:
+        _t = torch.randn(64, 64, device=device)
+        _ = (_t @ _t).sum().item()
+        print("CUDA sanity matmul OK", flush=True)
+    except Exception as e:
+        print("CUDA sanity check FAILED:", repr(e), flush=True)
+        print("Falling back to CPU for this run.", flush=True)
+        device = "cpu"
 
 WORK_DIR = "/kaggle/working"
 DATA_DIR = os.path.join(WORK_DIR, "data")
