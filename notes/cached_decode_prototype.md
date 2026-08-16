@@ -25,4 +25,5 @@
 ## 다음 구현 과제
 1. optimized MHA/GQA cached baseline과 공정 비교.
 2. absorbed MLA decode 또는 FlashMLA 계열 kernel 연결.
-3. token별 variable-width를 실제 packed storage로 저장하는 Elastic cache.
+3. ~~token별 variable-width packed storage~~ — `elastic_cache.py`로 correctness prototype 구현 완료.
+4. 학습된 tier router의 quality–memory Pareto 평가.

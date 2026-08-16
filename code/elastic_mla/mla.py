@@ -12,6 +12,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .elastic_cache import (
+    PACKED_KEYS,
+    append_packed_latents,
+    packed_cache_num_bytes,
+    unpack_latents,
+    validate_channel_order,
+    validate_ranks,
+)
+
 
 def rotate_half(x):
     x1, x2 = x.chunk(2, dim=-1)
@@ -251,3 +260,55 @@ class MultiHeadLatentAttention(nn.Module):
         if cache is None:
             return 0
         return sum(t.numel() * t.element_size() for t in cache.values())
+
+
+    def forward_cached_packed(
+        self, x, cache=None, ranks=None, channel_order=None
+    ):
+        """Incremental attention backed by a genuinely variable-width cache.
+
+        Only the top-``rank[b,t]`` channels under ``channel_order`` are stored for
+        each new token.  The packed cache is expanded to a temporary dense latent
+        tensor only while computing attention.  Consequently this prototype proves
+        persistent-memory savings, but not peak-memory or optimized-latency gains.
+        """
+        B, T_new, _ = x.shape
+        if ranks is None or channel_order is None:
+            raise ValueError("ranks and channel_order are required for packed caching")
+        order = validate_channel_order(channel_order, self.d_c).to(x.device)
+        ranks = validate_ranks(ranks, B, T_new, self.d_c).to(x.device)
+
+        if cache is None:
+            packed_core = None
+            dense_cache = None
+            past_len = 0
+        else:
+            if set(cache) != PACKED_KEYS:
+                raise ValueError(f"packed cache must contain exactly {sorted(PACKED_KEYS)}")
+            packed_core = {
+                key: cache[key]
+                for key in ("values", "offsets", "ranks", "channel_order")
+            }
+            past_c_kv = unpack_latents(packed_core, self.d_c, order)
+            past_len = past_c_kv.shape[1]
+            dense_cache = {"c_kv": past_c_kv, "k_rope": cache["k_rope"]}
+
+        # Boolean masking preserves the projection output dtype under autocast.
+        rank_mask = torch.zeros((B, T_new, self.d_c), device=x.device, dtype=torch.bool)
+        for b in range(B):
+            for t in range(T_new):
+                rank_mask[b, t, order[: int(ranks[b, t])]] = 1
+
+        out, dense_new_cache = self.forward_cached(
+            x, cache=dense_cache, rank_mask=rank_mask
+        )
+        c_new = dense_new_cache["c_kv"][:, past_len:]
+        packed_new = append_packed_latents(
+            packed_core, c_new, ranks, order
+        )
+        packed_new["k_rope"] = dense_new_cache["k_rope"]
+        return out, packed_new
+
+    def packed_cache_num_bytes(self, cache):
+        """Actual persistent bytes, including values, offsets, ranks and RoPE key."""
+        return packed_cache_num_bytes(cache)

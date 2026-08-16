@@ -51,6 +51,16 @@ class Block(nn.Module):
         return x, new_cache
 
 
+    def forward_cached_packed(self, x, cache, ranks, channel_order):
+        h = self.ln1(x)
+        a, new_cache = self.attn.forward_cached_packed(
+            h, cache=cache, ranks=ranks, channel_order=channel_order
+        )
+        x = x + a
+        x = x + self.mlp(self.ln2(x))
+        return x, new_cache
+
+
 class MLAGPT(nn.Module):
     def __init__(self, vocab_size, d_model=384, n_layers=8, n_heads=6,
                  d_head=64, d_rope=32, d_c=256, max_len=1024, dropout=0.0):
@@ -159,6 +169,62 @@ class MLAGPT(nn.Module):
         if len(caches) != self.n_layers:
             raise ValueError(f"expected {self.n_layers} layer caches, got {len(caches)}")
         return sum(block.attn.cache_num_bytes(cache) for block, cache in zip(self.blocks, caches))
+
+    def forward_cached_packed(
+        self, idx, ranks, channel_orders, caches=None
+    ):
+        """Incrementally process tokens with per-token variable-width caches.
+
+        ``ranks`` may be one ``(B,T_new)`` tensor shared by all layers or a list
+        of one tensor per layer. ``channel_orders`` must contain one permutation
+        of ``0..d_c-1`` per layer.
+        """
+        if idx.ndim != 2:
+            raise ValueError("idx must have shape (batch, new_sequence_length)")
+        if len(channel_orders) != self.n_layers:
+            raise ValueError("channel_orders must contain one order per layer")
+        if caches is None:
+            caches = [None] * self.n_layers
+        if len(caches) != self.n_layers:
+            raise ValueError(f"expected {self.n_layers} packed caches")
+        present = [cache is not None for cache in caches]
+        if any(present) and not all(present):
+            raise ValueError("packed layer caches must be all None or all populated")
+        if all(present):
+            lengths = {cache["ranks"].shape[1] for cache in caches}
+            batches = {cache["ranks"].shape[0] for cache in caches}
+            if len(lengths) != 1:
+                raise ValueError("all packed layer caches must have the same length")
+            if batches != {idx.shape[0]}:
+                raise ValueError("packed cache batch sizes must match idx")
+
+        if isinstance(ranks, (list, tuple)):
+            if len(ranks) != self.n_layers:
+                raise ValueError("ranks must contain one tensor per layer")
+            layer_ranks = list(ranks)
+        else:
+            layer_ranks = [ranks] * self.n_layers
+
+        x = self.drop(self.tok_emb(idx))
+        new_caches = []
+        for block, cache, layer_rank, order in zip(
+            self.blocks, caches, layer_ranks, channel_orders
+        ):
+            x, new_cache = block.forward_cached_packed(
+                x, cache=cache, ranks=layer_rank, channel_order=order
+            )
+            new_caches.append(new_cache)
+        return self.head(self.ln_f(x)), new_caches
+
+    def packed_cache_num_bytes(self, caches):
+        if caches is None:
+            return 0
+        if len(caches) != self.n_layers:
+            raise ValueError(f"expected {self.n_layers} packed caches")
+        return sum(
+            block.attn.packed_cache_num_bytes(cache)
+            for block, cache in zip(self.blocks, caches)
+        )
 
     def theoretical_mha_cache_num_bytes(self, batch_size, sequence_length, dtype):
         """Conservative standard-MHA K/V cache byte estimate.
