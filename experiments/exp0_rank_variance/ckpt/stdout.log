@@ -1,3 +1,4 @@
 device: mps
 params: 30.600576 M
 step 200/3000  train_loss=3.6694  val_loss=3.4789  elapsed=142.8s
+step 400/3000  train_loss=3.2755  val_loss=2.9216  elapsed=324.1s

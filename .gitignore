@@ -8,3 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
+
+# large training artifacts - keep out of git after initial snapshot
+experiments/exp0_rank_variance/data/*.bin
+experiments/exp0_rank_variance/ckpt/latest.pt
+experiments/*/data/*.bin
+experiments/*/ckpt/*.pt
