@@ -2,3 +2,17 @@ device: mps
 params: 30.600576 M
 step 200/3000  train_loss=3.6694  val_loss=3.4789  elapsed=142.8s
 step 400/3000  train_loss=3.2755  val_loss=2.9216  elapsed=324.1s
+step 600/3000  train_loss=2.9002  val_loss=2.6502  elapsed=558.6s
+step 800/3000  train_loss=2.6544  val_loss=2.4996  elapsed=756.6s
+step 1000/3000  train_loss=2.6622  val_loss=2.3891  elapsed=912.9s
+step 1200/3000  train_loss=2.4919  val_loss=2.2722  elapsed=1072.5s
+step 1400/3000  train_loss=2.4986  val_loss=2.2020  elapsed=1368.4s
+step 1600/3000  train_loss=2.5654  val_loss=2.1538  elapsed=1508.5s
+step 1800/3000  train_loss=2.2171  val_loss=2.0977  elapsed=1645.2s
+step 2000/3000  train_loss=2.2243  val_loss=2.0744  elapsed=1884.1s
+step 2200/3000  train_loss=2.1559  val_loss=2.0316  elapsed=2019.2s
+step 2400/3000  train_loss=2.1446  val_loss=2.0164  elapsed=2151.3s
+step 2600/3000  train_loss=2.1710  val_loss=1.9776  elapsed=2286.3s
+step 2800/3000  train_loss=2.0807  val_loss=1.9606  elapsed=2419.6s
+step 3000/3000  train_loss=2.0538  val_loss=1.9618  elapsed=2551.7s
+DONE
