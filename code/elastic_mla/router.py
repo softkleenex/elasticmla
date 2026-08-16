@@ -86,6 +86,18 @@ class ElasticMLAGPT(nn.Module):
             parameter.requires_grad_(False)
         return self
 
+    @torch.no_grad()
+    def routing_features_full(self, idx):
+        """Extract detached pre-attention features for offline router training."""
+        x = self.base.drop(self.base.tok_emb(idx))
+        features = []
+        for block in self.base.blocks:
+            h = block.ln1(x)
+            features.append(h.detach())
+            x = x + block.attn(h)
+            x = x + block.mlp(block.ln2(x))
+        return features
+
     def routing_logits_full(self, idx):
         """Return router logits on an ordinary full-attention teacher-forced pass."""
         x = self.base.drop(self.base.tok_emb(idx))
@@ -146,6 +158,69 @@ class ElasticMLAGPT(nn.Module):
             chosen_ranks.append(ranks)
             all_router_logits.append(route_logits)
         return self.base.head(self.base.ln_f(x)), new_caches, chosen_ranks, all_router_logits
+
+    def packed_cache_num_bytes(self, caches):
+        return self.base.packed_cache_num_bytes(caches)
+
+
+class GlobalElasticMLAGPT(nn.Module):
+    """One token-difficulty router chooses a shared tier for every MLA layer.
+
+    This matches an oracle obtained by intervening on all layers at the same rank.
+    The router observes the first block's pre-attention normalized hidden state,
+    which is unaffected by earlier compression and therefore avoids rollout feature
+    shift at the routing decision.
+    """
+
+    def __init__(self, base_model, channel_orders, tiers=(16, 64, 160, 256)):
+        super().__init__()
+        self.base = base_model
+        self.router = TieredRankRouter(base_model.tok_emb.embedding_dim, tiers=tiers)
+        if len(channel_orders) != base_model.n_layers:
+            raise ValueError("channel_orders must contain one order per layer")
+        for i, order in enumerate(channel_orders):
+            order = torch.as_tensor(order, dtype=torch.long)
+            if order.shape != (base_model.d_c,) or not torch.equal(
+                torch.sort(order).values,
+                torch.arange(base_model.d_c, device=order.device),
+            ):
+                raise ValueError(f"invalid channel order for layer {i}")
+            self.register_buffer(f"channel_order_{i}", order, persistent=True)
+
+    @property
+    def channel_orders(self):
+        return [getattr(self, f"channel_order_{i}") for i in range(self.base.n_layers)]
+
+    def freeze_base(self):
+        for parameter in self.base.parameters():
+            parameter.requires_grad_(False)
+        return self
+
+    @torch.no_grad()
+    def routing_features(self, idx):
+        x = self.base.drop(self.base.tok_emb(idx))
+        return self.base.blocks[0].ln1(x).detach()
+
+    def forward_cached_packed(self, idx, caches=None, forced_ranks=None):
+        x0 = self.base.drop(self.base.tok_emb(idx))
+        feature = self.base.blocks[0].ln1(x0)
+        route_logits = self.router(feature)
+        ranks = (
+            forced_ranks.to(idx.device)
+            if forced_ranks is not None
+            else self.router.select_ranks(route_logits)
+        )
+        if forced_ranks is not None:
+            valid = (ranks[..., None] == self.router.tiers).any(dim=-1)
+            if not torch.all(valid):
+                raise ValueError(f"forced ranks must belong to {self.router.tiers.tolist()}")
+        logits, new_caches = self.base.forward_cached_packed(
+            idx,
+            ranks=ranks,
+            channel_orders=self.channel_orders,
+            caches=caches,
+        )
+        return logits, new_caches, ranks, route_logits
 
     def packed_cache_num_bytes(self, caches):
         return self.base.packed_cache_num_bytes(caches)

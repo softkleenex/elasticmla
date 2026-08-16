@@ -1,0 +1,54 @@
+{
+  "objective": "max",
+  "tiers": [
+    16,
+    64,
+    160,
+    256
+  ],
+  "split_sequences": {
+    "train": [
+      0,
+      2,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      13,
+      14,
+      15,
+      18,
+      19,
+      20,
+      23
+    ],
+    "val": [
+      6,
+      11,
+      16,
+      17
+    ],
+    "test": [
+      1,
+      12,
+      21,
+      22
+    ]
+  },
+  "split_intervals_nonoverlap": true,
+  "train_class_counts": {
+    "16": 43,
+    "64": 28,
+    "160": 115,
+    "256": 326
+  },
+  "best_val_macro_f1": 0.3156299840510367,
+  "test_accuracy": 0.453125,
+  "test_macro_f1": 0.26149007607633135,
+  "predicted_mean_rank": 200.125,
+  "target_mean_rank": 204.25,
+  "interpretation": "global token-difficulty router; one tier is shared by every MLA layer"
+}

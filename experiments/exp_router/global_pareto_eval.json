@@ -1,0 +1,94 @@
+{
+  "device": "mps",
+  "test_sequences": [
+    1,
+    12,
+    21,
+    22
+  ],
+  "n_shuffles_per_sequence": 20,
+  "policies": {
+    "mean": {
+      "loss": 3.9857146739959717,
+      "ppl": 53.82374216457635,
+      "delta_loss": 1.8797569870948792,
+      "bytes": 357336.0,
+      "over_fixed_mla": 0.20194498697916666,
+      "average_rank": 24.15625,
+      "rank_hist_layer_expanded": {
+        "16": 5568,
+        "64": 342,
+        "160": 234,
+        "256": 0
+      },
+      "matched_budget_shuffled_loss_mean": 4.096477568149567,
+      "router_minus_shuffled_loss": -0.11076289415359497,
+      "router_minus_shuffled_sequence_bootstrap_95pct_ci": [
+        -0.1673232913017273,
+        -0.05420249700546287
+      ]
+    },
+    "max": {
+      "loss": 2.2602517008781433,
+      "ppl": 9.585501542308764,
+      "delta_loss": 0.15429401397705078,
+      "bytes": 1371096.0,
+      "over_fixed_mla": 0.7748616536458334,
+      "average_rank": 189.15625,
+      "rank_hist_layer_expanded": {
+        "16": 744,
+        "64": 480,
+        "160": 1458,
+        "256": 3462
+      },
+      "matched_budget_shuffled_loss_mean": 2.3723033279180528,
+      "router_minus_shuffled_loss": -0.11205162703990945,
+      "router_minus_shuffled_sequence_bootstrap_95pct_ci": [
+        -0.17370240092277534,
+        -0.05040085315704346
+      ]
+    }
+  },
+  "full_mla": {
+    "loss": 2.1059576869010925,
+    "ppl": 8.2149666094763
+  },
+  "fixed_width_mla_bytes": 1769472,
+  "standard_mha_theoretical_bytes": 4718592,
+  "fixed_tiers": {
+    "16": {
+      "loss": 4.232648849487305,
+      "ppl": 68.89949506597418,
+      "delta_loss": 2.126691162586212,
+      "bytes": 307224.0,
+      "over_fixed_mla": 0.17362467447916666
+    },
+    "64": {
+      "loss": 3.288228452205658,
+      "ppl": 26.795352336707214,
+      "delta_loss": 1.1822707653045654,
+      "bytes": 602136.0,
+      "over_fixed_mla": 0.3402913411458333
+    },
+    "160": {
+      "loss": 2.317700982093811,
+      "ppl": 10.152307119718287,
+      "delta_loss": 0.2117432951927185,
+      "bytes": 1191960.0,
+      "over_fixed_mla": 0.6736246744791666
+    },
+    "256": {
+      "loss": 2.1059576869010925,
+      "ppl": 8.2149666094763,
+      "delta_loss": 0.0,
+      "bytes": 1781784.0,
+      "over_fixed_mla": 1.0069580078125
+    }
+  },
+  "scope_notes": [
+    "router feature is pre-attention LN(token embedding): lexical token-identity routing, not contextual routing",
+    "v3 targets are marginal isolated-position intervention labels, not joint rollout-optimal oracle labels",
+    "four held-out nonoverlapping windows; bootstrap interval is descriptive/exploratory only",
+    "persistent packed bytes only; no peak-memory or latency claim"
+  ]
+}
