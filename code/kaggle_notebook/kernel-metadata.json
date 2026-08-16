@@ -1,0 +1,14 @@
+{
+  "id": "softkleenex/elastic-mla-exp1-scaleup",
+  "title": "ElasticMLA Exp1 - Scale-up Training (114M)",
+  "code_file": "train_kaggle.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": []
+}
