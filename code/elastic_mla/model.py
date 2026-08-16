@@ -77,7 +77,13 @@ class MLAGPT(nn.Module):
                 x, c_kv = blk(x, return_latent=True, rank_mask=rank_mask)
                 latents[i] = c_kv
             else:
-                x = blk(x, rank_mask=rank_mask if layer_idx_for_latent is None else None)
+                # rank_mask (channel truncation) is independent of the latent-return
+                # request: layer_idx_for_latent only controls which layer's c_kv is
+                # returned to the caller, it must not change which layers get the
+                # rank_mask applied. Previously this branch passed rank_mask=None to
+                # every non-selected layer whenever layer_idx_for_latent was set,
+                # silently disabling truncation on all-but-one layer (P1 bug).
+                x = blk(x, rank_mask=rank_mask)
         x = self.ln_f(x)
         logits = self.head(x)
         loss = None

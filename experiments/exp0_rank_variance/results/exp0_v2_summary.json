@@ -1,0 +1,90 @@
+{
+  "method": "per-token (single-position) KV-latent truncation on a held-out evaluation set, using saliency-based (calibration-set) channel importance; see module docstring for full methodology notes.",
+  "seed": 1234,
+  "device": "mps",
+  "rank_grid": [
+    16,
+    32,
+    48,
+    64,
+    96,
+    128,
+    160,
+    192,
+    224,
+    256
+  ],
+  "epsilon_future_mean_nats": 0.1,
+  "probe_layer": 5,
+  "n_layers": 6,
+  "d_c": 256,
+  "checkpoint_step": 3000,
+  "n_calib_sequences": 48,
+  "n_eval_sequences": 24,
+  "positions_probed_per_sequence": 32,
+  "min_future_tokens_required": 8,
+  "n_positions_probed_total": 768,
+  "channel_importance": {
+    "saliency_vs_variance_spearman_rho": 0.7215016308079651,
+    "saliency_vs_variance_top32_overlap_frac": 0.5
+  },
+  "r_star_future_mean": 18.416666666666668,
+  "r_star_future_std": 14.496886638938106,
+  "r_star_future_min": 16,
+  "r_star_future_max": 160,
+  "r_star_future_histogram": {
+    "16": 742,
+    "32": 5,
+    "48": 2,
+    "64": 1,
+    "96": 12,
+    "128": 5,
+    "160": 1,
+    "192": 0,
+    "224": 0,
+    "256": 0
+  },
+  "by_token_type_mean_rstar_future": {
+    "capitalized": 20.50485436893204,
+    "other": 17.83206106870229,
+    "punct": 17.0,
+    "space": 27.03448275862069
+  },
+  "by_token_type_count": {
+    "capitalized": 103,
+    "other": 524,
+    "punct": 112,
+    "space": 29
+  },
+  "maxagg_diagnostic": {
+    "note": "r_star_future is computed from the MEAN loss increase over ALL future positions t>i. Because a single position i is usually attended to strongly by only a few future tokens (not all of them), averaging over the whole future window dilutes the signal and can make r_star_future look artificially small/uniform. r_star_future_maxagg uses instead the MAX loss increase over future positions (i.e. the single worst-affected future token), which is a more sensitive, less diluted alternative definition of the same quantity. Both are reported; see notes/ for discussion of which one is more meaningful.",
+    "r_star_future_maxagg_mean": 194.95833333333334,
+    "r_star_future_maxagg_std": 74.93496022477684,
+    "r_star_future_maxagg_min": 16,
+    "r_star_future_maxagg_max": 256,
+    "r_star_future_maxagg_histogram": {
+      "16": 54,
+      "32": 13,
+      "48": 14,
+      "64": 16,
+      "96": 26,
+      "128": 28,
+      "160": 56,
+      "192": 95,
+      "224": 182,
+      "256": 284
+    },
+    "by_token_type_mean_rstar_future_maxagg": {
+      "capitalized": 213.74757281553397,
+      "other": 196.18320610687022,
+      "punct": 170.85714285714286,
+      "space": 199.17241379310346
+    }
+  },
+  "self_effect_diagnostics": {
+    "note": "self_delta = loss increase at position i itself when only c_kv[i] is truncated. This is expected to be small (query at i is unaffected by rank_mask) but NOT exactly zero, because the causal mask allows i to attend to its own (truncated) key/value -- see module docstring.",
+    "mean_abs_self_delta_at_rank16": 0.1325991958971334,
+    "mean_abs_self_delta_fraction_of_mean_abs_future_delta_at_rank16": 6.302658276380129
+  },
+  "sanity_check_rank_mask_applies_to_all_layers_max_abs_logit_diff": 0.0
+}
