@@ -10,7 +10,9 @@ then monitor with
 and pull output with
   kaggle kernels output softkleenex/elastic-mla-exp1-scaleup -p ./kaggle_output
 """
-import subprocess, sys
+import subprocess, sys, time
+
+SCRIPT_START_TIME = time.time()
 
 # Kaggle's preinstalled torch can lack compiled kernels for the GPU actually
 # assigned to the session (observed: "CUDA error: no kernel image is available
@@ -20,11 +22,9 @@ import subprocess, sys
 r = subprocess.run(
     [sys.executable, "-m", "pip", "install", "--force-reinstall",
      "torch==2.2.0", "--index-url", "https://download.pytorch.org/whl/cu118"],
-    capture_output=True, text=True,
+    check=True,
 )
 print("torch reinstall returncode:", r.returncode, flush=True)
-if r.returncode != 0:
-    print("torch reinstall STDERR tail:", r.stderr[-2000:], flush=True)
 
 # torch==2.2.0 was built against the numpy<2 C ABI. Kaggle's preinstalled numpy is
 # newer (2.x), which breaks torch<->numpy interop ("_ARRAY_API not found" /
@@ -32,15 +32,16 @@ if r.returncode != 0:
 # numpy alongside the torch downgrade.
 r2 = subprocess.run(
     [sys.executable, "-m", "pip", "install", "--force-reinstall", "numpy==1.26.4"],
-    capture_output=True, text=True,
+    check=True,
 )
 print("numpy reinstall returncode:", r2.returncode, flush=True)
-if r2.returncode != 0:
-    print("numpy reinstall STDERR tail:", r2.stderr[-2000:], flush=True)
 
-subprocess.run([sys.executable, "-m", "pip", "install", "-q", "tiktoken"], check=False)
+subprocess.run(
+    [sys.executable, "-m", "pip", "install", "-q", "tiktoken"],
+    check=True,
+)
 
-import os, time, json, math
+import os, json, math
 import numpy as np
 import torch
 import torch.nn as nn
@@ -252,7 +253,9 @@ class MLAGPT(nn.Module):
                 x, c_kv = blk(x, return_latent=True, rank_mask=rank_mask)
                 latents[i] = c_kv
             else:
-                x = blk(x, rank_mask=rank_mask if layer_idx_for_latent is None else None)
+                # Returning one layer's latent must not disable rank truncation in
+                # the other layers. Keep this in sync with elastic_mla/model.py.
+                x = blk(x, rank_mask=rank_mask)
         x = self.ln_f(x)
         logits = self.head(x)
         loss = None
@@ -273,6 +276,7 @@ import tiktoken
 from datasets import load_dataset
 
 torch.manual_seed(1337)
+np.random.seed(1337)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print("device:", device, flush=True)
 
@@ -337,7 +341,13 @@ N_HEADS = 12
 D_HEAD = 64
 D_ROPE = 32
 D_C = 384            # KV latent dim -- primary axis of interest for ElasticMLA
-MAX_STEPS = 8000
+# 1,500 steps is a practical default for a single Kaggle P100 session. It can be
+# raised on faster GPUs; the wall-clock guard below still leaves time to write a
+# complete checkpoint before Kaggle's session limit.
+MAX_STEPS = int(os.environ.get("MAX_STEPS", "1500"))
+MAX_RUNTIME_SECONDS = int(os.environ.get("MAX_RUNTIME_SECONDS", str(int(10.5 * 60 * 60))))
+# Avoid starting another costly validation pass too close to the deadline.
+RUNTIME_SAVE_MARGIN_SECONDS = int(os.environ.get("RUNTIME_SAVE_MARGIN_SECONDS", "900"))
 EVAL_INTERVAL = 250
 EVAL_ITERS = 40
 LR = 3e-4
@@ -350,11 +360,23 @@ def get_batch(split):
     y = np.stack([data[i + 1:i + 1 + BLOCK_SIZE].astype(np.int64) for i in ix])
     return torch.from_numpy(x).to(device), torch.from_numpy(y).to(device)
 
-model = MLAGPT(vocab_size=VOCAB_SIZE, d_model=D_MODEL, n_layers=N_LAYERS, n_heads=N_HEADS,
-               d_head=D_HEAD, d_rope=D_ROPE, d_c=D_C, max_len=BLOCK_SIZE, dropout=0.0).to(device)
-print("params:", model.num_params() / 1e6, "M", flush=True)
+MODEL_CONFIG = dict(vocab_size=VOCAB_SIZE, d_model=D_MODEL, n_layers=N_LAYERS,
+                    n_heads=N_HEADS, d_head=D_HEAD, d_rope=D_ROPE, d_c=D_C,
+                    max_len=BLOCK_SIZE)
+TRAIN_CONFIG = dict(max_steps=MAX_STEPS, batch_size=BATCH_SIZE,
+                    grad_accum_steps=GRAD_ACCUM_STEPS, eval_interval=EVAL_INTERVAL,
+                    eval_iters=EVAL_ITERS, lr=LR, warmup=WARMUP,
+                    optimizer_betas=(0.9, 0.95), weight_decay=0.1)
 
-opt = torch.optim.AdamW(model.parameters(), lr=LR, betas=(0.9, 0.95), weight_decay=0.1)
+def make_training_state():
+    new_model = MLAGPT(**MODEL_CONFIG, dropout=0.0).to(device)
+    new_opt = torch.optim.AdamW(
+        new_model.parameters(), lr=LR, betas=(0.9, 0.95), weight_decay=0.1
+    )
+    new_scaler = torch.cuda.amp.GradScaler(
+        enabled=(device == "cuda" and amp_dtype == torch.float16)
+    )
+    return new_model, new_opt, new_scaler
 
 def lr_at(step):
     if step < WARMUP:
@@ -380,12 +402,79 @@ if device == "cuda" and torch.cuda.get_device_capability(0)[0] >= 8:
     amp_dtype = torch.bfloat16
 print("amp dtype:", amp_dtype, flush=True)
 
-log_f = open(os.path.join(CKPT_DIR, "train_log.jsonl"), "w")
+model, opt, scaler = make_training_state()
+print("params:", model.num_params() / 1e6, "M", flush=True)
+
+CKPT_PATH = os.path.join(CKPT_DIR, "latest.pt")
+CHECKPOINT_KEYS = {
+    "model", "config", "train_config", "optimizer", "scaler", "step",
+    "numpy_rng_state", "torch_rng_state", "cuda_rng_state",
+}
+
+def save_checkpoint(step):
+    checkpoint = {
+        "model": model.state_dict(),
+        "config": MODEL_CONFIG,
+        "train_config": TRAIN_CONFIG,
+        "optimizer": opt.state_dict(),
+        "scaler": scaler.state_dict(),
+        "step": step,
+        "numpy_rng_state": np.random.get_state(),
+        "torch_rng_state": torch.get_rng_state(),
+        "cuda_rng_state": torch.cuda.get_rng_state_all() if device == "cuda" else [],
+    }
+    tmp_path = CKPT_PATH + ".tmp"
+    torch.save(checkpoint, tmp_path)
+    os.replace(tmp_path, CKPT_PATH)
+
+def checkpoint_is_complete(checkpoint):
+    missing = CHECKPOINT_KEYS.difference(checkpoint) if isinstance(checkpoint, dict) else CHECKPOINT_KEYS
+    if missing:
+        return False, "missing keys: " + ", ".join(sorted(missing))
+    if checkpoint["config"] != MODEL_CONFIG:
+        return False, "model config does not match this run"
+    if checkpoint["train_config"] != TRAIN_CONFIG:
+        return False, "training config/schedule does not match this run"
+    if not isinstance(checkpoint["step"], int) or not (0 <= checkpoint["step"] <= MAX_STEPS):
+        return False, "step is outside the configured schedule"
+    if device == "cuda" and len(checkpoint["cuda_rng_state"]) != torch.cuda.device_count():
+        return False, "CUDA RNG state does not match the available devices"
+    return True, ""
+
+start_step = 1
+resumed = False
+if os.path.exists(CKPT_PATH):
+    try:
+        # Keep serialized RNG tensors on CPU; state_dict loaders move model and
+        # optimizer tensors to their parameter devices as needed.
+        checkpoint = torch.load(CKPT_PATH, map_location="cpu")
+        valid, reason = checkpoint_is_complete(checkpoint)
+        if not valid:
+            raise ValueError(reason)
+        model.load_state_dict(checkpoint["model"], strict=True)
+        opt.load_state_dict(checkpoint["optimizer"])
+        scaler.load_state_dict(checkpoint["scaler"])
+        np.random.set_state(checkpoint["numpy_rng_state"])
+        torch.set_rng_state(checkpoint["torch_rng_state"].cpu())
+        if device == "cuda":
+            torch.cuda.set_rng_state_all(checkpoint["cuda_rng_state"])
+        start_step = checkpoint["step"] + 1
+        resumed = True
+        print(f"resuming from complete checkpoint at step {checkpoint['step']}", flush=True)
+    except Exception as exc:
+        print(f"checkpoint is legacy, incomplete, or invalid ({exc}); starting fresh", flush=True)
+        # Discard any partial state changes made before a load error.
+        torch.manual_seed(1337)
+        np.random.seed(1337)
+        model, opt, scaler = make_training_state()
+
+log_mode = "a" if resumed else "w"
+log_f = open(os.path.join(CKPT_DIR, "train_log.jsonl"), log_mode)
 t0 = time.time()
 model.train()
-scaler = torch.cuda.amp.GradScaler(enabled=(device == "cuda" and amp_dtype == torch.float16))
 opt.zero_grad(set_to_none=True)
-for step in range(1, MAX_STEPS + 1):
+stopped_for_runtime = False
+for step in range(start_step, MAX_STEPS + 1):
     lr = lr_at(step)
     for g in opt.param_groups:
         g["lr"] = lr
@@ -408,6 +497,20 @@ for step in range(1, MAX_STEPS + 1):
                                   "elapsed_s": round(time.time() - t0, 1)}) + "\n")
         log_f.flush()
 
+    # A 40-batch validation can take several minutes on a P100. Check the
+    # deadline before entering it and checkpoint only after a complete optimizer
+    # step, leaving the configured margin for serialization and kernel shutdown.
+    if time.time() - SCRIPT_START_TIME >= max(
+        0, MAX_RUNTIME_SECONDS - RUNTIME_SAVE_MARGIN_SECONDS
+    ):
+        save_checkpoint(step)
+        log_f.write(json.dumps({"step": step, "event": "runtime_limit_checkpoint",
+                                "elapsed_s": round(time.time() - t0, 1)}) + "\n")
+        log_f.flush()
+        print(f"runtime guard reached; complete checkpoint saved at step {step}", flush=True)
+        stopped_for_runtime = True
+        break
+
     if step % EVAL_INTERVAL == 0 or step == MAX_STEPS:
         val_loss = evaluate()
         log_f.write(json.dumps({"step": step, "val_loss": val_loss,
@@ -415,12 +518,7 @@ for step in range(1, MAX_STEPS + 1):
         log_f.flush()
         print(f"step {step}/{MAX_STEPS}  train_loss={accum_loss:.4f}  val_loss={val_loss:.4f}  "
               f"elapsed={time.time()-t0:.1f}s", flush=True)
-        torch.save({"model": model.state_dict(),
-                     "config": dict(vocab_size=VOCAB_SIZE, d_model=D_MODEL, n_layers=N_LAYERS,
-                                     n_heads=N_HEADS, d_head=D_HEAD, d_rope=D_ROPE, d_c=D_C,
-                                     max_len=BLOCK_SIZE),
-                     "step": step},
-                   os.path.join(CKPT_DIR, "latest.pt"))
+        save_checkpoint(step)
 
 log_f.close()
-print("DONE", flush=True)
+print("STOPPED FOR RUNTIME LIMIT" if stopped_for_runtime else "DONE", flush=True)
