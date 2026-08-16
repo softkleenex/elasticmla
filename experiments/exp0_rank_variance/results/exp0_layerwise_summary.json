@@ -1,0 +1,47 @@
+{
+  "rank_grid": [
+    16,
+    32,
+    48,
+    64,
+    96,
+    128,
+    160,
+    192,
+    224,
+    256
+  ],
+  "epsilon": 0.1,
+  "n_tokens_probed": 16384,
+  "r_star_mean": 149.61328125,
+  "r_star_std": 88.14081672873469,
+  "r_star_min": 16,
+  "r_star_max": 256,
+  "r_star_histogram": {
+    "16": 3105,
+    "32": 372,
+    "48": 423,
+    "64": 466,
+    "96": 1153,
+    "128": 1442,
+    "160": 1755,
+    "192": 1966,
+    "224": 2303,
+    "256": 3399
+  },
+  "by_token_type_mean_rstar": {
+    "capitalized": 144.86205294937298,
+    "other": 151.36588459099556,
+    "punct": 160.04512489927478,
+    "space": 100.30422535211268
+  },
+  "by_token_type_count": {
+    "capitalized": 2153,
+    "other": 11039,
+    "punct": 2482,
+    "space": 710
+  },
+  "checkpoint_step": 3000,
+  "d_c": 256,
+  "method": "layerwise (per-layer independent channel importance + per-layer truncation to same rank budget r)"
+}
