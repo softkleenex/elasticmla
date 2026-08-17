@@ -1638,5 +1638,7 @@
   },
   "token_attribution": "x_eval[b, pos] (the intervened source token)",
   "r_star_rule": "smallest grid rank for which this and every higher rank are <= epsilon",
-  "nonmonotonic_rule": "any adjacent raw delta increase greater than 0.0 as retained rank increases"
+  "nonmonotonic_rule": "any adjacent raw delta increase greater than 0.0 as retained rank increases",
+  "status": "superseded_invalid_for_intended_next_token_horizon",
+  "invalidation_reason": "loss window started at pos+1, excluding logits[pos] which predicts the immediate next token; calibration windows could also overlap"
 }

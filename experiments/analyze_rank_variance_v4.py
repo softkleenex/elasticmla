@@ -1,4 +1,4 @@
-"""Experiment 0 v3: layer-aligned, fixed-horizon KV rank intervention.
+"""Experiment 0 v4: layer-aligned, fixed-horizon KV rank intervention.
 
 The script calibrates a gradient-times-activation channel order independently for
 every MLA layer.  During evaluation, only one source position is truncated, and
@@ -34,7 +34,7 @@ DATA_DIR = ROOT / "experiments" / "exp0_rank_variance" / "data"
 CKPT_DIR = ROOT / "experiments" / "exp0_rank_variance" / "ckpt"
 OUT_DIR = ROOT / "experiments" / "exp0_rank_variance" / "results"
 
-DEFAULT_RANK_GRID = (16, 32, 48, 64, 96, 128, 160, 192, 224, 256)
+DEFAULT_RANK_GRID = (16, 32, 48, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384)
 CALIBRATION_SEED_BASE = 12_341
 EVALUATION_SEED = 23_452
 BOOTSTRAP_SEED = 34_563
@@ -75,14 +75,27 @@ def normalize_rank_grid(ranks: Iterable[int], d_c: int) -> list[int]:
 
 
 def valid_probe_positions(sequence_length: int, horizon: int) -> np.ndarray:
-    """Positions with exactly ``horizon`` available subsequent loss terms."""
+    """Source positions whose next-token losses have the exact horizon.
+
+    Masking the latent at source position ``pos`` changes ``logits[pos]`` itself;
+    that logit predicts token ``pos + 1``.  Thus the loss window is
+    ``[pos, pos + horizon)`` rather than starting at ``pos + 1``.
+    """
     if horizon <= 0:
         raise ValueError("horizon must be positive")
-    # The window for pos is [pos + 1, pos + 1 + horizon).
-    count = sequence_length - horizon
+    count = sequence_length - horizon + 1
     if count <= 0:
         return np.empty(0, dtype=np.int64)
     return np.arange(count, dtype=np.int64)
+
+
+def future_loss_slice(pos: int, horizon: int, loss_length: int) -> slice:
+    """Return the exact next-token loss window affected from source ``pos``."""
+    start = int(pos)
+    stop = start + int(horizon)
+    if start < 0 or horizon <= 0 or stop > loss_length:
+        raise ValueError("probe does not have the exact requested horizon")
+    return slice(start, stop)
 
 
 def suffix_all_satisfy_r_star(
@@ -191,12 +204,32 @@ def forward_with_all_latents(
 
 
 def sample_starts(
-    rng: np.random.Generator, low: int, high_exclusive: int, count: int
+    rng: np.random.Generator,
+    low: int,
+    high_exclusive: int,
+    count: int,
+    *,
+    min_separation: int = 1,
+    excluded: Sequence[int] = (),
 ) -> np.ndarray:
-    population = high_exclusive - low
-    if population < count:
-        raise ValueError(f"cannot sample {count} unique starts from {population}")
-    return np.sort(rng.choice(population, size=count, replace=False) + low)
+    """Sample starts whose full token windows cannot overlap.
+
+    ``min_separation`` should be the number of tokens read per sequence
+    (``block_size + 1`` here).  ``excluded`` permits disjoint sampling across
+    calibration repeats as well as within each repeat.
+    """
+    if count < 0 or min_separation <= 0 or high_exclusive <= low:
+        raise ValueError("invalid sampling bounds/count/separation")
+    accepted: list[int] = []
+    forbidden = [int(value) for value in excluded]
+    max_attempts = max(10_000, count * 10_000)
+    for _ in range(max_attempts):
+        if len(accepted) == count:
+            return np.sort(np.asarray(accepted, dtype=np.int64))
+        candidate = int(rng.integers(low, high_exclusive))
+        if all(abs(candidate - other) >= min_separation for other in forbidden + accepted):
+            accepted.append(candidate)
+    raise ValueError("could not sample the requested number of nonoverlapping windows")
 
 
 def sequence_batch(data: np.memmap, starts: Sequence[int], block_size: int) -> np.ndarray:
@@ -328,14 +361,20 @@ def main() -> None:
         raise ValueError("validation stream is too short for disjoint regions")
 
     calibration_starts = []
+    calibration_used: list[int] = []
+    sequence_span = block_size + 1
     for repeat_idx in range(args.calibration_repeats):
         rng = np.random.default_rng(CALIBRATION_SEED_BASE + repeat_idx)
-        calibration_starts.append(
-            sample_starts(rng, 0, calibration_high, args.n_calib_sequences)
+        starts = sample_starts(
+            rng, 0, calibration_high, args.n_calib_sequences,
+            min_separation=sequence_span, excluded=calibration_used,
         )
+        calibration_starts.append(starts)
+        calibration_used.extend(map(int, starts))
     eval_rng = np.random.default_rng(EVALUATION_SEED)
     eval_starts = sample_starts(
-        eval_rng, evaluation_low, n_possible_starts, args.n_eval_sequences
+        eval_rng, evaluation_low, n_possible_starts, args.n_eval_sequences,
+        min_separation=sequence_span,
     )
 
     layer_orders, saliency_repeats = calibrate_layer_orders(
@@ -390,9 +429,8 @@ def main() -> None:
                     )
                     losses = per_token_loss(logits, y)
                 for local_idx, pos in enumerate(pos_batch):
-                    start = int(pos) + 1
-                    stop = start + args.future_horizon
-                    delta = losses[local_idx, start:stop] - baseline_loss[seq_idx, start:stop]
+                    window = future_loss_slice(int(pos), args.future_horizon, losses.shape[1])
+                    delta = losses[local_idx, window] - baseline_loss[seq_idx, window]
                     if len(delta) != args.future_horizon:
                         raise AssertionError("probe did not have the exact requested horizon")
                     mean_curves[seq_idx][offset + local_idx, rank_idx] = float(delta.mean())
@@ -457,6 +495,8 @@ def main() -> None:
         repeat_top32_overlap.append(float(np.mean(overlaps)))
 
     summary = {
+        "status": "valid",
+        "method_version": "v4 immediate-next-token horizon + nonoverlapping windows",
         "method": "per-layer gradient*activation ordering; one-position truncation; fixed future horizon",
         "scope_limitation": "full-attention training/truncation simulation, not cache-aware decoding",
         "device": str(device),
@@ -512,8 +552,8 @@ def main() -> None:
     }
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    summary_path = args.output_dir / "exp0_v3_summary.json"
-    records_path = args.output_dir / "exp0_v3_records.json"
+    summary_path = args.output_dir / "exp0_v4_summary.json"
+    records_path = args.output_dir / "exp0_v4_records.json"
     with summary_path.open("w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2, ensure_ascii=False)
     with records_path.open("w", encoding="utf-8") as handle:

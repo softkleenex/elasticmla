@@ -1,3 +1,5 @@
+> **철회 상태 (2026-08-17):** 이 router는 철회된 v3 horizon label로 학습되었으므로 정량 수치를 논문 근거로 사용하지 않는다. packed-cache 구현 correctness와 별개이며, v4 label로 재학습해야 한다.
+
 # Global lexical tier-router PoC
 
 ## 설계 정정

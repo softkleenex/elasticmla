@@ -13,7 +13,7 @@
 - Do not intentionally exceed available free credits or switch to a paid machine/account without explicit approval.
 - Upload only required source, checkpoint, and validation data; keep large artifacts out of git.
 - Launch the workload asynchronously and record its command, PID/job identifier, log path, machine, and output location.
-- **Five minutes after launch**, verify that the process/job is still running, GPU execution is active, logs are advancing, and no OOM/dependency/input-path failure occurred.
+- **Five minutes after launch**, verify that the process/job is still running, GPU execution is active, logs are advancing, and no OOM/dependency/input-path failure occurred. Scheduler `Running` alone is recorded only as a partial check, not a passed health check.
 - If the five-minute check fails, stop the resource where appropriate, diagnose, and do not report the experiment as running.
 - Download result JSON/logs after completion and independently validate them locally before use in the paper.
 

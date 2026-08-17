@@ -1,3 +1,5 @@
+> **철회 상태 (2026-08-17):** 아래 v3 수치는 의도한 "즉시 다음 32개 token 예측" 근거로 사용하지 않는다. 구현이 `logits[pos]`를 제외하고 `pos+1`부터 loss를 집계했으며 calibration window 일부도 겹쳤다. 수정된 비중첩 immediate-next-token 분석은 v4로 재실행한다.
+
 # Exp0 v3 교정 방법론 및 결과
 
 ## 1. 목적과 해석 범위
