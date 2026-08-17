@@ -1,0 +1,47 @@
+{
+  "method": "independent sequence-cluster bootstrap of normalized r* difference (122M - 30M)",
+  "seed": 45678,
+  "draws": 10000,
+  "models": {
+    "30M": {
+      "d_c": 256,
+      "n_records": 768,
+      "future_mean": {
+        "mean_rank": 23.041666666666668,
+        "normalized_mean": 0.09000651041666667
+      },
+      "future_max": {
+        "mean_rank": 189.625,
+        "normalized_mean": 0.74072265625
+      }
+    },
+    "122M": {
+      "d_c": 384,
+      "n_records": 768,
+      "future_mean": {
+        "mean_rank": 31.5625,
+        "normalized_mean": 0.08219401041666667
+      },
+      "future_max": {
+        "mean_rank": 280.0,
+        "normalized_mean": 0.7291666666666666
+      }
+    }
+  },
+  "differences": {
+    "future_mean": {
+      "observed": -0.0078125,
+      "bootstrap_95pct_ci": [
+        -0.016167534722222224,
+        0.0007595486111111188
+      ]
+    },
+    "future_max": {
+      "observed": -0.01155598958333337,
+      "bootstrap_95pct_ci": [
+        -0.03849283854166663,
+        0.016113959418402768
+      ]
+    }
+  }
+}
