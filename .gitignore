@@ -14,3 +14,6 @@ experiments/exp0_rank_variance/data/*.bin
 experiments/exp0_rank_variance/ckpt/latest.pt
 experiments/*/data/*.bin
 experiments/*/ckpt/*.pt
+
+# downloaded Kaggle checkpoints and datasets
+kaggle_output/
