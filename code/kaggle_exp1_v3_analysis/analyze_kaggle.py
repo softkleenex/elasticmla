@@ -1,40 +1,292 @@
-"""Experiment 0 v3: layer-aligned, fixed-horizon KV rank intervention.
-
-The script calibrates a gradient-times-activation channel order independently for
-every MLA layer.  During evaluation, only one source position is truncated, and
-each layer uses its own order.  Effects are measured over exactly ``horizon``
-following positions, separately by their mean and maximum loss increase.
-
-This remains a full-attention truncation simulation; it is not compressed-cache
-autoregressive decoding.
+"""Kaggle self-contained Exp0-v3 replication on the completed 122M MLA checkpoint."""
 """
+ElasticMLA Experiment 1 - scale-up training on Kaggle GPU (P100 / T4x2).
+Self-contained script (Kaggle "script" kernel can't easily import local packages,
+so the elastic_mla module is inlined below).
 
-from __future__ import annotations
+Usage: push with
+  kaggle kernels push -p code/kaggle_notebook
+then monitor with
+  kaggle kernels status softkleenex/elastic-mla-exp1-scaleup
+and pull output with
+  kaggle kernels output softkleenex/elastic-mla-exp1-scaleup -p ./kaggle_output
+"""
+import subprocess, sys, time
 
-import argparse
-import gc
-import json
-import os
-import sys
-from pathlib import Path
-from typing import Iterable, Sequence
+SCRIPT_START_TIME = time.time()
 
+# Kaggle's preinstalled torch can lack compiled kernels for the GPU actually
+# assigned to the session (observed: "CUDA error: no kernel image is available
+# for execution on the device" on a P100 with a too-new torch build). Reinstall
+# a broadly-compatible torch (cu118 wheel covers Pascal/Turing/Ampere) BEFORE
+# importing torch anywhere else in this process.
+r = subprocess.run(
+    [sys.executable, "-m", "pip", "install", "--force-reinstall",
+     "torch==2.2.0", "--index-url", "https://download.pytorch.org/whl/cu118"],
+    check=True,
+)
+print("torch reinstall returncode:", r.returncode, flush=True)
+
+# torch==2.2.0 was built against the numpy<2 C ABI. Kaggle's preinstalled numpy is
+# newer (2.x), which breaks torch<->numpy interop ("_ARRAY_API not found" /
+# "RuntimeError: Numpy is not available" at torch.from_numpy time). Pin a compatible
+# numpy alongside the torch downgrade.
+r2 = subprocess.run(
+    [sys.executable, "-m", "pip", "install", "--force-reinstall", "numpy==1.26.4"],
+    check=True,
+)
+print("numpy reinstall returncode:", r2.returncode, flush=True)
+
+subprocess.run(
+    [sys.executable, "-m", "pip", "install", "-q", "tiktoken"],
+    check=True,
+)
+
+import os, json, math
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+print("torch version:", torch.__version__, flush=True)
+if torch.cuda.is_available():
+    print("cuda device:", torch.cuda.get_device_name(0), flush=True)
+    print("cuda capability:", torch.cuda.get_device_capability(0), flush=True)
+
+# ============ elastic_mla/mla.py (inlined) ============
+"""
+Minimal DeepSeek-V2 style Multi-head Latent Attention (MLA) implementation.
+
+Reference: DeepSeek-V2 (arXiv:2405.04434).
+- KV is compressed into a shared low-rank latent c_KV (dim d_c).
+- Q is also low-rank compressed (dim d_c' ) for training memory efficiency (optional here).
+- RoPE is "decoupled": a small extra per-head dimension carries positional info
+  and is NOT compressed, so latent c_KV stays purely content-based.
+"""
+import math
+import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "code"))
+def rotate_half(x):
+    x1, x2 = x.chunk(2, dim=-1)
+    return torch.cat((-x2, x1), dim=-1)
 
-from elastic_mla import MLAGPT  # noqa: E402
+
+def apply_rope(x, cos, sin):
+    # x: (B, H, T, D_rope)
+    return x * cos + rotate_half(x) * sin
 
 
-DATA_DIR = ROOT / "experiments" / "exp0_rank_variance" / "data"
-CKPT_DIR = ROOT / "experiments" / "exp0_rank_variance" / "ckpt"
-OUT_DIR = ROOT / "experiments" / "exp0_rank_variance" / "results"
+class RotaryEmbedding(nn.Module):
+    def __init__(self, dim, base=10000):
+        super().__init__()
+        inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float() / dim))
+        self.register_buffer("inv_freq", inv_freq, persistent=False)
 
-DEFAULT_RANK_GRID = (16, 32, 48, 64, 96, 128, 160, 192, 224, 256)
+    def forward(self, t, device, dtype):
+        freqs = torch.einsum("i,j->ij", t.float(), self.inv_freq.to(device))
+        emb = torch.cat((freqs, freqs), dim=-1)
+        return emb.cos().to(dtype), emb.sin().to(dtype)
+
+
+class MultiHeadLatentAttention(nn.Module):
+    """
+    d_model:   model hidden size
+    n_heads:   number of attention heads
+    d_head:    per-head dim for the "content" part (non-RoPE)
+    d_rope:    per-head dim carrying RoPE (decoupled, shared K rope across heads)
+    d_c:       KV latent compression dim   (this is the thing we want to study/vary)
+    d_c_q:     Query latent compression dim (optional, can equal d_c)
+    """
+
+    def __init__(self, d_model, n_heads, d_head=64, d_rope=32, d_c=256, d_c_q=None, dropout=0.0):
+        super().__init__()
+        self.n_heads = n_heads
+        self.d_head = d_head
+        self.d_rope = d_rope
+        self.d_c = d_c
+        d_c_q = d_c_q or d_c
+
+        # --- KV latent compression / decompression ---
+        self.W_DKV = nn.Linear(d_model, d_c, bias=False)              # down-proj to latent
+        self.W_UK = nn.Linear(d_c, n_heads * d_head, bias=False)      # up-proj -> K content
+        self.W_UV = nn.Linear(d_c, n_heads * d_head, bias=False)      # up-proj -> V
+        self.W_KR = nn.Linear(d_model, d_rope, bias=False)            # decoupled rope key (shared across heads)
+
+        # --- Query latent compression / decompression ---
+        self.W_DQ = nn.Linear(d_model, d_c_q, bias=False)
+        self.W_UQ = nn.Linear(d_c_q, n_heads * d_head, bias=False)
+        self.W_QR = nn.Linear(d_c_q, n_heads * d_rope, bias=False)    # per-head rope query
+
+        self.W_O = nn.Linear(n_heads * d_head, d_model, bias=False)
+
+        self.rope = RotaryEmbedding(d_rope)
+        self.dropout = nn.Dropout(dropout)
+        self.scale = 1.0 / math.sqrt(d_head + d_rope)
+
+    def forward(self, x, attn_mask=None, return_latent=False, rank_mask=None):
+        """
+        x: (B, T, d_model)
+        rank_mask: optional (d_c,) boolean/float mask to zero out latent dims
+                   -> lets us simulate "using only rank r" at inference time.
+        """
+        B, T, _ = x.shape
+        device, dtype = x.device, x.dtype
+
+        c_kv = self.W_DKV(x)  # (B, T, d_c)  <-- THE latent we care about
+        if rank_mask is not None:
+            c_kv = c_kv * rank_mask
+
+        k_content = self.W_UK(c_kv).view(B, T, self.n_heads, self.d_head).transpose(1, 2)  # (B,H,T,Dh)
+        v = self.W_UV(c_kv).view(B, T, self.n_heads, self.d_head).transpose(1, 2)          # (B,H,T,Dh)
+        k_rope = self.W_KR(x).view(B, T, 1, self.d_rope).transpose(1, 2)                   # (B,1,T,Dr)
+
+        c_q = self.W_DQ(x)
+        q_content = self.W_UQ(c_q).view(B, T, self.n_heads, self.d_head).transpose(1, 2)
+        q_rope = self.W_QR(c_q).view(B, T, self.n_heads, self.d_rope).transpose(1, 2)
+
+        pos = torch.arange(T, device=device)
+        cos, sin = self.rope(pos, device, dtype)  # (T, Dr)
+        cos = cos[None, None, :, :]
+        sin = sin[None, None, :, :]
+
+        q_rope = apply_rope(q_rope, cos, sin)
+        k_rope = apply_rope(k_rope, cos, sin)
+        k_rope = k_rope.expand(-1, self.n_heads, -1, -1)
+
+        q = torch.cat([q_content, q_rope], dim=-1)  # (B,H,T,Dh+Dr)
+        k = torch.cat([k_content, k_rope], dim=-1)
+
+        attn_scores = torch.matmul(q, k.transpose(-2, -1)) * self.scale  # (B,H,T,T)
+        causal = torch.triu(torch.ones(T, T, device=device, dtype=torch.bool), diagonal=1)
+        attn_scores = attn_scores.masked_fill(causal, float("-inf"))
+        attn = F.softmax(attn_scores, dim=-1)
+        attn = self.dropout(attn)
+
+        out = torch.matmul(attn, v)  # (B,H,T,Dh)
+        out = out.transpose(1, 2).contiguous().view(B, T, self.n_heads * self.d_head)
+        out = self.W_O(out)
+
+        if return_latent:
+            return out, c_kv
+        return out
+
+
+# ============ elastic_mla/model.py (inlined) ============
+"""
+Small GPT-style LM using MultiHeadLatentAttention blocks.
+Sized to run comfortably on Apple M4 Pro (MPS) or a single 4090.
+"""
+import torch
+import torch.nn as nn
+# (MultiHeadLatentAttention defined above, inlined)
+
+
+class MLP(nn.Module):
+    def __init__(self, d_model, mult=4, dropout=0.0):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(d_model, d_model * mult),
+            nn.GELU(),
+            nn.Linear(d_model * mult, d_model),
+            nn.Dropout(dropout),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class Block(nn.Module):
+    def __init__(self, d_model, n_heads, d_head, d_rope, d_c, dropout=0.0):
+        super().__init__()
+        self.ln1 = nn.LayerNorm(d_model)
+        self.attn = MultiHeadLatentAttention(d_model, n_heads, d_head, d_rope, d_c, dropout=dropout)
+        self.ln2 = nn.LayerNorm(d_model)
+        self.mlp = MLP(d_model, dropout=dropout)
+
+    def forward(self, x, return_latent=False, rank_mask=None):
+        h = self.ln1(x)
+        if return_latent:
+            a, c_kv = self.attn(h, return_latent=True, rank_mask=rank_mask)
+            x = x + a
+            x = x + self.mlp(self.ln2(x))
+            return x, c_kv
+        else:
+            x = x + self.attn(h, rank_mask=rank_mask)
+            x = x + self.mlp(self.ln2(x))
+            return x
+
+
+class MLAGPT(nn.Module):
+    def __init__(self, vocab_size, d_model=384, n_layers=8, n_heads=6,
+                 d_head=64, d_rope=32, d_c=256, max_len=1024, dropout=0.0):
+        super().__init__()
+        self.tok_emb = nn.Embedding(vocab_size, d_model)
+        self.drop = nn.Dropout(dropout)
+        self.blocks = nn.ModuleList([
+            Block(d_model, n_heads, d_head, d_rope, d_c, dropout=dropout)
+            for _ in range(n_layers)
+        ])
+        self.ln_f = nn.LayerNorm(d_model)
+        self.head = nn.Linear(d_model, vocab_size, bias=False)
+        self.head.weight = self.tok_emb.weight  # weight tying
+        self.max_len = max_len
+        self.d_c = d_c
+        self.n_layers = n_layers
+        self.apply(self._init)
+
+    def _init(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.normal_(m.weight, mean=0.0, std=0.02)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+        elif isinstance(m, nn.Embedding):
+            nn.init.normal_(m.weight, mean=0.0, std=0.02)
+
+    def forward(self, idx, targets=None, rank_mask=None, layer_idx_for_latent=None):
+        x = self.drop(self.tok_emb(idx))
+        latents = {}
+        for i, blk in enumerate(self.blocks):
+            want_latent = (layer_idx_for_latent is not None and i == layer_idx_for_latent)
+            if want_latent:
+                x, c_kv = blk(x, return_latent=True, rank_mask=rank_mask)
+                latents[i] = c_kv
+            else:
+                # Returning one layer's latent must not disable rank truncation in
+                # the other layers. Keep this in sync with elastic_mla/model.py.
+                x = blk(x, rank_mask=rank_mask)
+        x = self.ln_f(x)
+        logits = self.head(x)
+        loss = None
+        if targets is not None:
+            loss = torch.nn.functional.cross_entropy(
+                logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1
+            )
+        if layer_idx_for_latent is not None:
+            return logits, loss, latents.get(layer_idx_for_latent)
+        return logits, loss
+
+    def num_params(self):
+        return sum(p.numel() for p in self.parameters())
+
+
+
+import argparse, gc
+from pathlib import Path
+from typing import Iterable, Sequence
+
+INPUT_CANDIDATES = sorted(Path("/kaggle/input").glob("*/ckpt/latest.pt"))
+if not INPUT_CANDIDATES:
+    raise FileNotFoundError("kernel-source checkpoint not mounted under /kaggle/input")
+INPUT_ROOT = INPUT_CANDIDATES[0].parents[1]
+DATA_DIR = INPUT_ROOT / "data"
+CKPT_DIR = INPUT_ROOT / "ckpt"
+OUT_DIR = Path("/kaggle/working/results")
+print(f"input root: {INPUT_ROOT}", flush=True)
+
+DEFAULT_RANK_GRID = (16, 32, 48, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384)
 CALIBRATION_SEED_BASE = 12_341
 EVALUATION_SEED = 23_452
 BOOTSTRAP_SEED = 34_563

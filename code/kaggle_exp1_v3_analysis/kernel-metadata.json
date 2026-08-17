@@ -1,0 +1,16 @@
+{
+  "id": "softkleenex/elasticmla-exp1-v3-rank-analysis-122m",
+  "title": "ElasticMLA Exp1 v3 Rank Analysis 122M",
+  "code_file": "analyze_kaggle.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": [
+    "softkleenex/elasticmla-exp1-scale-up-training-114m"
+  ]
+}
