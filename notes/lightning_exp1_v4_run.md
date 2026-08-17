@@ -15,3 +15,7 @@
 - Five-minute observation: scheduler status `Running` at approximately 345 seconds; reported total cost `0.049816668`.
 - The batch filesystem/log had not synced to the Studio file API at the check, so GPU utilization and advancing stdout were not directly observed. This is a partial scheduler health check, not a full policy health-pass or result validation.
 - Expected outputs after completion: `results_v4/analysis.log`, `results_v4/exp0_v4_summary.json`, `results_v4/exp0_v4_records.json`.
+
+## Completion
+
+Job completed successfully. SDK logs show CUDA execution, all 14 ranks completed, and both v4 JSON files written. Artifacts were downloaded from `/teamspace/jobs/elasticmla-exp1-v4-122m-0817/artifacts/`, validated locally, and the temporary CPU Studio used for retrieval was stopped.
