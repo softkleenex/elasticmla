@@ -34,7 +34,7 @@ per model rather than copying the same absolute tier set across scales.
 - Result hashes:
   - analysis log: `bdd6ead0df68b1cc70fae4f3357bb9ce177930cff321d6b6b62dfdfed6310887`
   - records: `acca0aea5be67f7c2f0f90d2905504c787d7adf5306ea17ceb1f74b81a750b38`
-  - summary: `df91d4322faa60556e9c233ca08726d4ab7311ed17e603372ddc8cd9581c3154`
+  - summary: `0c9b32f049ca92e6b8110d3a9812353ca7caf06b4427517fb48fa9b7c0e6ddc4`
 
 Results passed local checks: 768 records, six valid 256-channel permutations, summary means and
 histograms recomputed exactly, and valid rank/horizon values. The temporary retrieval Studio was stopped.

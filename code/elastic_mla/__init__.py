@@ -1,3 +1,5 @@
 from .mla import MultiHeadLatentAttention
 from .model import MLAGPT, Block, MLP
-from .router import ElasticMLAGPT, GlobalElasticMLAGPT, TieredRankRouter
+from .router import (
+    ContextualElasticMLAGPT, ElasticMLAGPT, GlobalElasticMLAGPT, TieredRankRouter,
+)

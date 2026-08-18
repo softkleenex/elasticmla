@@ -46,6 +46,28 @@ class RankVarianceWindowTests(unittest.TestCase):
             MODULE.normalize_rank_grid(MODULE.DEFAULT_RANK_GRID, 256)[-1], 256
         )
 
+    def test_masked_layers_can_leave_layer_zero_full(self):
+        import torch
+        torch.manual_seed(4)
+        model = MODULE.MLAGPT(
+            vocab_size=31, d_model=24, n_layers=2, n_heads=2,
+            d_head=8, d_rope=4, d_c=12, max_len=8,
+        ).eval()
+        idx = torch.randint(0, 31, (1, 6))
+        positions = torch.tensor([2])
+        masks = torch.zeros(2, 1, 12)
+        baseline = MODULE.forward_with_layer_masks(model, idx)
+        no_active = MODULE.forward_with_layer_masks(
+            model, idx, channel_masks=masks, probe_positions=positions,
+            masked_layers=(),
+        )
+        torch.testing.assert_close(no_active, baseline)
+        downstream_only = MODULE.forward_with_layer_masks(
+            model, idx, channel_masks=masks, probe_positions=positions,
+            masked_layers=(1,),
+        )
+        self.assertFalse(torch.allclose(downstream_only, baseline))
+
 
 if __name__ == "__main__":
     unittest.main()

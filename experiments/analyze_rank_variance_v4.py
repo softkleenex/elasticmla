@@ -40,6 +40,14 @@ EVALUATION_SEED = 23_452
 BOOTSTRAP_SEED = 34_563
 
 
+
+def file_sha256(path: Path) -> str:
+    digest = __import__("hashlib").sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(8 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
 def choose_device(requested: str = "auto") -> torch.device:
     """Select cuda > mps > cpu, or validate an explicit selection."""
     if requested == "auto":
@@ -160,6 +168,7 @@ def forward_with_layer_masks(
     *,
     channel_masks: torch.Tensor | None = None,
     probe_positions: torch.Tensor | None = None,
+    masked_layers: Sequence[int] | None = None,
 ) -> torch.Tensor:
     """Model forward with a different position-isolated channel mask per layer.
 
@@ -176,11 +185,14 @@ def forward_with_layer_masks(
         if tuple(probe_positions.shape) != (idx.shape[0],):
             raise ValueError("probe_positions must have shape (batch,)")
 
+    active_layers = set(range(model.n_layers)) if masked_layers is None else set(masked_layers)
+    if any(layer < 0 or layer >= model.n_layers for layer in active_layers):
+        raise ValueError("masked_layers contains an invalid layer index")
     hidden = model.drop(model.tok_emb(idx))
     batch_indices = torch.arange(idx.shape[0], device=idx.device)
     for layer_idx, block in enumerate(model.blocks):
         rank_mask = None
-        if channel_masks is not None:
+        if channel_masks is not None and layer_idx in active_layers:
             # Only one (source) position per batch item is intervened on.
             rank_mask = torch.ones(
                 idx.shape[0], idx.shape[1], model.d_c,
@@ -501,6 +513,8 @@ def main() -> None:
         "scope_limitation": "full-attention training/truncation simulation, not cache-aware decoding",
         "device": str(device),
         "checkpoint_step": int(checkpoint["step"]),
+        "checkpoint_sha256": file_sha256(args.checkpoint),
+        "data_sha256": file_sha256(args.data),
         "rank_grid": rank_grid,
         "epsilon_nats": args.epsilon,
         "future_horizon_exact": args.future_horizon,

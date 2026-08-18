@@ -224,3 +224,104 @@ class GlobalElasticMLAGPT(nn.Module):
 
     def packed_cache_num_bytes(self, caches):
         return self.base.packed_cache_num_bytes(caches)
+
+
+class ContextualElasticMLAGPT(nn.Module):
+    """Route shared tiers for layers 1+ from a full-rank layer-0 context.
+
+    Layer 0 always stores its full ``d_c`` latent.  Its contextual output is
+    normalized by layer 1 and fed to one lightweight router.  The selected
+    per-token tier is then shared by every downstream layer.  This makes the
+    routing decision context-dependent while keeping the intervention and cache
+    policy simple enough to evaluate exactly.
+    """
+
+    def __init__(self, base_model, channel_orders, tiers=(16, 64, 160, 256)):
+        super().__init__()
+        if base_model.n_layers < 2:
+            raise ValueError("contextual routing requires at least two layers")
+        self.base = base_model
+        self.router = TieredRankRouter(base_model.tok_emb.embedding_dim, tiers=tiers)
+        if int(self.router.tiers.max()) > base_model.d_c:
+            raise ValueError("router tiers cannot exceed the base latent dimension")
+        if len(channel_orders) != base_model.n_layers:
+            raise ValueError("channel_orders must contain one order per layer")
+        for i, order in enumerate(channel_orders):
+            order = torch.as_tensor(order, dtype=torch.long)
+            if order.shape != (base_model.d_c,) or not torch.equal(
+                torch.sort(order).values,
+                torch.arange(base_model.d_c, device=order.device),
+            ):
+                raise ValueError(f"invalid channel order for layer {i}")
+            self.register_buffer(f"channel_order_{i}", order, persistent=True)
+
+    @property
+    def channel_orders(self):
+        return [getattr(self, f"channel_order_{i}") for i in range(self.base.n_layers)]
+
+    def freeze_base(self):
+        for parameter in self.base.parameters():
+            parameter.requires_grad_(False)
+        return self
+
+    @torch.no_grad()
+    def routing_features(self, idx):
+        """Teacher-forced contextual features at layer 1's attention input."""
+        x = self.base.drop(self.base.tok_emb(idx))
+        block0 = self.base.blocks[0]
+        h0 = block0.ln1(x)
+        x = x + block0.attn(h0)
+        x = x + block0.mlp(block0.ln2(x))
+        return self.base.blocks[1].ln1(x).detach()
+
+    def forward_cached_packed(self, idx, caches=None, forced_ranks=None):
+        """Packed forward with full layer 0 and routed/shared downstream tiers."""
+        if idx.ndim != 2:
+            raise ValueError("idx must have shape (B, T_new)")
+        if caches is None:
+            caches = [None] * self.base.n_layers
+        if len(caches) != self.base.n_layers:
+            raise ValueError("wrong number of layer caches")
+        present = [cache is not None for cache in caches]
+        if any(present) and not all(present):
+            raise ValueError("packed layer caches must be all None or all populated")
+        if all(present):
+            lengths = {cache["ranks"].shape[1] for cache in caches}
+            batches = {cache["ranks"].shape[0] for cache in caches}
+            if len(lengths) != 1:
+                raise ValueError("all packed layer caches must have the same length")
+            if batches != {idx.shape[0]}:
+                raise ValueError("packed cache batch sizes must match idx")
+
+        x = self.base.drop(self.base.tok_emb(idx))
+        full_ranks = torch.full(
+            idx.shape, self.base.d_c, dtype=torch.long, device=idx.device
+        )
+        x, cache0 = self.base.blocks[0].forward_cached_packed(
+            x, cache=caches[0], ranks=full_ranks, channel_order=self.channel_orders[0]
+        )
+        feature = self.base.blocks[1].ln1(x)
+        route_logits = self.router(feature)
+        ranks = (
+            forced_ranks.to(idx.device)
+            if forced_ranks is not None
+            else self.router.select_ranks(route_logits)
+        )
+        if tuple(ranks.shape) != tuple(idx.shape):
+            raise ValueError("forced ranks must have shape (B, T_new)")
+        valid = (ranks[..., None] == self.router.tiers).any(dim=-1)
+        if not torch.all(valid):
+            raise ValueError(f"downstream ranks must belong to {self.router.tiers.tolist()}")
+
+        new_caches = [cache0]
+        for block, cache, order in zip(
+            self.base.blocks[1:], caches[1:], self.channel_orders[1:]
+        ):
+            x, new_cache = block.forward_cached_packed(
+                x, cache=cache, ranks=ranks, channel_order=order
+            )
+            new_caches.append(new_cache)
+        return self.base.head(self.base.ln_f(x)), new_caches, ranks, route_logits
+
+    def packed_cache_num_bytes(self, caches):
+        return self.base.packed_cache_num_bytes(caches)

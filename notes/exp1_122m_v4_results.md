@@ -35,7 +35,7 @@ checkpoint. It does not yet establish scale replication against the 30M model be
 
 - `analysis.log`: `498fd11c9efae7ba521b00b0bd1bb6a235b0798856b85bb604c6951bfc2699d4`
 - `exp0_v4_records.json`: `0ed88e820a06e76bba62fa7fcb9eaa09bdcff874a1134ebaa25db5564705231d`
-- `exp0_v4_summary.json`: `a3ce458f8924f13179d4826c3bca4da88f125d7dee217547c4276d31a907a15f`
+- `exp0_v4_summary.json`: `f49c9f966f3910fd682e1937f9d694f978428f44483fa77196372149065e5cb1`
 
 Scope remains a one-position full-attention truncation simulation, not joint packed-cache rollout,
 peak-memory validation, or latency evidence.

@@ -4742,5 +4742,7 @@
   },
   "token_attribution": "x_eval[b, pos] (the intervened source token)",
   "r_star_rule": "smallest grid rank for which this and every higher rank are <= epsilon",
-  "nonmonotonic_rule": "any adjacent raw delta increase greater than 0.0 as retained rank increases"
+  "nonmonotonic_rule": "any adjacent raw delta increase greater than 0.0 as retained rank increases",
+  "checkpoint_sha256": "eeb8abf6366399298350eb183d2ff740b0966b9e1bf4426adaa6dde60dcf8b93",
+  "data_sha256": "03246b576bb789ac6bf15996fd642167008620f2ee96d8a45496d69c13f073ce"
 }
