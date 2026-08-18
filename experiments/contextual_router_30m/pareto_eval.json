@@ -1,0 +1,99 @@
+{
+  "device": "mps",
+  "test_sequences": [
+    9,
+    12,
+    19,
+    21
+  ],
+  "n_shuffles": 20,
+  "full_mla": {
+    "loss": 1.966450810432434,
+    "ppl": 7.145271508375059
+  },
+  "fixed_width_mla_bytes": 1769472,
+  "standard_mha_theoretical_bytes": 4718592,
+  "fixed_downstream_tiers": {
+    "16": {
+      "loss": 2.9804208874702454,
+      "delta_loss": 1.0139700770378113,
+      "bytes": 552984.0,
+      "over_fixed_mla": 0.3125135633680556
+    },
+    "64": {
+      "loss": 2.5255525708198547,
+      "delta_loss": 0.5591017603874207,
+      "bytes": 798744.0,
+      "over_fixed_mla": 0.4514024522569444
+    },
+    "160": {
+      "loss": 2.085964560508728,
+      "delta_loss": 0.11951375007629395,
+      "bytes": 1290264.0,
+      "over_fixed_mla": 0.7291802300347222
+    },
+    "256": {
+      "loss": 1.966450810432434,
+      "delta_loss": 0.0,
+      "bytes": 1781784.0,
+      "over_fixed_mla": 1.0069580078125
+    }
+  },
+  "policies": {
+    "mean": {
+      "loss": 2.980230212211609,
+      "ppl": 19.69234954231811,
+      "delta_loss": 1.0137794017791748,
+      "bytes": 553704.0,
+      "over_fixed_mla": 0.3129204644097222,
+      "average_downstream_rank": 16.140625,
+      "rank_hist": {
+        "16": 1021,
+        "64": 3,
+        "160": 0,
+        "256": 0
+      },
+      "matched_budget_shuffled_loss": 2.9791693717241285,
+      "router_minus_shuffled_loss": 0.0010608404874803412,
+      "sequence_differences": [
+        0.0,
+        0.002615213394165039,
+        0.0016281485557554376,
+        0.0
+      ],
+      "exploratory_sequence_bootstrap_95pct_ci": [
+        0.0,
+        0.0021216809749602383
+      ],
+      "matched_budget_control": "exact per-sequence tier histogram shuffled across token positions"
+    },
+    "max": {
+      "loss": 2.0670793056488037,
+      "ppl": 7.901710900026783,
+      "delta_loss": 0.10062849521636963,
+      "bytes": 1351224.0,
+      "over_fixed_mla": 0.7636311848958334,
+      "average_downstream_rank": 171.90625,
+      "rank_hist": {
+        "16": 172,
+        "64": 55,
+        "160": 357,
+        "256": 440
+      },
+      "matched_budget_shuffled_loss": 2.120011958479881,
+      "router_minus_shuffled_loss": -0.0529326528310774,
+      "sequence_differences": [
+        -0.033441686630248935,
+        -0.08701937198638898,
+        -0.03423649072647095,
+        -0.05703306198120117
+      ],
+      "exploratory_sequence_bootstrap_95pct_ci": [
+        -0.07382365167140947,
+        -0.03383908867835994
+      ],
+      "matched_budget_control": "exact per-sequence tier histogram shuffled across token positions"
+    }
+  },
+  "method": "layer0 full rank; tier applies to layers1+"
+}
