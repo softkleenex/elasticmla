@@ -61,3 +61,7 @@ or latency gains.
 ## Same-budget static-rank check
 
 At nearly identical bytes, uniform downstream rank 172 achieved loss 2.0611 versus 2.0671 for the contextual max router. Thus the router beats shuffled placement but does **not** yet dominate a continuous fixed-rank baseline. This blocks a general Pareto-superiority claim and motivates validation-selected rollout-aware bias/floor calibration.
+
+## Validation-only rollout calibration
+
+A 32-policy grid over risk bias and minimum tier was selected strictly on validation with a +0.15 loss constraint. The unmodified policy was selected. It beat static rank 176 on validation by 0.0089 nats but lost to static rank 172 on test by 0.0060, so the apparent validation Pareto gain did not generalize.

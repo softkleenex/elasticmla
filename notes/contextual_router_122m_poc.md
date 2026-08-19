@@ -38,3 +38,7 @@ At both 30M and 122M, contextual ordering improves over random placement at an i
 histogram, demonstrating a reproducible content-aware signal. At both scales the max router
 fails to dominate the same-byte uniform rank. Next work must calibrate router risk bias/floors on
 validation joint-rollout loss and evaluate once on the untouched test split.
+
+## Validation-only rollout calibration
+
+A 32-policy risk-bias/floor grid found zero validation candidates that both stayed within +0.15 loss and beat the same-rank static baseline. The unmodified policy remained selected and was worse than static rank 298 on test by 0.0398 nats. Post-hoc calibration is insufficient; direct joint-rollout optimization is required.

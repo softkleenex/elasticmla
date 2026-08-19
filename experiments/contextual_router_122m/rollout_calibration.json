@@ -1,0 +1,708 @@
+{
+  "selection": "validation only: minimum bytes subject to delta-loss threshold and beating same-rank static when feasible",
+  "max_delta_loss": 0.15,
+  "validation_sequences": [
+    0,
+    7,
+    13,
+    22
+  ],
+  "test_sequences": [
+    9,
+    12,
+    19,
+    21
+  ],
+  "n_candidates": 32,
+  "n_feasible": 0,
+  "chosen_validation": {
+    "bias": 0,
+    "floor_index": 0,
+    "floor_tier": 24,
+    "loss": 1.6698967218399048,
+    "full_loss": 1.5572296679019928,
+    "delta_loss": 0.11266705393791199,
+    "bytes": 6119040.0,
+    "average_rank": 290.15625,
+    "static_rank": 290,
+    "static_loss": 1.5914007425308228,
+    "static_bytes": 6116400.0,
+    "router_minus_static_loss": 0.07849597930908203,
+    "rank_hist": {
+      "24": 174,
+      "96": 82,
+      "240": 402,
+      "384": 878
+    }
+  },
+  "test": {
+    "bias": 0,
+    "floor_index": 0,
+    "floor_tier": 24,
+    "loss": 1.956601470708847,
+    "full_loss": 1.898238331079483,
+    "delta_loss": 0.058363139629364014,
+    "bytes": 6243384.0,
+    "average_rank": 297.515625,
+    "static_rank": 298,
+    "static_loss": 1.9168061017990112,
+    "static_bytes": 6251568.0,
+    "router_minus_static_loss": 0.039795368909835815,
+    "rank_hist": {
+      "24": 171,
+      "96": 100,
+      "240": 295,
+      "384": 970
+    },
+    "matched_shuffle_loss": 2.0451091021299366,
+    "router_minus_shuffle_loss": -0.08850763142108953,
+    "sequence_router_minus_shuffle": [
+      -0.022169530391693115,
+      -0.1152484953403472,
+      -0.1306574583053588,
+      -0.08595504164695744
+    ]
+  },
+  "validation_candidates": [
+    {
+      "bias": 0,
+      "floor_index": 0,
+      "floor_tier": 24,
+      "loss": 1.6698967218399048,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.11266705393791199,
+      "bytes": 6119040.0,
+      "average_rank": 290.15625,
+      "static_rank": 290,
+      "static_loss": 1.5914007425308228,
+      "static_bytes": 6116400.0,
+      "router_minus_static_loss": 0.07849597930908203,
+      "rank_hist": {
+        "24": 174,
+        "96": 82,
+        "240": 402,
+        "384": 878
+      }
+    },
+    {
+      "bias": 0,
+      "floor_index": 1,
+      "floor_tier": 96,
+      "loss": 1.6362201273441315,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.07899045944213867,
+      "bytes": 6256848.0,
+      "average_rank": 298.3125,
+      "static_rank": 298,
+      "static_loss": 1.5875494480133057,
+      "static_bytes": 6251568.0,
+      "router_minus_static_loss": 0.048670679330825806,
+      "rank_hist": {
+        "24": 0,
+        "96": 256,
+        "240": 402,
+        "384": 878
+      }
+    },
+    {
+      "bias": 0,
+      "floor_index": 2,
+      "floor_tier": 240,
+      "loss": 1.5929763913154602,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.03574672341346741,
+      "bytes": 6662352.0,
+      "average_rank": 322.3125,
+      "static_rank": 322,
+      "static_loss": 1.575579822063446,
+      "static_bytes": 6657072.0,
+      "router_minus_static_loss": 0.01739656925201416,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 658,
+        "384": 878
+      }
+    },
+    {
+      "bias": 0,
+      "floor_index": 3,
+      "floor_tier": 384,
+      "loss": 1.5572296679019928,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.0,
+      "bytes": 7704624.0,
+      "average_rank": 384.0,
+      "static_rank": 384,
+      "static_loss": 1.5572296679019928,
+      "static_bytes": 7704624.0,
+      "router_minus_static_loss": 0.0,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 0,
+        "384": 1536
+      }
+    },
+    {
+      "bias": 0.25,
+      "floor_index": 0,
+      "floor_tier": 24,
+      "loss": 1.6624508202075958,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.10522115230560303,
+      "bytes": 6195072.0,
+      "average_rank": 294.65625,
+      "static_rank": 295,
+      "static_loss": 1.5874939858913422,
+      "static_bytes": 6200880.0,
+      "router_minus_static_loss": 0.07495683431625366,
+      "rank_hist": {
+        "24": 156,
+        "96": 80,
+        "240": 403,
+        "384": 897
+      }
+    },
+    {
+      "bias": 0.25,
+      "floor_index": 1,
+      "floor_tier": 96,
+      "loss": 1.634741097688675,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.07751142978668213,
+      "bytes": 6318624.0,
+      "average_rank": 301.96875,
+      "static_rank": 302,
+      "static_loss": 1.5858424603939056,
+      "static_bytes": 6319152.0,
+      "router_minus_static_loss": 0.04889863729476929,
+      "rank_hist": {
+        "24": 0,
+        "96": 236,
+        "240": 403,
+        "384": 897
+      }
+    },
+    {
+      "bias": 0.25,
+      "floor_index": 2,
+      "floor_tier": 240,
+      "loss": 1.5923936069011688,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.035163938999176025,
+      "bytes": 6692448.0,
+      "average_rank": 324.09375,
+      "static_rank": 324,
+      "static_loss": 1.574256807565689,
+      "static_bytes": 6690864.0,
+      "router_minus_static_loss": 0.018136799335479736,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 639,
+        "384": 897
+      }
+    },
+    {
+      "bias": 0.25,
+      "floor_index": 3,
+      "floor_tier": 384,
+      "loss": 1.5572296679019928,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.0,
+      "bytes": 7704624.0,
+      "average_rank": 384.0,
+      "static_rank": 384,
+      "static_loss": 1.5572296679019928,
+      "static_bytes": 7704624.0,
+      "router_minus_static_loss": 0.0,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 0,
+        "384": 1536
+      }
+    },
+    {
+      "bias": 0.5,
+      "floor_index": 0,
+      "floor_tier": 24,
+      "loss": 1.6550289690494537,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.09779930114746094,
+      "bytes": 6263184.0,
+      "average_rank": 298.6875,
+      "static_rank": 299,
+      "static_loss": 1.5879145860671997,
+      "static_bytes": 6268464.0,
+      "router_minus_static_loss": 0.06711438298225403,
+      "rank_hist": {
+        "24": 144,
+        "96": 77,
+        "240": 396,
+        "384": 919
+      }
+    },
+    {
+      "bias": 0.5,
+      "floor_index": 1,
+      "floor_tier": 96,
+      "loss": 1.6314288675785065,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.07419919967651367,
+      "bytes": 6377232.0,
+      "average_rank": 305.4375,
+      "static_rank": 305,
+      "static_loss": 1.5842899084091187,
+      "static_bytes": 6369840.0,
+      "router_minus_static_loss": 0.04713895916938782,
+      "rank_hist": {
+        "24": 0,
+        "96": 221,
+        "240": 396,
+        "384": 919
+      }
+    },
+    {
+      "bias": 0.5,
+      "floor_index": 2,
+      "floor_tier": 240,
+      "loss": 1.5929385125637054,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.035708844661712646,
+      "bytes": 6727296.0,
+      "average_rank": 326.15625,
+      "static_rank": 326,
+      "static_loss": 1.57265904545784,
+      "static_bytes": 6724656.0,
+      "router_minus_static_loss": 0.02027946710586548,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 617,
+        "384": 919
+      }
+    },
+    {
+      "bias": 0.5,
+      "floor_index": 3,
+      "floor_tier": 384,
+      "loss": 1.5572296679019928,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.0,
+      "bytes": 7704624.0,
+      "average_rank": 384.0,
+      "static_rank": 384,
+      "static_loss": 1.5572296679019928,
+      "static_bytes": 7704624.0,
+      "router_minus_static_loss": 0.0,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 0,
+        "384": 1536
+      }
+    },
+    {
+      "bias": 1,
+      "floor_index": 0,
+      "floor_tier": 24,
+      "loss": 1.6415567994117737,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.08432713150978088,
+      "bytes": 6385152.0,
+      "average_rank": 305.90625,
+      "static_rank": 306,
+      "static_loss": 1.5842300355434418,
+      "static_bytes": 6386736.0,
+      "router_minus_static_loss": 0.05732676386833191,
+      "rank_hist": {
+        "24": 124,
+        "96": 66,
+        "240": 391,
+        "384": 955
+      }
+    },
+    {
+      "bias": 1,
+      "floor_index": 1,
+      "floor_tier": 96,
+      "loss": 1.6220768988132477,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.06484723091125488,
+      "bytes": 6483360.0,
+      "average_rank": 311.71875,
+      "static_rank": 312,
+      "static_loss": 1.5800288021564484,
+      "static_bytes": 6488112.0,
+      "router_minus_static_loss": 0.042048096656799316,
+      "rank_hist": {
+        "24": 0,
+        "96": 190,
+        "240": 391,
+        "384": 955
+      }
+    },
+    {
+      "bias": 1,
+      "floor_index": 2,
+      "floor_tier": 240,
+      "loss": 1.5880402624607086,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.03081059455871582,
+      "bytes": 6784320.0,
+      "average_rank": 329.53125,
+      "static_rank": 330,
+      "static_loss": 1.5710850656032562,
+      "static_bytes": 6792240.0,
+      "router_minus_static_loss": 0.016955196857452393,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 581,
+        "384": 955
+      }
+    },
+    {
+      "bias": 1,
+      "floor_index": 3,
+      "floor_tier": 384,
+      "loss": 1.5572296679019928,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.0,
+      "bytes": 7704624.0,
+      "average_rank": 384.0,
+      "static_rank": 384,
+      "static_loss": 1.5572296679019928,
+      "static_bytes": 7704624.0,
+      "router_minus_static_loss": 0.0,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 0,
+        "384": 1536
+      }
+    },
+    {
+      "bias": 1.5,
+      "floor_index": 0,
+      "floor_tier": 24,
+      "loss": 1.6320164203643799,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.07478675246238708,
+      "bytes": 6482568.0,
+      "average_rank": 311.671875,
+      "static_rank": 312,
+      "static_loss": 1.5800288021564484,
+      "static_bytes": 6488112.0,
+      "router_minus_static_loss": 0.05198761820793152,
+      "rank_hist": {
+        "24": 107,
+        "96": 57,
+        "240": 390,
+        "384": 982
+      }
+    },
+    {
+      "bias": 1.5,
+      "floor_index": 1,
+      "floor_tier": 96,
+      "loss": 1.6151511669158936,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.05792149901390076,
+      "bytes": 6567312.0,
+      "average_rank": 316.6875,
+      "static_rank": 317,
+      "static_loss": 1.576821893453598,
+      "static_bytes": 6572592.0,
+      "router_minus_static_loss": 0.03832927346229553,
+      "rank_hist": {
+        "24": 0,
+        "96": 164,
+        "240": 390,
+        "384": 982
+      }
+    },
+    {
+      "bias": 1.5,
+      "floor_index": 2,
+      "floor_tier": 240,
+      "loss": 1.5851553082466125,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.02792564034461975,
+      "bytes": 6827088.0,
+      "average_rank": 332.0625,
+      "static_rank": 332,
+      "static_loss": 1.5718097984790802,
+      "static_bytes": 6826032.0,
+      "router_minus_static_loss": 0.013345509767532349,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 554,
+        "384": 982
+      }
+    },
+    {
+      "bias": 1.5,
+      "floor_index": 3,
+      "floor_tier": 384,
+      "loss": 1.5572296679019928,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.0,
+      "bytes": 7704624.0,
+      "average_rank": 384.0,
+      "static_rank": 384,
+      "static_loss": 1.5572296679019928,
+      "static_bytes": 7704624.0,
+      "router_minus_static_loss": 0.0,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 0,
+        "384": 1536
+      }
+    },
+    {
+      "bias": 2,
+      "floor_index": 0,
+      "floor_tier": 24,
+      "loss": 1.6258502006530762,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.06862053275108337,
+      "bytes": 6587904.0,
+      "average_rank": 317.90625,
+      "static_rank": 318,
+      "static_loss": 1.576342612504959,
+      "static_bytes": 6589488.0,
+      "router_minus_static_loss": 0.049507588148117065,
+      "rank_hist": {
+        "24": 90,
+        "96": 54,
+        "240": 372,
+        "384": 1020
+      }
+    },
+    {
+      "bias": 2,
+      "floor_index": 1,
+      "floor_tier": 96,
+      "loss": 1.6113470792770386,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.054117411375045776,
+      "bytes": 6659184.0,
+      "average_rank": 322.125,
+      "static_rank": 322,
+      "static_loss": 1.575579822063446,
+      "static_bytes": 6657072.0,
+      "router_minus_static_loss": 0.03576725721359253,
+      "rank_hist": {
+        "24": 0,
+        "96": 144,
+        "240": 372,
+        "384": 1020
+      }
+    },
+    {
+      "bias": 2,
+      "floor_index": 2,
+      "floor_tier": 240,
+      "loss": 1.5847988724708557,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.027569204568862915,
+      "bytes": 6887280.0,
+      "average_rank": 335.625,
+      "static_rank": 336,
+      "static_loss": 1.57035493850708,
+      "static_bytes": 6893616.0,
+      "router_minus_static_loss": 0.014443933963775635,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 516,
+        "384": 1020
+      }
+    },
+    {
+      "bias": 2,
+      "floor_index": 3,
+      "floor_tier": 384,
+      "loss": 1.5572296679019928,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.0,
+      "bytes": 7704624.0,
+      "average_rank": 384.0,
+      "static_rank": 384,
+      "static_loss": 1.5572296679019928,
+      "static_bytes": 7704624.0,
+      "router_minus_static_loss": 0.0,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 0,
+        "384": 1536
+      }
+    },
+    {
+      "bias": 3,
+      "floor_index": 0,
+      "floor_tier": 24,
+      "loss": 1.6085787117481232,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.05134904384613037,
+      "bytes": 6770856.0,
+      "average_rank": 328.734375,
+      "static_rank": 329,
+      "static_loss": 1.5721173286437988,
+      "static_bytes": 6775344.0,
+      "router_minus_static_loss": 0.03646138310432434,
+      "rank_hist": {
+        "24": 69,
+        "96": 39,
+        "240": 339,
+        "384": 1089
+      }
+    },
+    {
+      "bias": 3,
+      "floor_index": 1,
+      "floor_tier": 96,
+      "loss": 1.5969054400920868,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.039675772190093994,
+      "bytes": 6825504.0,
+      "average_rank": 331.96875,
+      "static_rank": 332,
+      "static_loss": 1.5718097984790802,
+      "static_bytes": 6826032.0,
+      "router_minus_static_loss": 0.025095641613006592,
+      "rank_hist": {
+        "24": 0,
+        "96": 108,
+        "240": 339,
+        "384": 1089
+      }
+    },
+    {
+      "bias": 3,
+      "floor_index": 2,
+      "floor_tier": 240,
+      "loss": 1.578576236963272,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.021346569061279297,
+      "bytes": 6996576.0,
+      "average_rank": 342.09375,
+      "static_rank": 342,
+      "static_loss": 1.5676635801792145,
+      "static_bytes": 6994992.0,
+      "router_minus_static_loss": 0.010912656784057617,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 447,
+        "384": 1089
+      }
+    },
+    {
+      "bias": 3,
+      "floor_index": 3,
+      "floor_tier": 384,
+      "loss": 1.5572296679019928,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.0,
+      "bytes": 7704624.0,
+      "average_rank": 384.0,
+      "static_rank": 384,
+      "static_loss": 1.5572296679019928,
+      "static_bytes": 7704624.0,
+      "router_minus_static_loss": 0.0,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 0,
+        "384": 1536
+      }
+    },
+    {
+      "bias": 4,
+      "floor_index": 0,
+      "floor_tier": 24,
+      "loss": 1.5892472565174103,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.03201758861541748,
+      "bytes": 6971232.0,
+      "average_rank": 340.59375,
+      "static_rank": 341,
+      "static_loss": 1.5682438611984253,
+      "static_bytes": 6978096.0,
+      "router_minus_static_loss": 0.021003395318984985,
+      "rank_hist": {
+        "24": 44,
+        "96": 24,
+        "240": 305,
+        "384": 1163
+      }
+    },
+    {
+      "bias": 4,
+      "floor_index": 1,
+      "floor_tier": 96,
+      "loss": 1.5832991003990173,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.026069432497024536,
+      "bytes": 7006080.0,
+      "average_rank": 342.65625,
+      "static_rank": 343,
+      "static_loss": 1.567070871591568,
+      "static_bytes": 7011888.0,
+      "router_minus_static_loss": 0.01622822880744934,
+      "rank_hist": {
+        "24": 0,
+        "96": 68,
+        "240": 305,
+        "384": 1163
+      }
+    },
+    {
+      "bias": 4,
+      "floor_index": 2,
+      "floor_tier": 240,
+      "loss": 1.5743378698825836,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.01710820198059082,
+      "bytes": 7113792.0,
+      "average_rank": 349.03125,
+      "static_rank": 349,
+      "static_loss": 1.5654604136943817,
+      "static_bytes": 7113264.0,
+      "router_minus_static_loss": 0.008877456188201904,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 373,
+        "384": 1163
+      }
+    },
+    {
+      "bias": 4,
+      "floor_index": 3,
+      "floor_tier": 384,
+      "loss": 1.5572296679019928,
+      "full_loss": 1.5572296679019928,
+      "delta_loss": 0.0,
+      "bytes": 7704624.0,
+      "average_rank": 384.0,
+      "static_rank": 384,
+      "static_loss": 1.5572296679019928,
+      "static_bytes": 7704624.0,
+      "router_minus_static_loss": 0.0,
+      "rank_hist": {
+        "24": 0,
+        "96": 0,
+        "240": 0,
+        "384": 1536
+      }
+    }
+  ]
+}
