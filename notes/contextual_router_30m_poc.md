@@ -57,3 +57,7 @@ or latency gains.
 - Reported cost: 0.11297222
 - Five-minute scheduler check: Running
 - All 35 unit tests passed before oracle generation
+
+## Same-budget static-rank check
+
+At nearly identical bytes, uniform downstream rank 172 achieved loss 2.0611 versus 2.0671 for the contextual max router. Thus the router beats shuffled placement but does **not** yet dominate a continuous fixed-rank baseline. This blocks a general Pareto-superiority claim and motivates validation-selected rollout-aware bias/floor calibration.

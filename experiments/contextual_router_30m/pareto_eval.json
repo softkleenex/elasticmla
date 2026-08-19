@@ -65,7 +65,12 @@
         0.0,
         0.0021216809749602383
       ],
-      "matched_budget_control": "exact per-sequence tier histogram shuffled across token positions"
+      "matched_budget_control": "exact per-sequence tier histogram shuffled across token positions",
+      "static_rounded_mean_rank_control": {
+        "downstream_rank": 16,
+        "loss": 2.9804208874702454,
+        "bytes": 552984.0
+      }
     },
     "max": {
       "loss": 2.0670793056488037,
@@ -92,7 +97,12 @@
         -0.07382365167140947,
         -0.03383908867835994
       ],
-      "matched_budget_control": "exact per-sequence tier histogram shuffled across token positions"
+      "matched_budget_control": "exact per-sequence tier histogram shuffled across token positions",
+      "static_rounded_mean_rank_control": {
+        "downstream_rank": 172,
+        "loss": 2.0610546469688416,
+        "bytes": 1351704.0
+      }
     }
   },
   "method": "layer0 full rank; tier applies to layers1+"

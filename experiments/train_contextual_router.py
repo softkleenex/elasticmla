@@ -23,13 +23,13 @@ def macro_f1(p,t,tiers,observed_only=False):
   a,b=p==x,t==x;tp=(a&b).sum().item();fp=(a&~b).sum().item();fn=(~a&b).sum().item();out.append(0 if 2*tp+fp+fn==0 else 2*tp/(2*tp+fp+fn))
  return float(np.mean(out))
 def main():
- ap=argparse.ArgumentParser();ap.add_argument("--objective",choices=("mean","max"),required=True);ap.add_argument("--epochs",type=int,default=250);ap.add_argument("--seed",type=int,default=2027);ap.add_argument("--lr",type=float,default=2e-3);ap.add_argument("--batch-size",type=int,default=64);args=ap.parse_args();torch.manual_seed(args.seed);np.random.seed(args.seed);dev=device_auto()
- summary_path=ORACLE_DIR/"contextual_oracle_v1_summary.json";records_path=ORACLE_DIR/"contextual_oracle_v1_records.json";summary=json.load(open(summary_path));records=json.load(open(records_path));tiers=summary["deployment_tiers"]
- if file_sha(CKPT)!=summary["checkpoint_sha256"] or file_sha(DATA)!=summary["data_sha256"]:raise ValueError("training checkpoint/data do not match oracle provenance")
- ck=torch.load(CKPT,map_location=dev,weights_only=False);base=MLAGPT(**ck["config"]).to(dev).eval();base.load_state_dict(ck["model"],strict=True)
+ ap=argparse.ArgumentParser();ap.add_argument("--objective",choices=("mean","max"),required=True);ap.add_argument("--epochs",type=int,default=250);ap.add_argument("--seed",type=int,default=2027);ap.add_argument("--lr",type=float,default=2e-3);ap.add_argument("--batch-size",type=int,default=64);ap.add_argument("--checkpoint",type=Path,default=CKPT);ap.add_argument("--data",type=Path,default=DATA);ap.add_argument("--oracle-dir",type=Path,default=ORACLE_DIR);ap.add_argument("--output-dir",type=Path,default=ROOT/"experiments/contextual_router_30m");args=ap.parse_args();torch.manual_seed(args.seed);np.random.seed(args.seed);dev=device_auto()
+ summary_path=args.oracle_dir/"contextual_oracle_v1_summary.json";records_path=args.oracle_dir/"contextual_oracle_v1_records.json";summary=json.load(open(summary_path));records=json.load(open(records_path));tiers=summary["deployment_tiers"]
+ if file_sha(args.checkpoint)!=summary["checkpoint_sha256"] or file_sha(args.data)!=summary["data_sha256"]:raise ValueError("training checkpoint/data do not match oracle provenance")
+ ck=torch.load(args.checkpoint,map_location=dev,weights_only=False);base=MLAGPT(**ck["config"]).to(dev).eval();base.load_state_dict(ck["model"],strict=True)
  model=ContextualElasticMLAGPT(base,[torch.tensor(o) for o in summary["layer_channel_orders"]],tiers).to(dev).freeze_base();seqs=sorted({r["seq"] for r in records});splits={"val":[0,7,13,22],"test":[9,12,19,21]};splits["train"]=sorted(set(seqs)-set(splits["val"])-set(splits["test"]));split_of={s:k for k,v in splits.items() for s in v};by={s:[] for s in seqs}
  for r in records:by[r["seq"]].append(r)
- data=np.memmap(DATA,dtype=np.uint16,mode="r");features=[];labels=[];split_names=[]
+ data=np.memmap(args.data,dtype=np.uint16,mode="r");features=[];labels=[];split_names=[]
  with torch.no_grad():
   for s in seqs:
    rows=sorted(by[s],key=lambda r:r["pos"]);start=rows[0]["sequence_start"];arr=np.asarray(data[start:start+ck["config"]["max_len"]],dtype=np.int64);f=model.routing_features(torch.from_numpy(arr.copy())[None].to(dev))[0].cpu()
@@ -46,5 +46,5 @@ def main():
  model.router.load_state_dict(state);ix=torch.where(masks["test"])[0];target=labels[ix].to(dev)
  with torch.no_grad():pred=model.router.select_ranks(model.router(features[ix].to(dev)))
  metrics={"objective":args.objective,"tiers":tiers,"split_sequences":splits,"best_val_macro_f1":best,"test_accuracy":float((pred==target).float().mean()),"test_macro_f1":macro_f1(pred.cpu(),target.cpu(),tiers),"test_observed_tier_macro_f1":macro_f1(pred.cpu(),target.cpu(),tiers,observed_only=True),"predicted_mean_rank":float(pred.float().mean()),"target_mean_rank":float(target.float().mean()),"train_class_counts":{str(t):int(c) for t,c in zip(tiers,counts)},"feature":"layer1 pre-attention LN after full-rank contextual layer0","split_strategy":"fixed sequence-group stratification ensuring rare mean-tier coverage in val/test"}
- out=ROOT/"experiments/contextual_router_30m";torch.save({"router":state,"tiers":tiers,"objective":args.objective,"split_sequences":splits,"channel_orders":summary["layer_channel_orders"],"checkpoint_sha256":summary["checkpoint_sha256"],"data_sha256":summary["data_sha256"],"oracle_summary_sha256":file_sha(summary_path),"oracle_records_sha256":file_sha(records_path)},out/f"router_{args.objective}.pt");json.dump(metrics,open(out/f"metrics_{args.objective}.json","w"),indent=2);print(json.dumps(metrics,indent=2))
+ out=args.output_dir;out.mkdir(parents=True,exist_ok=True);torch.save({"router":state,"tiers":tiers,"objective":args.objective,"split_sequences":splits,"channel_orders":summary["layer_channel_orders"],"checkpoint_sha256":summary["checkpoint_sha256"],"data_sha256":summary["data_sha256"],"oracle_summary_sha256":file_sha(summary_path),"oracle_records_sha256":file_sha(records_path)},out/f"router_{args.objective}.pt");json.dump(metrics,open(out/f"metrics_{args.objective}.json","w"),indent=2);print(json.dumps(metrics,indent=2))
 if __name__=="__main__":main()

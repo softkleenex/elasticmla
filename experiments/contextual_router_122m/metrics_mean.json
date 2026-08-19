@@ -1,0 +1,55 @@
+{
+  "objective": "mean",
+  "tiers": [
+    24,
+    96,
+    240,
+    384
+  ],
+  "split_sequences": {
+    "val": [
+      0,
+      7,
+      13,
+      22
+    ],
+    "test": [
+      9,
+      12,
+      19,
+      21
+    ],
+    "train": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      10,
+      11,
+      14,
+      15,
+      16,
+      17,
+      18,
+      20,
+      23
+    ]
+  },
+  "best_val_macro_f1": 0.40747126436781606,
+  "test_accuracy": 0.875,
+  "test_macro_f1": 0.23529411764705882,
+  "test_observed_tier_macro_f1": 0.23529411764705882,
+  "predicted_mean_rank": 28.5,
+  "target_mean_rank": 37.5,
+  "train_class_counts": {
+    "24": 467,
+    "96": 31,
+    "240": 11,
+    "384": 3
+  },
+  "feature": "layer1 pre-attention LN after full-rank contextual layer0",
+  "split_strategy": "fixed sequence-group stratification ensuring rare mean-tier coverage in val/test"
+}

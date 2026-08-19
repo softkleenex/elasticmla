@@ -1,0 +1,109 @@
+{
+  "device": "mps",
+  "test_sequences": [
+    9,
+    12,
+    19,
+    21
+  ],
+  "n_shuffles": 20,
+  "full_mla": {
+    "loss": 1.898238331079483,
+    "ppl": 6.674126478505935
+  },
+  "fixed_width_mla_bytes": 7667712,
+  "standard_mha_theoretical_bytes": 28311552,
+  "fixed_downstream_tiers": {
+    "24": {
+      "loss": 3.615900754928589,
+      "delta_loss": 1.7176624238491058,
+      "bytes": 1622064.0,
+      "over_fixed_mla": 0.21154472155448717
+    },
+    "96": {
+      "loss": 2.697217285633087,
+      "delta_loss": 0.7989789545536041,
+      "bytes": 2838576.0,
+      "over_fixed_mla": 0.3701985677083333
+    },
+    "240": {
+      "loss": 1.9902476966381073,
+      "delta_loss": 0.09200936555862427,
+      "bytes": 5271600.0,
+      "over_fixed_mla": 0.6875062600160257
+    },
+    "384": {
+      "loss": 1.898238331079483,
+      "delta_loss": 0.0,
+      "bytes": 7704624.0,
+      "over_fixed_mla": 1.0048139523237178
+    }
+  },
+  "policies": {
+    "mean": {
+      "loss": 3.4277051091194153,
+      "ppl": 30.805865467939462,
+      "delta_loss": 1.5294667780399323,
+      "bytes": 1726608.0,
+      "over_fixed_mla": 0.22517903645833334,
+      "average_downstream_rank": 30.1875,
+      "rank_hist": {
+        "24": 1416,
+        "96": 114,
+        "240": 6,
+        "384": 0
+      },
+      "matched_budget_shuffled_loss": 3.5304340004920958,
+      "router_minus_shuffled_loss": -0.10272889137268049,
+      "sequence_differences": [
+        -0.1312138080596923,
+        -0.13333157300949106,
+        -0.09335532188415518,
+        -0.053014862537383856
+      ],
+      "exploratory_sequence_bootstrap_95pct_ci": [
+        -0.13227269053459167,
+        -0.07256459891796097
+      ],
+      "matched_budget_control": "exact per-sequence tier histogram shuffled across token positions",
+      "static_rounded_mean_rank_control": {
+        "downstream_rank": 30,
+        "loss": 3.5183274149894714,
+        "bytes": 1723440.0
+      }
+    },
+    "max": {
+      "loss": 1.956601470708847,
+      "ppl": 7.0752407463912235,
+      "delta_loss": 0.058363139629364014,
+      "bytes": 6243384.0,
+      "over_fixed_mla": 0.8142434144631411,
+      "average_downstream_rank": 297.515625,
+      "rank_hist": {
+        "24": 171,
+        "96": 100,
+        "240": 295,
+        "384": 970
+      },
+      "matched_budget_shuffled_loss": 2.044302174448967,
+      "router_minus_shuffled_loss": -0.08770070374011985,
+      "sequence_differences": [
+        -0.01477403640747088,
+        -0.128012704849243,
+        -0.12444777488708492,
+        -0.08356829881668082
+      ],
+      "exploratory_sequence_bootstrap_95pct_ci": [
+        -0.12623023986816395,
+        -0.04219247102737439
+      ],
+      "matched_budget_control": "exact per-sequence tier histogram shuffled across token positions",
+      "static_rounded_mean_rank_control": {
+        "downstream_rank": 298,
+        "loss": 1.9168061017990112,
+        "bytes": 6251568.0
+      }
+    }
+  },
+  "method": "layer0 full rank; tier applies to layers1+"
+}
