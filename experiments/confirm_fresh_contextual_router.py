@@ -76,6 +76,9 @@ def main():
     parser.add_argument("--oracle-summary", type=Path, required=True)
     parser.add_argument("--oracle-records", type=Path, required=True)
     parser.add_argument("--policy", type=Path, required=True)
+    parser.add_argument("--protocol-manifest", type=Path, required=True)
+    parser.add_argument("--contextual-summary", type=Path, required=True)
+    parser.add_argument("--scale", choices=("30m", "122m"), required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=91_827)
     parser.add_argument("--n-sequences", type=int, default=24)
@@ -91,6 +94,24 @@ def main():
 
     oracle = json.load(open(args.oracle_summary))
     old_records = json.load(open(args.oracle_records))
+    contextual = json.load(open(args.contextual_summary))
+    manifest = json.load(open(args.protocol_manifest))
+    expected = manifest["scales"][args.scale]
+    actual_inputs = {
+        "policy_sha256": file_sha(args.policy),
+        "source_summary_sha256": file_sha(args.oracle_summary),
+        "source_records_sha256": file_sha(args.oracle_records),
+        "contextual_summary_sha256": file_sha(args.contextual_summary),
+    }
+    if actual_inputs != {key: expected[key] for key in actual_inputs}:
+        raise ValueError("run inputs do not match frozen protocol manifest")
+    if (args.seed, args.n_sequences, args.control_repeats) != (
+        manifest["seed"], manifest["n_sequences"], manifest["control_repeats"]
+    ):
+        raise ValueError("run parameters do not match frozen protocol manifest")
+    if (contextual["source_summary_sha256"] != actual_inputs["source_summary_sha256"]
+            or contextual["source_records_sha256"] != actual_inputs["source_records_sha256"]):
+        raise ValueError("source summary/records are not authenticated by contextual oracle")
     policy = torch.load(args.policy, map_location="cpu", weights_only=False)
     checkpoint_hash, data_hash = file_sha(args.checkpoint), file_sha(args.data)
     if checkpoint_hash != oracle["checkpoint_sha256"] or data_hash != oracle["data_sha256"]:
@@ -201,6 +222,11 @@ def main():
         "data_sha256": data_hash,
         "policy_sha256": file_sha(args.policy),
         "policy_file": args.policy.name,
+        "protocol_commit": manifest["protocol_commit"],
+        "protocol_manifest_sha256": file_sha(args.protocol_manifest),
+        "source_summary_sha256": actual_inputs["source_summary_sha256"],
+        "source_records_sha256": actual_inputs["source_records_sha256"],
+        "contextual_summary_sha256": actual_inputs["contextual_summary_sha256"],
         "tiers": policy["tiers"],
         "seed": args.seed,
         "n_sequences": args.n_sequences,

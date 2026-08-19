@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "scale": "122m",
+  "protocol_commit": "a4bcc7f",
+  "manifest_sha256": "b0f6e39b38c0fd466a3362f0bac0fbc23633dd79bcea5a470721c75b89a4a1ab",
+  "result_sha256": "d935ce27c12fa0b376b9f83e005ac94e5f7102f689a54b33fcb106b00150f382",
+  "authenticated_inputs": {
+    "policy_sha256": "200508e6b44ccff7bd15c55e4fcf1ba9b091a1f3868ec64bacf9a4626f85c8ec",
+    "source_summary_sha256": "f49c9f966f3910fd682e1937f9d694f978428f44483fa77196372149065e5cb1",
+    "source_records_sha256": "0ed88e820a06e76bba62fa7fcb9eaa09bdcff874a1134ebaa25db5564705231d",
+    "contextual_summary_sha256": "5c4a3f05a323e726499382df8a1b3ef450915fbfea3e40c28027cf29e10f9b82"
+  },
+  "n_authenticated_prior_starts": 24,
+  "n_fresh_starts": 24,
+  "minimum_fresh_prior_distance": 2797,
+  "minimum_fresh_fresh_distance": 968,
+  "deterministic_sampler_reconstructed": true,
+  "authenticated_checkpoint_config": {
+    "vocab_size": 50257,
+    "d_model": 768,
+    "n_layers": 12,
+    "n_heads": 12,
+    "d_head": 64,
+    "d_rope": 32,
+    "d_c": 384,
+    "max_len": 384
+  },
+  "arithmetic_recomputed": true,
+  "packed_bytes_recomputed_from_histograms": true,
+  "exact_sign_flip_p_less_router_vs_static": 4.929304122924805e-05,
+  "exact_sign_flip_p_less_router_vs_shuffle": 5.960464477539063e-08,
+  "success": true
+}

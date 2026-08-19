@@ -1,0 +1,22 @@
+{
+  "protocol_commit": "a4bcc7f",
+  "seed": 91827,
+  "n_sequences": 24,
+  "control_repeats": 20,
+  "scales": {
+    "30m": {
+      "policy_sha256": "8ca2b654bbbe6e4fc050aaed0625d84d1c4586ac6bf880db01cd797056e9d71e",
+      "source_summary_sha256": "0c9b32f049ca92e6b8110d3a9812353ca7caf06b4427517fb48fa9b7c0e6ddc4",
+      "source_records_sha256": "acca0aea5be67f7c2f0f90d2905504c787d7adf5306ea17ceb1f74b81a750b38",
+      "contextual_summary_sha256": "e671053c050884fa776e63880e24cf47c2a0ca9edf13224646ba142041bd94b5",
+      "policy_file": "joint_lambda_0p4.pt"
+    },
+    "122m": {
+      "policy_sha256": "200508e6b44ccff7bd15c55e4fcf1ba9b091a1f3868ec64bacf9a4626f85c8ec",
+      "source_summary_sha256": "f49c9f966f3910fd682e1937f9d694f978428f44483fa77196372149065e5cb1",
+      "source_records_sha256": "0ed88e820a06e76bba62fa7fcb9eaa09bdcff874a1134ebaa25db5564705231d",
+      "contextual_summary_sha256": "5c4a3f05a323e726499382df8a1b3ef450915fbfea3e40c28027cf29e10f9b82",
+      "policy_file": "fine_lambda_0p8.pt"
+    }
+  }
+}

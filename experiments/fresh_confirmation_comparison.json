@@ -1,0 +1,53 @@
+{
+  "status": "complete",
+  "protocol_commit": "a4bcc7f",
+  "manifest_sha256": "b0f6e39b38c0fd466a3362f0bac0fbc23633dd79bcea5a470721c75b89a4a1ab",
+  "scales": {
+    "30m": {
+      "n_sequences": 24,
+      "mean_downstream_rank": 145.78125,
+      "full_rank": 256,
+      "mean_router_bytes": 1217464.0,
+      "fixed_dense_mla_bytes": 1769472,
+      "router_over_fixed_dense_mla": 0.6880380135995371,
+      "mean_router_delta_loss_vs_full": 0.10009195903937022,
+      "mean_router_minus_exact_static": -0.019586300849914556,
+      "bootstrap_95pct_ci": [
+        -0.02910717089970904,
+        -0.00938077537963791
+      ],
+      "wins_vs_static": 20,
+      "exact_sign_flip_p_less_vs_static": 0.000654757022857666,
+      "mean_router_minus_tier_shuffle": -0.07989062940080958,
+      "shuffle_bootstrap_95pct_ci": [
+        -0.08999242298925914,
+        -0.06955751032878951
+      ],
+      "wins_vs_shuffle": 24,
+      "success": true
+    },
+    "122m": {
+      "n_sequences": 24,
+      "mean_downstream_rank": 206.93056042989096,
+      "full_rank": 384,
+      "mean_router_bytes": 4712858.666666667,
+      "fixed_dense_mla_bytes": 7667712,
+      "router_over_fixed_dense_mla": 0.6146368912482194,
+      "mean_router_delta_loss_vs_full": 0.18233241637547812,
+      "mean_router_minus_exact_static": -0.03250892062981923,
+      "bootstrap_95pct_ci": [
+        -0.04575191679721076,
+        -0.019581329071273412
+      ],
+      "wins_vs_static": 21,
+      "exact_sign_flip_p_less_vs_static": 4.929304122924805e-05,
+      "mean_router_minus_tier_shuffle": -0.13906795630852384,
+      "shuffle_bootstrap_95pct_ci": [
+        -0.15438856447736424,
+        -0.1240814726613462
+      ],
+      "wins_vs_shuffle": 24,
+      "success": true
+    }
+  }
+}
