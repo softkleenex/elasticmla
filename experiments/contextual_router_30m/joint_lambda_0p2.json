@@ -1,0 +1,135 @@
+{
+  "rank_lambda": 0.2,
+  "temperature": 1.0,
+  "best_score": 2.0530989825725556,
+  "history": [
+    {
+      "epoch": 1,
+      "train_lm_loss": 2.023592010140419,
+      "train_expected_rank": 153.35389137268066,
+      "val_loss": 1.9183773398399353,
+      "val_hard_rank": 176.078125,
+      "selection_score": 2.0559383749961855
+    },
+    {
+      "epoch": 2,
+      "train_lm_loss": 2.005330517888069,
+      "train_expected_rank": 157.9295015335083,
+      "val_loss": 1.9131209552288055,
+      "val_hard_rank": 179.171875,
+      "selection_score": 2.0530989825725556
+    },
+    {
+      "epoch": 3,
+      "train_lm_loss": 1.9937305003404617,
+      "train_expected_rank": 157.2886085510254,
+      "val_loss": 1.932042419910431,
+      "val_hard_rank": 175.1875,
+      "selection_score": 2.068907654285431
+    },
+    {
+      "epoch": 4,
+      "train_lm_loss": 1.9879549071192741,
+      "train_expected_rank": 155.6649227142334,
+      "val_loss": 1.9456119239330292,
+      "val_hard_rank": 170.546875,
+      "selection_score": 2.078851670026779
+    },
+    {
+      "epoch": 5,
+      "train_lm_loss": 1.979943498969078,
+      "train_expected_rank": 154.42769527435303,
+      "val_loss": 1.9445124864578247,
+      "val_hard_rank": 171.296875,
+      "selection_score": 2.0783381700515746
+    },
+    {
+      "epoch": 6,
+      "train_lm_loss": 1.9772223457694054,
+      "train_expected_rank": 152.94885158538818,
+      "val_loss": 1.942060649394989,
+      "val_hard_rank": 165.203125,
+      "selection_score": 2.071125590801239
+    },
+    {
+      "epoch": 7,
+      "train_lm_loss": 1.97111127525568,
+      "train_expected_rank": 152.13939380645752,
+      "val_loss": 1.940463364124298,
+      "val_hard_rank": 166.515625,
+      "selection_score": 2.070553696155548
+    },
+    {
+      "epoch": 8,
+      "train_lm_loss": 1.968658410012722,
+      "train_expected_rank": 151.95044994354248,
+      "val_loss": 1.9419904351234436,
+      "val_hard_rank": 166.5625,
+      "selection_score": 2.0721173882484436
+    },
+    {
+      "epoch": 9,
+      "train_lm_loss": 1.9692846089601517,
+      "train_expected_rank": 151.17586994171143,
+      "val_loss": 1.9530690014362335,
+      "val_hard_rank": 166.890625,
+      "selection_score": 2.0834523022174833
+    },
+    {
+      "epoch": 10,
+      "train_lm_loss": 1.9629825577139854,
+      "train_expected_rank": 152.38587951660156,
+      "val_loss": 1.9619081914424896,
+      "val_hard_rank": 157.890625,
+      "selection_score": 2.0852602422237396
+    },
+    {
+      "epoch": 11,
+      "train_lm_loss": 1.968087799847126,
+      "train_expected_rank": 151.66506671905518,
+      "val_loss": 1.9439837038516998,
+      "val_hard_rank": 168.109375,
+      "selection_score": 2.07531915307045
+    },
+    {
+      "epoch": 12,
+      "train_lm_loss": 1.9553214982151985,
+      "train_expected_rank": 151.37232494354248,
+      "val_loss": 1.9585486948490143,
+      "val_hard_rank": 159.625,
+      "selection_score": 2.083255726099014
+    },
+    {
+      "epoch": 13,
+      "train_lm_loss": 1.9555401057004929,
+      "train_expected_rank": 150.91560459136963,
+      "val_loss": 1.9507575631141663,
+      "val_hard_rank": 164.5,
+      "selection_score": 2.079273188114166
+    },
+    {
+      "epoch": 14,
+      "train_lm_loss": 1.947846531867981,
+      "train_expected_rank": 151.41182899475098,
+      "val_loss": 1.9563714265823364,
+      "val_hard_rank": 160.5625,
+      "selection_score": 2.0818108797073362
+    },
+    {
+      "epoch": 15,
+      "train_lm_loss": 1.9408771097660065,
+      "train_expected_rank": 151.39463424682617,
+      "val_loss": 1.941137433052063,
+      "val_hard_rank": 168.34375,
+      "selection_score": 2.072655987739563
+    }
+  ],
+  "elapsed_s": 4.67386794090271,
+  "random_init": false,
+  "seed": 3031,
+  "epochs": 15,
+  "learning_rate": 0.0005,
+  "tag": "joint",
+  "checkpoint_sha256": "18646f1fdd2d97396e687aaf5e60900b0f825ce96a0d11ffe9b6ac600acc8dc1",
+  "data_sha256": "5e146271a0bbaf5581b9e71490b1c5b12910b6a59062307ab81206acec8615be"
+}

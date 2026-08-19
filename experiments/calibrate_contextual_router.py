@@ -24,11 +24,15 @@ def evaluate(model,base,orders,data,starts,seqs,T,bias,floor,d,shuffles=0,seedba
     for rep in range(shuffles):
      g=torch.Generator().manual_seed(seedbase+10000*s+rep);sr=flat[torch.randperm(flat.numel(),generator=g)].view_as(r).to(d);z,_,_,_=model.forward_cached_packed(x,forced_ranks=sr);sl.append(ce(z,y))
     shuffle_losses.append(float(np.mean(sl)))
- avg=float(torch.cat([r.flatten() for r in ranks_all]).float().mean());static_rank=int(round(avg));static_loss=[];static_bytes=[]
+ avg=float(torch.cat([r.flatten() for r in ranks_all]).float().mean());static_rank=int(round(avg));static_loss=[];static_bytes=[];static_means=[]
+ # Exact-byte static control: for each sequence, distribute floor/ceil ranks in a
+ # deterministic position-only pattern so its downstream rank sum (and packed
+ # bytes) exactly matches the router for that sequence.
  with torch.no_grad():
-  for s in seqs:
-   x,y=load_seq(data,starts[s],T,d);lr=[torch.full(x.shape,base.d_c,device=d,dtype=torch.long)]+[torch.full(x.shape,static_rank,device=d,dtype=torch.long) for _ in range(base.n_layers-1)];l,c=base.forward_cached_packed(x,ranks=lr,channel_orders=orders);static_loss.append(ce(l,y));static_bytes.append(base.packed_cache_num_bytes(c))
- out={"bias":bias,"floor_index":floor,"floor_tier":int(model.router.tiers[floor]),"loss":float(np.mean(losses)),"full_loss":float(np.mean(full)),"delta_loss":float(np.mean(losses)-np.mean(full)),"bytes":float(np.mean(bytes_)),"average_rank":avg,"static_rank":static_rank,"static_loss":float(np.mean(static_loss)),"static_bytes":float(np.mean(static_bytes)),"router_minus_static_loss":float(np.mean(losses)-np.mean(static_loss)),"rank_hist":{str(int(t)):int(sum((r==int(t)).sum() for r in ranks_all)) for t in model.router.tiers}}
+  for s,routed in zip(seqs,ranks_all):
+   x,y=load_seq(data,starts[s],T,d);total=int(routed.sum());q,rem=divmod(total,routed.numel());sr=torch.full(x.shape,q,device=d,dtype=torch.long);sr.view(-1)[:rem]+=1;lr=[torch.full(x.shape,base.d_c,device=d,dtype=torch.long)]+[sr for _ in range(base.n_layers-1)];l,c=base.forward_cached_packed(x,ranks=lr,channel_orders=orders);static_loss.append(ce(l,y));static_bytes.append(base.packed_cache_num_bytes(c));static_means.append(float(sr.float().mean()))
+ if any(a!=b for a,b in zip(bytes_,static_bytes)):raise AssertionError("exact static control bytes must match router bytes per sequence")
+ out={"bias":bias,"floor_index":floor,"floor_tier":int(model.router.tiers[floor]),"loss":float(np.mean(losses)),"full_loss":float(np.mean(full)),"delta_loss":float(np.mean(losses)-np.mean(full)),"bytes":float(np.mean(bytes_)),"average_rank":avg,"static_rank":static_rank,"static_exact_average_rank":float(np.mean(static_means)),"static_loss":float(np.mean(static_loss)),"static_bytes":float(np.mean(static_bytes)),"router_minus_static_loss":float(np.mean(losses)-np.mean(static_loss)),"sequence_router_losses":[float(x) for x in losses],"sequence_full_losses":[float(x) for x in full],"sequence_static_losses":[float(x) for x in static_loss],"sequence_router_minus_static":[float(a-b) for a,b in zip(losses,static_loss)],"rank_hist":{str(int(t)):int(sum((r==int(t)).sum() for r in ranks_all)) for t in model.router.tiers}}
  if shuffles:out.update({"matched_shuffle_loss":float(np.mean(shuffle_losses)),"router_minus_shuffle_loss":float(np.mean(losses)-np.mean(shuffle_losses)),"sequence_router_minus_shuffle":[float(a-b) for a,b in zip(losses,shuffle_losses)]})
  return out
 def main():
