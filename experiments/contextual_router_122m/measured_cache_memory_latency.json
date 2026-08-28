@@ -1,0 +1,42 @@
+{
+  "status": "complete",
+  "device": "cuda",
+  "torch_version": "2.13.0+cu130",
+  "cuda_device_name": "Tesla T4",
+  "checkpoint_sha256": "eeb8abf6366399298350eb183d2ff740b0966b9e1bf4426adaa6dde60dcf8b93",
+  "data_sha256": "03246b576bb789ac6bf15996fd642167008620f2ee96d8a45496d69c13f073ce",
+  "policy_sha256": "200508e6b44ccff7bd15c55e4fcf1ba9b091a1f3868ec64bacf9a4626f85c8ec",
+  "config": {
+    "vocab_size": 50257,
+    "d_model": 768,
+    "n_layers": 12,
+    "n_heads": 12,
+    "d_head": 64,
+    "d_rope": 32,
+    "d_c": 384,
+    "max_len": 384
+  },
+  "batch_size": 8,
+  "prefill_length": 256,
+  "decode_steps": 128,
+  "matched_uniform_rank": 192,
+  "results": {
+    "full_mla": {
+      "resident_cache_bytes": 61341696,
+      "peak_allocated_bytes": 1537902080,
+      "mean_decode_step_seconds": 0.017870513296875057
+    },
+    "packed_uniform_matched_rank": {
+      "resident_cache_bytes": 33260592,
+      "peak_allocated_bytes": 1507376128,
+      "mean_decode_step_seconds": 3.5927219126093752
+    },
+    "packed_router": {
+      "resident_cache_bytes": 36541424,
+      "peak_allocated_bytes": 1472963072,
+      "mean_decode_step_seconds": 3.5929470298281245,
+      "mean_downstream_rank": 195.94010416666666
+    }
+  },
+  "note": "peak_allocated_bytes is None off CUDA. resident_cache_bytes is the exact tensor-payload size of the cache object retained after the run, matching cache_num_bytes/packed_cache_num_bytes used elsewhere in this repository."
+}

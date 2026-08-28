@@ -31,9 +31,9 @@ trivial position rule at 30M and to a trivial rarity rule at 122M. We report thi
 transparently. The 122M policy also misses its own +0.15-nat validation-time quality budget on
 fresh data (+0.1823 nat realized). Overall, this work provides a formal rate-allocation framework
 and a rigorously audited, mostly negative empirical picture: contextual placement beats naive
-random allocation but has not yet been shown to beat simple hand-designed heuristics, and no
-peak-memory or latency benefit is established because the correctness-first implementation
-reconstructs dense temporaries before attention.
+random allocation but has not yet been shown to beat simple hand-designed heuristics, and a direct T4 GPU benchmark shows a modest measured peak-memory reduction (3.5-4.2%) alongside
+a severe measured decode-latency cost (168-201x slower than full MLA), traced to an unvectorized
+Python-loop cache reconstruction that must be fixed before any serving benefit is possible.
 
 ## 1. Introduction
 
@@ -400,6 +400,26 @@ straight-through training that refines it, are not yet strong enough to reliably
 inexpensive non-learned rules, motivating stronger joint objectives, larger calibration sets, or
 hybrid heuristic-plus-learned designs as future work.
 
+### 5.5 Measured GPU memory and latency confirm storage savings and reveal a severe latency cost
+
+Section 3.1's byte formula is a derived tensor-payload count. We additionally benchmarked real
+prefill-then-128-step incremental decode on a Tesla T4 GPU at both scales, comparing full-width
+dense MLA, a uniform packed cache matched to the router's realized rank, and the router's packed
+cache (`experiments/benchmark_cache_memory_latency.py`).
+
+| Scale | Cache bytes (router / full) | Peak allocated (router / full) | Mean decode step (router vs full) |
+|---|---:|---:|---:|
+| 30M | 67.4% | 96.5% | 1412.6 ms vs 8.41 ms (**167.9x slower**) |
+| 122M | 59.6% | 95.8% | 3592.9 ms vs 17.87 ms (**201.1x slower**) |
+
+Measured cache-byte ratios closely track the derived formula. Peak allocated memory is modestly
+*lower* for packed configurations (3.5-4.2% at the router's realized rank), a small positive result
+we had not previously claimed. Decode latency, however, is two orders of magnitude worse for the
+packed path, because `pack_latents`/`unpack_latents` reconstruct the entire cached history with a
+per-token Python loop on every decode step -- an implementation limitation, not a property of the
+packed representation itself. See `notes/measured_cache_memory_latency.md` for full results at both
+configurations (uniform and router) and both scales.
+
 ## 6. Validity, Reproducibility, and Limitations
 
 **Statistical scope.** The unit of inference is a full sequence, not an individual token. Twenty-
@@ -431,9 +451,17 @@ compression literature.
 **Oracle scope.** Capacity labels are isolated-position interventions, not joint-rollout-optimal
 labels. Joint training alleviates but does not solve this limitation.
 
-**System scope.** Packed storage is real and cache tensor-payload byte counts include values and metadata. However, the
-prototype reconstructs dense temporaries before attention. We therefore do not claim improved
-peak memory, latency, throughput, energy, or superiority to optimized MHA/GQA/FlashMLA kernels.
+**System scope (now measured, not only derived).** We benchmarked real prefill+128-step incremental
+decode on a Tesla T4 GPU at both scales (`experiments/benchmark_cache_memory_latency.py`,
+`notes/measured_cache_memory_latency.md`). Measured persistent cache bytes closely track the
+byte-formula predictions (67.2-67.4% of full MLA at 30M, 54.2-59.6% at 122M). Peak allocated GPU
+memory is modestly lower for packed configurations (1.3-4.2% reduction), a small positive result
+we had not previously claimed. However, **decode latency is 168-201x slower** for the packed path
+than full-width dense MLA at both scales, because `pack_latents`/`unpack_latents` reconstruct the
+entire cached history with a per-token Python loop on every decode step. We therefore still do not
+claim any latency, throughput, or superiority to optimized MHA/GQA/FlashMLA kernels; on the
+contrary, we now have direct evidence that the current implementation is roughly two orders of
+magnitude too slow for real decoding, and identify the specific unvectorized code path responsible.
 
 **Quality scope.** Both compressed policies increase loss relative to full MLA, and the 122M policy
 misses the held-out +0.15-nat budget. Task-level generation quality is not evaluated.
@@ -463,9 +491,10 @@ contextual routers beat random and shuffled placement at equal cache bytes at bo
 rigorous comparison against simple causal heuristics (position, token identity, rarity, type) shows
 the router does not consistently win, and in two cases loses with high confidence. We report this
 transparently rather than overclaim: the present evidence establishes a formal allocation framework
-and a real but limited placement effect, not superiority over hand-designed heuristics, not
-peak-memory or latency gains (the correctness-first implementation reconstructs dense temporaries),
-and not a reliably calibrated quality constraint at 122M. Priority future work is (1) stronger joint
+and a real but limited placement effect, not superiority over hand-designed heuristics, not peak-memory or latency gains -- a direct T4 benchmark shows the packed path is 168-201x
+slower per decode step than full MLA despite modestly lower peak memory, because the packed
+cache reconstruction is an unvectorized Python loop -- and not a reliably calibrated quality
+constraint at 122M. Priority future work is (1) stronger joint
 -rollout objectives or hybrid heuristic-plus-learned routers that can beat causal baselines with
 statistical confidence, (2) a grouped-tier or fused packed attention kernel to convert the
 established persistent-byte savings into measured peak-memory and latency gains against optimized
