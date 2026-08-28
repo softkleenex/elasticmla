@@ -14,11 +14,11 @@ upper-tail future-loss risk induces a formally ordered spectrum of safe rates be
 average and worst reuse offset (Risk-Capacity Ordering, proved here). We implement a variable-width
 packed MLA cache with token-specific nested latent prefixes, offsets, ranks, and channel-order
 metadata, and a layer-0-full contextual router trained with a straight-through joint-rollout
-surrogate for the corresponding rate-penalized Lagrangian. On 30.6M- and 122.1M-parameter MLA
-language models, we measure the full risk-capacity spectrum (not only mean and max): required rate
-rises monotonically from 9.00%/8.22% of the full latent width at the mean criterion to
-74.07%/72.92% at the worst-offset criterion, with an almost scale-invariant normalized
-tail-capacity premium (0.651 at 30M, 0.647 at 122M). Diagnostic decomposition shows this separation
+surrogate for the corresponding rate-penalized Lagrangian. On 30.6M-, 122.1M-, and 249.3M-parameter MLA
+language models (an 8x parameter range), we measure the full risk-capacity spectrum (not only mean
+and max): required rate rises monotonically from 9.00%/8.22%/7.15% of the full latent width at the
+mean criterion to 74.07%/72.92%/76.03% at the worst-offset criterion, with an almost scale-invariant
+normalized tail-capacity premium (0.651/0.647/0.689 at 30M/122M/250M). Diagnostic decomposition shows this separation
 reflects **pervasive cancellation across the reuse horizon, not rare catastrophic tokens**: over 93%
 of mean-safe positions still have at least one future offset exceeding the loss budget, and the
 positive-part mean loss is roughly double the signed mean. The frozen, pre-registered router beats
@@ -267,10 +267,13 @@ We train two decoder-only MLA language models on TinyStories-tokenized data.
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | MLA-30M | 30.6M | 6 | 384 | 6 | 256 | 32 | 256 | 24.576M sampled tokens |
 | MLA-122M | 122.14M | 12 | 768 | 12 | 384 | 32 | 384 | 147.46M tokens |
+| MLA-250M | 249.27M | 16 | 1024 | 16 | 512 | 32 | 384 | 288M sampled tokens |
 
 The 30M model was trained for 3,000 steps from an approximately 8.8M-token training corpus and its checkpoint has validation loss 1.9618. The 122M final step-8,000 checkpoint has validation
-loss 1.5662; the best logged value, 1.5179 at step 7,250, was not checkpointed. We therefore make
-no best-checkpoint claim.
+loss 1.5662; the best logged value, 1.5179 at step 7,250, was not checkpointed. The 250M model was
+trained for 3,000 steps on the same TinyStories corpus construction as the 122M model (byte-
+identical held-out validation stream) and reached validation loss 1.6588. We make no
+best-checkpoint claim for any model: all three use the final training step.
 
 ### 4.2 Confirmation protocol
 
@@ -284,41 +287,50 @@ one-sided paired sign-flip tests and sequence win counts.
 
 ## 5. Results
 
-### 5.1 The full risk-capacity spectrum is monotone and nearly scale-invariant
+### 5.1 The full risk-capacity spectrum is monotone and nearly scale-invariant across 30M-250M
 
 We extend the two-point mean/max analysis to a full upper-tail spectrum computed from the same
-corrected, provenance-tracked windows: for each source position we retain the largest $k$ of the
-$H=32$ future loss deltas, for $k\in\{32,16,8,4,2,1\}$, and take the smallest suffix-safe rank.
+corrected, provenance-tracked windows, now at **three** scales spanning an 8x parameter range: for
+each source position we retain the largest $k$ of the $H=32$ future loss deltas, for
+$k\in\{32,16,8,4,2,1\}$, and take the smallest suffix-safe rank.
 
-| $k$ (of 32) | $\alpha=1-k/H$ | 30M mean $r^*$ | 30M $/d_c$ | 122M mean $r^*$ | 122M $/d_c$ |
-|---:|---:|---:|---:|---:|---:|
-| 32 (mean) | 0.000 | 23.04 | 9.00% | 31.56 | 8.22% |
-| 16 | 0.500 | 54.96 | 21.47% | 88.33 | 23.00% |
-| 8 | 0.750 | 101.50 | 39.65% | 151.75 | 39.52% |
-| 4 | 0.875 | 142.71 | 55.75% | 208.19 | 54.22% |
-| 2 | 0.938 | 171.35 | 66.94% | 251.75 | 65.56% |
-| 1 (max) | 0.969 | 189.62 | 74.07% | 280.00 | 72.92% |
+| $k$ (of 32) | $\alpha=1-k/H$ | 30M $/d_c$ | 122M $/d_c$ | 250M $/d_c$ |
+|---:|---:|---:|---:|---:|
+| 32 (mean) | 0.000 | 9.00% | 8.22% | 7.15% |
+| 16 | 0.500 | 21.47% | 23.00% | 22.53% |
+| 8 | 0.750 | 39.65% | 39.52% | 40.14% |
+| 4 | 0.875 | 55.75% | 54.22% | 57.23% |
+| 2 | 0.938 | 66.94% | 65.56% | 69.18% |
+| 1 (max) | 0.969 | 74.07% | 72.92% | 76.03% |
 
-Every step is monotone nondecreasing at both scales, exactly as Proposition 2 (risk-capacity
+Every step is monotone nondecreasing at all three scales, exactly as Proposition 2 (risk-capacity
 ordering) guarantees. The normalized **tail-capacity premium** $\mathrm{TCP}=\mathbb E[r^*_{\max}
--r^*_{\mathrm{mean}}]/d_c$ is 0.6507 (95% CI [0.6335, 0.6673]) at 30M and 0.6470 (CI [0.6283,
-0.6641]) at 122M -- nearly identical intervals, making this the most scale-consistent quantitative
-result in the paper.
+-r^*_{\mathrm{mean}}]/d_c$ is 0.6507 (95% CI [0.6335, 0.6673]) at 30M, 0.6470 (CI [0.6283, 0.6641])
+at 122M, and 0.6888 (CI [0.6647, 0.7129]) at 250M -- three overlapping-to-adjacent intervals across
+an 8x parameter range, making this the most scale-consistent quantitative result in the paper.
 
-**The separation is driven by pervasive cancellation, not rare catastrophic tokens.** At the rank
-that is safe under the signed mean criterion, the positive-part mean loss (mean of $\max(\Delta,0)$
-over the horizon) is 2.05x (30M) and 2.31x (122M) larger than the signed mean, and 93.1%/94.1% of
-such "mean-safe" positions still have at least one future offset whose loss increase exceeds
-$\epsilon$. If harm were concentrated in a few rare spikes, the vast majority of mean-safe positions
-would have zero offsets above $\epsilon$; instead nearly all of them do, and the signed mean is kept
-small by cancellation against negative excursions elsewhere in the horizon. **Figure 2**
-(`figures/elasticmla_risk_spectrum.pdf`) shows the spectrum and this diagnostic.
+**The separation is driven by pervasive cancellation, not rare catastrophic tokens, at all three
+scales.** At the rank that is safe under the signed mean criterion, the positive-part mean loss
+(mean of $\max(\Delta,0)$ over the horizon) is 2.05x (30M), 2.31x (122M), and 2.15x (250M) larger
+than the signed mean, and 93.1%/94.1%/96.1% of such "mean-safe" positions still have at least one
+future offset whose loss increase exceeds $\epsilon$. If harm were concentrated in a few rare
+spikes, the vast majority of mean-safe positions would have zero offsets above $\epsilon$; instead
+nearly all of them do at every scale we tested, and the signed mean is kept small by cancellation
+against negative excursions elsewhere in the horizon. **Figure 2**
+(`figures/elasticmla_risk_spectrum.pdf`) shows the spectrum and this diagnostic across all three
+scales.
+
+The 250M model (249.3M unique parameters, $d_{model}=1024$, 16 layers, $d_c=512$) was trained for
+3,000 steps on the same TinyStories corpus construction as the 122M model (byte-identical held-out
+validation stream), reaching validation loss 1.6588. It was not used for router training or fresh-
+window confirmation in this version; it contributes only to the risk-capacity spectrum result.
 
 The normalized 122M-minus-30M difference in the original mean/max endpoints is -0.781 percentage
 points for the mean (95% bootstrap CI: [-1.617, +0.076]) and -1.156 points for the maximum (CI:
 [-3.849, +1.611]); both include zero. This is not an equivalence test and does not establish scale
 invariance of the endpoints, but the tail-capacity premium result above is a stronger and separate
-scale-consistency finding computed across the whole spectrum rather than two endpoints.
+scale-consistency finding computed across the whole spectrum and now three scales rather than two
+endpoints at two scales.
 
 The per-record raw deltas underlying this spectrum were computed on ephemeral cloud job storage and
 are not independently re-auditable; only the aggregate summary (with verified checkpoint/data
@@ -349,7 +361,7 @@ router's per-sequence cache tensor-payload byte count. Points are discrete evalu
 configurations, not an interpolated operating curve. Panel (a) shows only the mean/max endpoints;
 see Figure 2 for the full six-point risk-capacity spectrum. Source: `figures/elasticmla_main_results.pdf`.
 
-**Figure 2.** (a) Normalized suffix-safe rate against upper-tail level $\alpha=1-k/H$ at both
+**Figure 2.** (a) Normalized suffix-safe rate against upper-tail level $\alpha=1-k/H$ at all three
 scales, with paired sequence-bootstrap 95% bands; monotonicity is guaranteed by Proposition 2. (b)
 Signed mean, positive-part mean, and maximum loss delta at the rank that is safe under the signed
 mean criterion, annotated with the fraction of records having at least one future offset exceeding
@@ -483,8 +495,9 @@ results. Future runs fail unless their manifest inputs match.
 We formalize token-wise MLA latent width as a basis-dependent operational rate allocation problem:
 persistent cache bytes are exactly affine in summed token rates (Proposition 1), and upper-tail
 future-loss risk induces a provably monotone spectrum of safe rates between average and worst-case
-reuse (Proposition 2). Measured at 30M and 122M, this spectrum is nearly scale-invariant in its
-normalized tail-capacity premium (~0.65 at both scales) and shows that the mean/tail separation
+reuse (Proposition 2). Measured at 30M, 122M, and 250M (an 8x parameter range), this spectrum is nearly
+scale-invariant in its normalized tail-capacity premium (0.65-0.69 across all three scales) and
+shows that the mean/tail separation
 arises from pervasive cancellation across the reuse horizon rather than rare catastrophic tokens --
 a mechanistic finding that revises the intuitive "rare spike" story. Frozen, pre-registered
 contextual routers beat random and shuffled placement at equal cache bytes at both scales, but a
