@@ -1,0 +1,1211 @@
+{
+  "status": "complete",
+  "interpretation": "post-confirmation exploratory causal baselines; selection used only original train/validation splits",
+  "checkpoint_sha256": "18646f1fdd2d97396e687aaf5e60900b0f825ce96a0d11ffe9b6ac600acc8dc1",
+  "data_sha256": "5e146271a0bbaf5581b9e71490b1c5b12910b6a59062307ab81206acec8615be",
+  "policy_sha256": "8ca2b654bbbe6e4fc050aaed0625d84d1c4586ac6bf880db01cd797056e9d71e",
+  "fresh_result_sha256": "eb4aa6038a8ffe1a08e5a9112d4ed92e1e5c21d126df7ce921d0fadfd1904a8c",
+  "fresh_audit_sha256": "62d046adbda1f5c876c7085e751eeed255b49eba04d6f8f15c6b08b1ea829dba",
+  "contextual_oracle_summary_sha256": "e671053c050884fa776e63880e24cf47c2a0ca9edf13224646ba142041bd94b5",
+  "contextual_oracle_records_sha256": "91de9f3ba2525e7e55d84db636959161d741dbcb86785594d4d9198be893e802",
+  "split_source_sha256": "ee981603d80821ea5ab96770dcdbe8c8bcfa2c793cb9a74bc3911c61bf321934",
+  "max_delta_loss": 0.15,
+  "biases": [
+    -192,
+    -128,
+    -96,
+    -64,
+    -32,
+    0,
+    32,
+    64,
+    96,
+    128,
+    192
+  ],
+  "training_sequences": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8,
+    10,
+    11,
+    14,
+    15,
+    16,
+    17,
+    18,
+    20,
+    23
+  ],
+  "validation_sequences": [
+    0,
+    7,
+    13,
+    22
+  ],
+  "fresh_starts": [
+    99145,
+    100603,
+    102377,
+    104995,
+    109282,
+    109808,
+    110613,
+    113086,
+    117329,
+    122965,
+    125574,
+    125990,
+    133659,
+    134426,
+    134946,
+    144920,
+    148056,
+    151338,
+    153125,
+    154146,
+    159667,
+    165007,
+    168944,
+    176862
+  ],
+  "score_causality": "rank at t uses only absolute t and/or current token x[t], never future tokens or sequence-global budgets",
+  "validation_candidates": {
+    "position": [
+      {
+        "bias": -192,
+        "loss": 2.9656564593315125,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 1.1041636765003204,
+        "average_rank": 16.0,
+        "bytes": 552984.0
+      },
+      {
+        "bias": -128,
+        "loss": 2.6709635853767395,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.8094708025455475,
+        "average_rank": 39.4375,
+        "bytes": 672984.0
+      },
+      {
+        "bias": -96,
+        "loss": 2.297110438346863,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.4356176555156708,
+        "average_rank": 79.5625,
+        "bytes": 878424.0
+      },
+      {
+        "bias": -64,
+        "loss": 2.0387912690639496,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.17729848623275757,
+        "average_rank": 135.4375,
+        "bytes": 1164504.0
+      },
+      {
+        "bias": -32,
+        "loss": 1.9526249766349792,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.09113219380378723,
+        "average_rank": 160.0,
+        "bytes": 1290264.0
+      },
+      {
+        "bias": 0,
+        "loss": 1.9269599914550781,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.06546720862388611,
+        "average_rank": 179.5,
+        "bytes": 1390104.0
+      },
+      {
+        "bias": 32,
+        "loss": 1.8841402530670166,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.022647470235824585,
+        "average_rank": 231.625,
+        "bytes": 1656984.0
+      },
+      {
+        "bias": 64,
+        "loss": 1.8611913323402405,
+        "full_loss": 1.861492782831192,
+        "delta_loss": -0.0003014504909515381,
+        "average_rank": 255.625,
+        "bytes": 1779864.0
+      },
+      {
+        "bias": 96,
+        "loss": 1.861492782831192,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0,
+        "average_rank": 256.0,
+        "bytes": 1781784.0
+      },
+      {
+        "bias": 128,
+        "loss": 1.861492782831192,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0,
+        "average_rank": 256.0,
+        "bytes": 1781784.0
+      },
+      {
+        "bias": 192,
+        "loss": 1.861492782831192,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0,
+        "average_rank": 256.0,
+        "bytes": 1781784.0
+      }
+    ],
+    "lexical_identity": [
+      {
+        "bias": -192,
+        "loss": 2.8948784470558167,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 1.0333856642246246,
+        "average_rank": 17.828125,
+        "bytes": 562344.0
+      },
+      {
+        "bias": -128,
+        "loss": 2.5248059034347534,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.6633131206035614,
+        "average_rank": 45.859375,
+        "bytes": 705864.0
+      },
+      {
+        "bias": -96,
+        "loss": 2.238340377807617,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.37684759497642517,
+        "average_rank": 77.453125,
+        "bytes": 867624.0
+      },
+      {
+        "bias": -64,
+        "loss": 1.982636034488678,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.12114325165748596,
+        "average_rank": 130.140625,
+        "bytes": 1137384.0
+      },
+      {
+        "bias": -32,
+        "loss": 1.9539237320423126,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0924309492111206,
+        "average_rank": 146.921875,
+        "bytes": 1223304.0
+      },
+      {
+        "bias": 0,
+        "loss": 1.9316002130508423,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.07010743021965027,
+        "average_rank": 177.34375,
+        "bytes": 1379064.0
+      },
+      {
+        "bias": 32,
+        "loss": 1.867659479379654,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.006166696548461914,
+        "average_rank": 227.78125,
+        "bytes": 1637304.0
+      },
+      {
+        "bias": 64,
+        "loss": 1.8643496930599213,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.002856910228729248,
+        "average_rank": 240.53125,
+        "bytes": 1702584.0
+      },
+      {
+        "bias": 96,
+        "loss": 1.8603503704071045,
+        "full_loss": 1.861492782831192,
+        "delta_loss": -0.0011424124240875244,
+        "average_rank": 250.09375,
+        "bytes": 1751544.0
+      },
+      {
+        "bias": 128,
+        "loss": 1.8614003360271454,
+        "full_loss": 1.861492782831192,
+        "delta_loss": -9.244680404663086e-05,
+        "average_rank": 251.96875,
+        "bytes": 1761144.0
+      },
+      {
+        "bias": 192,
+        "loss": 1.861492782831192,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0,
+        "average_rank": 256.0,
+        "bytes": 1781784.0
+      }
+    ],
+    "token_rarity": [
+      {
+        "bias": -192,
+        "loss": 2.9656564593315125,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 1.1041636765003204,
+        "average_rank": 16.0,
+        "bytes": 552984.0
+      },
+      {
+        "bias": -128,
+        "loss": 2.5957818627357483,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.7342890799045563,
+        "average_rank": 40.234375,
+        "bytes": 677064.0
+      },
+      {
+        "bias": -96,
+        "loss": 2.207925319671631,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.34643253684043884,
+        "average_rank": 84.15625,
+        "bytes": 901944.0
+      },
+      {
+        "bias": -64,
+        "loss": 1.986271232366562,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.12477844953536987,
+        "average_rank": 145.75,
+        "bytes": 1217304.0
+      },
+      {
+        "bias": -32,
+        "loss": 1.9525098204612732,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.09101703763008118,
+        "average_rank": 160.0,
+        "bytes": 1290264.0
+      },
+      {
+        "bias": 0,
+        "loss": 1.9196213781833649,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.05812859535217285,
+        "average_rank": 180.15625,
+        "bytes": 1393464.0
+      },
+      {
+        "bias": 32,
+        "loss": 1.8662132620811462,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.004720479249954224,
+        "average_rank": 241.75,
+        "bytes": 1708824.0
+      },
+      {
+        "bias": 64,
+        "loss": 1.861492782831192,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0,
+        "average_rank": 256.0,
+        "bytes": 1781784.0
+      },
+      {
+        "bias": 96,
+        "loss": 1.861492782831192,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0,
+        "average_rank": 256.0,
+        "bytes": 1781784.0
+      },
+      {
+        "bias": 128,
+        "loss": 1.861492782831192,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0,
+        "average_rank": 256.0,
+        "bytes": 1781784.0
+      },
+      {
+        "bias": 192,
+        "loss": 1.861492782831192,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0,
+        "average_rank": 256.0,
+        "bytes": 1781784.0
+      }
+    ],
+    "token_type": [
+      {
+        "bias": -192,
+        "loss": 2.9656564593315125,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 1.1041636765003204,
+        "average_rank": 16.0,
+        "bytes": 552984.0
+      },
+      {
+        "bias": -128,
+        "loss": 2.7477511763572693,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.8862583935260773,
+        "average_rank": 29.40625,
+        "bytes": 621624.0
+      },
+      {
+        "bias": -96,
+        "loss": 2.2948818802833557,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.4333890974521637,
+        "average_rank": 76.75,
+        "bytes": 864024.0
+      },
+      {
+        "bias": -64,
+        "loss": 1.9565199315547943,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0950271487236023,
+        "average_rank": 154.65625,
+        "bytes": 1262904.0
+      },
+      {
+        "bias": -32,
+        "loss": 1.9558673202991486,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.09437453746795654,
+        "average_rank": 156.4375,
+        "bytes": 1272024.0
+      },
+      {
+        "bias": 0,
+        "loss": 1.9371258020401,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.07563301920890808,
+        "average_rank": 174.53125,
+        "bytes": 1364664.0
+      },
+      {
+        "bias": 32,
+        "loss": 1.8643797934055328,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0028870105743408203,
+        "average_rank": 252.4375,
+        "bytes": 1763544.0
+      },
+      {
+        "bias": 64,
+        "loss": 1.8643797934055328,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0028870105743408203,
+        "average_rank": 252.4375,
+        "bytes": 1763544.0
+      },
+      {
+        "bias": 96,
+        "loss": 1.861492782831192,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0,
+        "average_rank": 256.0,
+        "bytes": 1781784.0
+      },
+      {
+        "bias": 128,
+        "loss": 1.861492782831192,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0,
+        "average_rank": 256.0,
+        "bytes": 1781784.0
+      },
+      {
+        "bias": 192,
+        "loss": 1.861492782831192,
+        "full_loss": 1.861492782831192,
+        "delta_loss": 0.0,
+        "average_rank": 256.0,
+        "bytes": 1781784.0
+      }
+    ]
+  },
+  "chosen_validation": {
+    "position": {
+      "bias": -32,
+      "loss": 1.9526249766349792,
+      "full_loss": 1.861492782831192,
+      "delta_loss": 0.09113219380378723,
+      "average_rank": 160.0,
+      "bytes": 1290264.0,
+      "selection": "minimum validation bytes under loss budget"
+    },
+    "lexical_identity": {
+      "bias": -64,
+      "loss": 1.982636034488678,
+      "full_loss": 1.861492782831192,
+      "delta_loss": 0.12114325165748596,
+      "average_rank": 130.140625,
+      "bytes": 1137384.0,
+      "selection": "minimum validation bytes under loss budget"
+    },
+    "token_rarity": {
+      "bias": -64,
+      "loss": 1.986271232366562,
+      "full_loss": 1.861492782831192,
+      "delta_loss": 0.12477844953536987,
+      "average_rank": 145.75,
+      "bytes": 1217304.0,
+      "selection": "minimum validation bytes under loss budget"
+    },
+    "token_type": {
+      "bias": -64,
+      "loss": 1.9565199315547943,
+      "full_loss": 1.861492782831192,
+      "delta_loss": 0.0950271487236023,
+      "average_rank": 154.65625,
+      "bytes": 1262904.0,
+      "selection": "minimum validation bytes under loss budget"
+    }
+  },
+  "fresh": {
+    "position": {
+      "selected_bias": -32,
+      "mean_loss": 2.0770955830812454,
+      "mean_full_loss": 1.9907511870066326,
+      "delta_loss": 0.08634439607461293,
+      "average_rank": 160.0,
+      "mean_bytes": 1290264.0,
+      "mean_router_minus_control": 0.013747483491897583,
+      "router_minus_control_bootstrap_95pct_ci": [
+        0.0024507708847522737,
+        0.02536651467283567
+      ],
+      "rows": [
+        {
+          "start": 99145,
+          "loss": 2.452542304992676,
+          "full_loss": 2.389456033706665,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 100603,
+          "loss": 1.9384747743606567,
+          "full_loss": 1.83205246925354,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 102377,
+          "loss": 1.8500680923461914,
+          "full_loss": 1.784440040588379,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 104995,
+          "loss": 2.2688651084899902,
+          "full_loss": 2.098766803741455,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 109282,
+          "loss": 2.947211265563965,
+          "full_loss": 2.8427271842956543,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 109808,
+          "loss": 1.6398835182189941,
+          "full_loss": 1.5804649591445923,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 110613,
+          "loss": 2.455265522003174,
+          "full_loss": 2.338292360305786,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 113086,
+          "loss": 1.8851920366287231,
+          "full_loss": 1.7946488857269287,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 117329,
+          "loss": 2.2804486751556396,
+          "full_loss": 2.1703052520751953,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 122965,
+          "loss": 1.884782314300537,
+          "full_loss": 1.8362690210342407,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 125574,
+          "loss": 2.325666666030884,
+          "full_loss": 2.2561779022216797,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 125990,
+          "loss": 2.268393039703369,
+          "full_loss": 2.1335372924804688,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 133659,
+          "loss": 2.6248512268066406,
+          "full_loss": 2.5919365882873535,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 134426,
+          "loss": 1.854968786239624,
+          "full_loss": 1.784806489944458,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 134946,
+          "loss": 2.4041976928710938,
+          "full_loss": 2.336562395095825,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 144920,
+          "loss": 1.5577502250671387,
+          "full_loss": 1.4442375898361206,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 148056,
+          "loss": 2.0978446006774902,
+          "full_loss": 2.0487570762634277,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 151338,
+          "loss": 1.7707182168960571,
+          "full_loss": 1.7574979066848755,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 153125,
+          "loss": 1.9376349449157715,
+          "full_loss": 1.8590503931045532,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 154146,
+          "loss": 2.4299914836883545,
+          "full_loss": 2.322648763656616,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 159667,
+          "loss": 1.5537149906158447,
+          "full_loss": 1.4620733261108398,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 165007,
+          "loss": 1.8136889934539795,
+          "full_loss": 1.6686689853668213,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 168944,
+          "loss": 1.5416452884674072,
+          "full_loss": 1.4383331537246704,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        },
+        {
+          "start": 176862,
+          "loss": 2.0664942264556885,
+          "full_loss": 2.006317615509033,
+          "average_rank": 160.0,
+          "bytes": 1290264
+        }
+      ]
+    },
+    "lexical_identity": {
+      "selected_bias": -64,
+      "mean_loss": 2.1161746829748154,
+      "mean_full_loss": 1.9907511870066326,
+      "delta_loss": 0.1254234959681829,
+      "average_rank": 130.2734375,
+      "mean_bytes": 1138064.0,
+      "mean_router_minus_control": -0.025331616401672363,
+      "router_minus_control_bootstrap_95pct_ci": [
+        -0.03990387097001076,
+        -0.011350401615103098
+      ],
+      "rows": [
+        {
+          "start": 99145,
+          "loss": 2.4807052612304688,
+          "full_loss": 2.389456033706665,
+          "average_rank": 130.375,
+          "bytes": 1138584
+        },
+        {
+          "start": 100603,
+          "loss": 1.9765732288360596,
+          "full_loss": 1.83205246925354,
+          "average_rank": 131.3125,
+          "bytes": 1143384
+        },
+        {
+          "start": 102377,
+          "loss": 1.8902583122253418,
+          "full_loss": 1.784440040588379,
+          "average_rank": 127.5625,
+          "bytes": 1124184
+        },
+        {
+          "start": 104995,
+          "loss": 2.288203001022339,
+          "full_loss": 2.098766803741455,
+          "average_rank": 131.3125,
+          "bytes": 1143384
+        },
+        {
+          "start": 109282,
+          "loss": 3.027996063232422,
+          "full_loss": 2.8427271842956543,
+          "average_rank": 133.0,
+          "bytes": 1152024
+        },
+        {
+          "start": 109808,
+          "loss": 1.6787967681884766,
+          "full_loss": 1.5804649591445923,
+          "average_rank": 136.5625,
+          "bytes": 1170264
+        },
+        {
+          "start": 110613,
+          "loss": 2.566110610961914,
+          "full_loss": 2.338292360305786,
+          "average_rank": 133.375,
+          "bytes": 1153944
+        },
+        {
+          "start": 113086,
+          "loss": 1.9262492656707764,
+          "full_loss": 1.7946488857269287,
+          "average_rank": 135.625,
+          "bytes": 1165464
+        },
+        {
+          "start": 117329,
+          "loss": 2.3277909755706787,
+          "full_loss": 2.1703052520751953,
+          "average_rank": 129.8125,
+          "bytes": 1135704
+        },
+        {
+          "start": 122965,
+          "loss": 1.9131057262420654,
+          "full_loss": 1.8362690210342407,
+          "average_rank": 126.0625,
+          "bytes": 1116504
+        },
+        {
+          "start": 125574,
+          "loss": 2.3789007663726807,
+          "full_loss": 2.2561779022216797,
+          "average_rank": 130.375,
+          "bytes": 1138584
+        },
+        {
+          "start": 125990,
+          "loss": 2.286956787109375,
+          "full_loss": 2.1335372924804688,
+          "average_rank": 136.0,
+          "bytes": 1167384
+        },
+        {
+          "start": 133659,
+          "loss": 2.6686978340148926,
+          "full_loss": 2.5919365882873535,
+          "average_rank": 129.4375,
+          "bytes": 1133784
+        },
+        {
+          "start": 134426,
+          "loss": 1.8838435411453247,
+          "full_loss": 1.784806489944458,
+          "average_rank": 131.6875,
+          "bytes": 1145304
+        },
+        {
+          "start": 134946,
+          "loss": 2.43601655960083,
+          "full_loss": 2.336562395095825,
+          "average_rank": 134.875,
+          "bytes": 1161624
+        },
+        {
+          "start": 144920,
+          "loss": 1.5985106229782104,
+          "full_loss": 1.4442375898361206,
+          "average_rank": 133.0,
+          "bytes": 1152024
+        },
+        {
+          "start": 148056,
+          "loss": 2.1273646354675293,
+          "full_loss": 2.0487570762634277,
+          "average_rank": 126.8125,
+          "bytes": 1120344
+        },
+        {
+          "start": 151338,
+          "loss": 1.7762094736099243,
+          "full_loss": 1.7574979066848755,
+          "average_rank": 127.1875,
+          "bytes": 1122264
+        },
+        {
+          "start": 153125,
+          "loss": 1.9750938415527344,
+          "full_loss": 1.8590503931045532,
+          "average_rank": 119.875,
+          "bytes": 1084824
+        },
+        {
+          "start": 154146,
+          "loss": 2.4735188484191895,
+          "full_loss": 2.322648763656616,
+          "average_rank": 131.5,
+          "bytes": 1144344
+        },
+        {
+          "start": 159667,
+          "loss": 1.5793970823287964,
+          "full_loss": 1.4620733261108398,
+          "average_rank": 125.5,
+          "bytes": 1113624
+        },
+        {
+          "start": 165007,
+          "loss": 1.8410694599151611,
+          "full_loss": 1.6686689853668213,
+          "average_rank": 130.1875,
+          "bytes": 1137624
+        },
+        {
+          "start": 168944,
+          "loss": 1.593601107597351,
+          "full_loss": 1.4383331537246704,
+          "average_rank": 123.25,
+          "bytes": 1102104
+        },
+        {
+          "start": 176862,
+          "loss": 2.0932226181030273,
+          "full_loss": 2.006317615509033,
+          "average_rank": 131.875,
+          "bytes": 1146264
+        }
+      ]
+    },
+    "token_rarity": {
+      "selected_bias": -64,
+      "mean_loss": 2.1175896177689233,
+      "mean_full_loss": 1.9907511870066326,
+      "delta_loss": 0.12683843076229095,
+      "average_rank": 144.765625,
+      "mean_bytes": 1212264.0,
+      "mean_router_minus_control": -0.026746551195780437,
+      "router_minus_control_bootstrap_95pct_ci": [
+        -0.041238986576596894,
+        -0.012423979242642729
+      ],
+      "rows": [
+        {
+          "start": 99145,
+          "loss": 2.476738929748535,
+          "full_loss": 2.389456033706665,
+          "average_rank": 144.625,
+          "bytes": 1211544
+        },
+        {
+          "start": 100603,
+          "loss": 1.9972522258758545,
+          "full_loss": 1.83205246925354,
+          "average_rank": 143.125,
+          "bytes": 1203864
+        },
+        {
+          "start": 102377,
+          "loss": 1.866890549659729,
+          "full_loss": 1.784440040588379,
+          "average_rank": 144.625,
+          "bytes": 1211544
+        },
+        {
+          "start": 104995,
+          "loss": 2.308094024658203,
+          "full_loss": 2.098766803741455,
+          "average_rank": 145.0,
+          "bytes": 1213464
+        },
+        {
+          "start": 109282,
+          "loss": 2.971940040588379,
+          "full_loss": 2.8427271842956543,
+          "average_rank": 143.5,
+          "bytes": 1205784
+        },
+        {
+          "start": 109808,
+          "loss": 1.6864006519317627,
+          "full_loss": 1.5804649591445923,
+          "average_rank": 139.375,
+          "bytes": 1184664
+        },
+        {
+          "start": 110613,
+          "loss": 2.497339963912964,
+          "full_loss": 2.338292360305786,
+          "average_rank": 143.5,
+          "bytes": 1205784
+        },
+        {
+          "start": 113086,
+          "loss": 1.9256923198699951,
+          "full_loss": 1.7946488857269287,
+          "average_rank": 143.5,
+          "bytes": 1205784
+        },
+        {
+          "start": 117329,
+          "loss": 2.389310359954834,
+          "full_loss": 2.1703052520751953,
+          "average_rank": 141.625,
+          "bytes": 1196184
+        },
+        {
+          "start": 122965,
+          "loss": 1.912642478942871,
+          "full_loss": 1.8362690210342407,
+          "average_rank": 145.0,
+          "bytes": 1213464
+        },
+        {
+          "start": 125574,
+          "loss": 2.3508238792419434,
+          "full_loss": 2.2561779022216797,
+          "average_rank": 144.625,
+          "bytes": 1211544
+        },
+        {
+          "start": 125990,
+          "loss": 2.309863567352295,
+          "full_loss": 2.1335372924804688,
+          "average_rank": 143.875,
+          "bytes": 1207704
+        },
+        {
+          "start": 133659,
+          "loss": 2.6733341217041016,
+          "full_loss": 2.5919365882873535,
+          "average_rank": 144.625,
+          "bytes": 1211544
+        },
+        {
+          "start": 134426,
+          "loss": 1.9267663955688477,
+          "full_loss": 1.784806489944458,
+          "average_rank": 142.0,
+          "bytes": 1198104
+        },
+        {
+          "start": 134946,
+          "loss": 2.4236245155334473,
+          "full_loss": 2.336562395095825,
+          "average_rank": 143.875,
+          "bytes": 1207704
+        },
+        {
+          "start": 144920,
+          "loss": 1.5853639841079712,
+          "full_loss": 1.4442375898361206,
+          "average_rank": 147.625,
+          "bytes": 1226904
+        },
+        {
+          "start": 148056,
+          "loss": 2.140862226486206,
+          "full_loss": 2.0487570762634277,
+          "average_rank": 146.5,
+          "bytes": 1221144
+        },
+        {
+          "start": 151338,
+          "loss": 1.8161343336105347,
+          "full_loss": 1.7574979066848755,
+          "average_rank": 147.25,
+          "bytes": 1224984
+        },
+        {
+          "start": 153125,
+          "loss": 1.9830937385559082,
+          "full_loss": 1.8590503931045532,
+          "average_rank": 146.125,
+          "bytes": 1219224
+        },
+        {
+          "start": 154146,
+          "loss": 2.47176194190979,
+          "full_loss": 2.322648763656616,
+          "average_rank": 146.5,
+          "bytes": 1221144
+        },
+        {
+          "start": 159667,
+          "loss": 1.5704716444015503,
+          "full_loss": 1.4620733261108398,
+          "average_rank": 146.875,
+          "bytes": 1223064
+        },
+        {
+          "start": 165007,
+          "loss": 1.850974678993225,
+          "full_loss": 1.6686689853668213,
+          "average_rank": 146.5,
+          "bytes": 1221144
+        },
+        {
+          "start": 168944,
+          "loss": 1.575932502746582,
+          "full_loss": 1.4383331537246704,
+          "average_rank": 146.125,
+          "bytes": 1219224
+        },
+        {
+          "start": 176862,
+          "loss": 2.110841751098633,
+          "full_loss": 2.006317615509033,
+          "average_rank": 148.0,
+          "bytes": 1228824
+        }
+      ]
+    },
+    "token_type": {
+      "selected_bias": -64,
+      "mean_loss": 2.0843118677536645,
+      "mean_full_loss": 1.9907511870066326,
+      "delta_loss": 0.09356068074703217,
+      "average_rank": 154.6796875,
+      "mean_bytes": 1263024.0,
+      "mean_router_minus_control": 0.006531198819478353,
+      "router_minus_control_bootstrap_95pct_ci": [
+        -0.0041747383773326876,
+        0.017363230263193447
+      ],
+      "rows": [
+        {
+          "start": 99145,
+          "loss": 2.455477237701416,
+          "full_loss": 2.389456033706665,
+          "average_rank": 154.375,
+          "bytes": 1261464
+        },
+        {
+          "start": 100603,
+          "loss": 1.939100742340088,
+          "full_loss": 1.83205246925354,
+          "average_rank": 152.125,
+          "bytes": 1249944
+        },
+        {
+          "start": 102377,
+          "loss": 1.8554006814956665,
+          "full_loss": 1.784440040588379,
+          "average_rank": 148.75,
+          "bytes": 1232664
+        },
+        {
+          "start": 104995,
+          "loss": 2.2662291526794434,
+          "full_loss": 2.098766803741455,
+          "average_rank": 153.25,
+          "bytes": 1255704
+        },
+        {
+          "start": 109282,
+          "loss": 2.954129219055176,
+          "full_loss": 2.8427271842956543,
+          "average_rank": 153.25,
+          "bytes": 1255704
+        },
+        {
+          "start": 109808,
+          "loss": 1.657592535018921,
+          "full_loss": 1.5804649591445923,
+          "average_rank": 155.5,
+          "bytes": 1267224
+        },
+        {
+          "start": 110613,
+          "loss": 2.4498603343963623,
+          "full_loss": 2.338292360305786,
+          "average_rank": 157.75,
+          "bytes": 1278744
+        },
+        {
+          "start": 113086,
+          "loss": 1.899212121963501,
+          "full_loss": 1.7946488857269287,
+          "average_rank": 155.5,
+          "bytes": 1267224
+        },
+        {
+          "start": 117329,
+          "loss": 2.2843446731567383,
+          "full_loss": 2.1703052520751953,
+          "average_rank": 155.5,
+          "bytes": 1267224
+        },
+        {
+          "start": 122965,
+          "loss": 1.8907045125961304,
+          "full_loss": 1.8362690210342407,
+          "average_rank": 150.4375,
+          "bytes": 1241304
+        },
+        {
+          "start": 125574,
+          "loss": 2.3310182094573975,
+          "full_loss": 2.2561779022216797,
+          "average_rank": 153.25,
+          "bytes": 1255704
+        },
+        {
+          "start": 125990,
+          "loss": 2.281109094619751,
+          "full_loss": 2.1335372924804688,
+          "average_rank": 153.25,
+          "bytes": 1255704
+        },
+        {
+          "start": 133659,
+          "loss": 2.637360095977783,
+          "full_loss": 2.5919365882873535,
+          "average_rank": 154.375,
+          "bytes": 1261464
+        },
+        {
+          "start": 134426,
+          "loss": 1.8547192811965942,
+          "full_loss": 1.784806489944458,
+          "average_rank": 156.0625,
+          "bytes": 1270104
+        },
+        {
+          "start": 134946,
+          "loss": 2.419405937194824,
+          "full_loss": 2.336562395095825,
+          "average_rank": 154.375,
+          "bytes": 1261464
+        },
+        {
+          "start": 144920,
+          "loss": 1.5781307220458984,
+          "full_loss": 1.4442375898361206,
+          "average_rank": 156.625,
+          "bytes": 1272984
+        },
+        {
+          "start": 148056,
+          "loss": 2.105595111846924,
+          "full_loss": 2.0487570762634277,
+          "average_rank": 156.625,
+          "bytes": 1272984
+        },
+        {
+          "start": 151338,
+          "loss": 1.7739412784576416,
+          "full_loss": 1.7574979066848755,
+          "average_rank": 154.9375,
+          "bytes": 1264344
+        },
+        {
+          "start": 153125,
+          "loss": 1.9418320655822754,
+          "full_loss": 1.8590503931045532,
+          "average_rank": 156.0625,
+          "bytes": 1270104
+        },
+        {
+          "start": 154146,
+          "loss": 2.437608242034912,
+          "full_loss": 2.322648763656616,
+          "average_rank": 157.75,
+          "bytes": 1278744
+        },
+        {
+          "start": 159667,
+          "loss": 1.5612497329711914,
+          "full_loss": 1.4620733261108398,
+          "average_rank": 153.8125,
+          "bytes": 1258584
+        },
+        {
+          "start": 165007,
+          "loss": 1.816286325454712,
+          "full_loss": 1.6686689853668213,
+          "average_rank": 155.5,
+          "bytes": 1267224
+        },
+        {
+          "start": 168944,
+          "loss": 1.5495636463165283,
+          "full_loss": 1.4383331537246704,
+          "average_rank": 156.625,
+          "bytes": 1272984
+        },
+        {
+          "start": 176862,
+          "loss": 2.083613872528076,
+          "full_loss": 2.006317615509033,
+          "average_rank": 156.625,
+          "bytes": 1272984
+        }
+      ]
+    }
+  }
+}

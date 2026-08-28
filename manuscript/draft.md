@@ -8,27 +8,32 @@
 
 Multi-head Latent Attention (MLA) reduces autoregressive key-value (KV) cache storage by caching a
 compressed latent vector instead of per-head keys and values, but it assigns the same latent width
-to every token. We investigate whether the required latent capacity varies by token and whether a
-contextual router can exploit this variation without merely shifting memory among positions. We
-first implement a variable-width packed MLA cache that stores token-specific latent prefixes,
-offsets, ranks, channel-order metadata, and decoupled rotary keys. On 30.6M- and 122.1M-parameter
-MLA language models, a corrected isolated-position intervention shows the same descriptive separation
-between average and tail capacity: the mean required rank is 9.00% and 8.22% of the full latent
-width, whereas the maximum future-loss criterion requires 74.07% and 72.92%, respectively. We
-then introduce a layer-0-full contextual router and train it with straight-through hard tier
-selection under a joint-rollout language-model loss and expected-rank penalty. Policies were
-frozen using 16 training and four validation sequences and evaluated once on 24 new,
-nonoverlapping sequences per scale. Relative to a random position-independent static interpolation, conditional on the router's realized per-sequence budget and with
-exactly the same cache tensor-payload bytes, the router reduces cross-entropy by 0.0196 nat at 30M
-(95% paired bootstrap CI: [0.0094, 0.0291] improvement) and 0.0325 nat at 122M (CI: [0.0196,
-0.0458]), while using 68.80% and 61.46% of fixed-width MLA cache tensor-payload bytes. The 30M policy
-incurs +0.1001 nat versus full MLA; the 122M policy incurs +0.1823 nat and therefore misses its
-+0.15-nat validation-time quality budget. These results provide evidence for contextual capacity allocation as
-a storage-quality effect at two small scales, but do not establish latency or peak-memory
-improvements because the correctness-first implementation reconstructs dense temporary latents.
-
-**Keywords:** multi-head latent attention, KV cache compression, adaptive computation, dynamic
-rank, contextual routing, language-model inference
+to every token. We recast token-wise latent width as an **operational, basis-dependent rate
+allocation problem**: persistent cache bytes are provably affine in the sum of token rates, and
+upper-tail future-loss risk induces a formally ordered spectrum of safe rates between a token's
+average and worst reuse offset (Risk-Capacity Ordering, proved here). We implement a variable-width
+packed MLA cache with token-specific nested latent prefixes, offsets, ranks, and channel-order
+metadata, and a layer-0-full contextual router trained with a straight-through joint-rollout
+surrogate for the corresponding rate-penalized Lagrangian. On 30.6M- and 122.1M-parameter MLA
+language models, we measure the full risk-capacity spectrum (not only mean and max): required rate
+rises monotonically from 9.00%/8.22% of the full latent width at the mean criterion to
+74.07%/72.92% at the worst-offset criterion, with an almost scale-invariant normalized
+tail-capacity premium (0.651 at 30M, 0.647 at 122M). Diagnostic decomposition shows this separation
+reflects **pervasive cancellation across the reuse horizon, not rare catastrophic tokens**: over 93%
+of mean-safe positions still have at least one future offset exceeding the loss budget, and the
+positive-part mean loss is roughly double the signed mean. The frozen, pre-registered router beats
+random and matched-histogram-shuffle placement on 24 untouched sequences per scale (30M: -0.0196
+nat, 95% CI [-0.0291,-0.0094]; 122M: -0.0325 nat, CI [-0.0458,-0.0196]) at 68.80%/61.46% of
+fixed-width MLA cache bytes. However, against simple **causal heuristic** baselines (absolute
+position, token identity, token rarity) selected only on the original training/validation splits
+and evaluated at the identical byte budget, the router does not consistently win: it loses to a
+trivial position rule at 30M and to a trivial rarity rule at 122M. We report this negative result
+transparently. The 122M policy also misses its own +0.15-nat validation-time quality budget on
+fresh data (+0.1823 nat realized). Overall, this work provides a formal rate-allocation framework
+and a rigorously audited, mostly negative empirical picture: contextual placement beats naive
+random allocation but has not yet been shown to beat simple hand-designed heuristics, and no
+peak-memory or latency benefit is established because the correctness-first implementation
+reconstructs dense temporaries before attention.
 
 ## 1. Introduction
 
@@ -108,6 +113,23 @@ Our early supervised routers exposed this mismatch: high accuracy on isolated me
 collapsed toward the smallest tier during simultaneous compression. This negative result motivates
 direct optimization under the deployed hard-routing rollout.
 
+
+### 2.3 Relation to token-conditioned and layer-wise MLA variants
+
+Closest in spirit is EG-MLA [7], which gates latent content per token via an embedding-conditioned
+mechanism, and CARE [8], which allocates rank across layers using covariance-aware decomposition.
+ElasticMLA differs along three axes simultaneously: (i) it changes the *persistent cache width*
+itself through a genuinely packed, ragged representation rather than a fixed-width gate; (ii) the
+routing decision is trained end-to-end with a straight-through hard-tier joint-rollout surrogate
+under an explicit rate penalty, rather than a fixed heuristic or layer-only allocation; and (iii)
+we evaluate it against random, shuffled, *and* causal-heuristic exact-byte controls, exposing a
+result those comparisons alone would miss: the router does not consistently beat simple hand-
+designed rules (Section 5.4). We see this combination -- runtime per-token packed rate allocation,
+joint hard-routing optimization, and honest heuristic comparison -- as the paper's main empirical
+novelty, while acknowledging that "learn an importance signal, then spend a discrete resource
+budget nonuniformly" is a general pattern shared with adaptive-computation and mixture-of-experts
+routing more broadly.
+
 ## 3. Method
 
 ### 3.1 Nested latent prefixes and packed storage
@@ -130,6 +152,43 @@ int16 channel permutations. The implementation uses $b=4$. This excludes allocat
 framework-object overhead, router weights, and workspace memory. During attention, the prototype
 reconstructs a dense temporary latent tensor; the metric is therefore neither process/device
 memory nor a peak-memory or kernel-latency measurement.
+
+### 3.1a Terminology and two propositions
+
+We deliberately avoid calling $r_t$ an intrinsic matrix rank. Because MLA's latent coordinates can
+be rotated while compensating the up-projections ($c\mapsto Qc$, $W_U\mapsto W_UQ^{-1}$ for
+invertible $Q$), a coordinate-wise nested prefix is **basis dependent**: full-model equivalence
+under $Q$ does not imply prefix-code equivalence. We therefore call $r_t$ an operational retained-
+coordinate rate in the calibrated nested codebook $P_{\ell,r_1}\preceq\cdots\preceq P_{\ell,d_c}=I$.
+
+**Proposition 1 (exact budget affinity).** From the byte formula above, for any two per-sequence
+rate allocations $\mathbf r,\mathbf s$ with the same downstream rank sum,
+$M_{\text{packed}}(\mathbf r)=M_{\text{packed}}(\mathbf s)$; more generally
+$M_{\text{packed}}(\mathbf r)-M_{\text{packed}}(\mathbf s)=b(L-1)\sum_t(r_t-s_t)$. This licenses
+exact-byte controls: any two allocations with equal rank sums have identical cache tensor-payload
+bytes.
+
+Let $\Delta_{t,j}(r)=\ell_{t+j}(P_rc_t)-\ell_{t+j}(c_t)$ be the signed loss change at future offset
+$j\in\{0,\ldots,H-1\}$ from truncating only source token $t$ to rate $r$, and for tail count $k$
+let $A_{t,k}(r)$ be the mean of the $k$ largest $\Delta_{t,j}(r)$ (so $k=H$ is the signed mean and
+$k=1$ is the maximum). Define the conservative suffix-safe rate
+$r^*_{t,k}(\epsilon)=\min\{r\in\mathcal R: A_{t,k}(r')\le\epsilon\ \forall r'\ge r\}$.
+
+**Proposition 2 (risk-capacity ordering).** If $k_1\ge k_2$ then $A_{t,k_1}(r)\le A_{t,k_2}(r)$ for
+every $r$, hence $r^*_{t,k_1}(\epsilon)\le r^*_{t,k_2}(\epsilon)$. *Proof.* The mean of the top-$k$
+elements of a fixed vector cannot decrease as $k$ shrinks, so the suffix-feasible rank set for
+$k_2$ is a subset of that for $k_1$; their minima are ordered. This holds for any realized loss
+vector, including the empirically nonmonotone rank-loss curves we observe, and requires no
+assumption about the sign or shape of $\Delta_{t,j}$. It is what licenses reporting an ordered
+risk-capacity spectrum (Section 5.1) rather than only two endpoints.
+
+Under a bounded-Lipschitz assumption on the future logit map, nested-prefix truncation additionally
+admits the sensitivity envelope $|\Delta_{t,j}(r)|\le\sqrt2K_{t,j}\|e_t(r)\|_2$, where $e_t(r)$ is
+the discarded latent tail and $K_{t,j}$ a local Lipschitz constant; this gives a monotone safety
+bound consistent with, but not proving, the realized risk-capacity ordering. Full derivations,
+the constrained joint rate-distortion formulation that motivates the router objective, a formal
+statement of the straight-through surrogate's scope, and further falsifiable predictions are given
+in `notes/theory_contextual_tail_rate.md`.
 
 ### 3.2 Corrected future-loss capacity analysis
 
@@ -225,17 +284,45 @@ one-sided paired sign-flip tests and sequence win counts.
 
 ## 5. Results
 
-### 5.1 Mean and tail capacity separate at both scales
+### 5.1 The full risk-capacity spectrum is monotone and nearly scale-invariant
 
-| Scale | Mean-over-horizon: mean $r^*$ | Mean / $d_c$ | Max-over-horizon: mean $r^*$ | Mean / $d_c$ |
-|---|---:|---:|---:|---:|
-| 30M | 23.04 | 9.00% | 189.63 | 74.07% |
-| 122M | 31.56 | 8.22% | 280.00 | 72.92% |
+We extend the two-point mean/max analysis to a full upper-tail spectrum computed from the same
+corrected, provenance-tracked windows: for each source position we retain the largest $k$ of the
+$H=32$ future loss deltas, for $k\in\{32,16,8,4,2,1\}$, and take the smallest suffix-safe rank.
 
-The large typical-versus-tail separation replicates descriptively. The normalized 122M-minus-30M
-difference is -0.781 percentage points for the mean (95% bootstrap CI: [-1.617, +0.076]) and
--1.156 points for the maximum (CI: [-3.849, +1.611]). Both intervals include zero. This is not an
-equivalence test and does not establish scale invariance.
+| $k$ (of 32) | $\alpha=1-k/H$ | 30M mean $r^*$ | 30M $/d_c$ | 122M mean $r^*$ | 122M $/d_c$ |
+|---:|---:|---:|---:|---:|---:|
+| 32 (mean) | 0.000 | 23.04 | 9.00% | 31.56 | 8.22% |
+| 16 | 0.500 | 54.96 | 21.47% | 88.33 | 23.00% |
+| 8 | 0.750 | 101.50 | 39.65% | 151.75 | 39.52% |
+| 4 | 0.875 | 142.71 | 55.75% | 208.19 | 54.22% |
+| 2 | 0.938 | 171.35 | 66.94% | 251.75 | 65.56% |
+| 1 (max) | 0.969 | 189.62 | 74.07% | 280.00 | 72.92% |
+
+Every step is monotone nondecreasing at both scales, exactly as Proposition 2 (risk-capacity
+ordering) guarantees. The normalized **tail-capacity premium** $\mathrm{TCP}=\mathbb E[r^*_{\max}
+-r^*_{\mathrm{mean}}]/d_c$ is 0.6507 (95% CI [0.6335, 0.6673]) at 30M and 0.6470 (CI [0.6283,
+0.6641]) at 122M -- nearly identical intervals, making this the most scale-consistent quantitative
+result in the paper.
+
+**The separation is driven by pervasive cancellation, not rare catastrophic tokens.** At the rank
+that is safe under the signed mean criterion, the positive-part mean loss (mean of $\max(\Delta,0)$
+over the horizon) is 2.05x (30M) and 2.31x (122M) larger than the signed mean, and 93.1%/94.1% of
+such "mean-safe" positions still have at least one future offset whose loss increase exceeds
+$\epsilon$. If harm were concentrated in a few rare spikes, the vast majority of mean-safe positions
+would have zero offsets above $\epsilon$; instead nearly all of them do, and the signed mean is kept
+small by cancellation against negative excursions elsewhere in the horizon. **Figure 2**
+(`figures/elasticmla_risk_spectrum.pdf`) shows the spectrum and this diagnostic.
+
+The normalized 122M-minus-30M difference in the original mean/max endpoints is -0.781 percentage
+points for the mean (95% bootstrap CI: [-1.617, +0.076]) and -1.156 points for the maximum (CI:
+[-3.849, +1.611]); both include zero. This is not an equivalence test and does not establish scale
+invariance of the endpoints, but the tail-capacity premium result above is a stronger and separate
+scale-consistency finding computed across the whole spectrum rather than two endpoints.
+
+The per-record raw deltas underlying this spectrum were computed on ephemeral cloud job storage and
+are not independently re-auditable; only the aggregate summary (with verified checkpoint/data
+provenance) was recovered. See `notes/risk_capacity_spectrum_results.md`.
 
 ### 5.2 Fresh contextual routing beats exact-byte static allocation
 
@@ -259,7 +346,15 @@ averaged over 768 probed positions per scale. (b) Per-sequence router-minus-cont
 dots are sequences, diamonds are means, and error bars are paired sequence-bootstrap 95%
 intervals. (c) Mean fresh-sequence loss increases versus full MLA; both controls have exactly the
 router's per-sequence cache tensor-payload byte count. Points are discrete evaluated
-configurations, not an interpolated operating curve. Source: `figures/elasticmla_main_results.pdf`.
+configurations, not an interpolated operating curve. Panel (a) shows only the mean/max endpoints;
+see Figure 2 for the full six-point risk-capacity spectrum. Source: `figures/elasticmla_main_results.pdf`.
+
+**Figure 2.** (a) Normalized suffix-safe rate against upper-tail level $\alpha=1-k/H$ at both
+scales, with paired sequence-bootstrap 95% bands; monotonicity is guaranteed by Proposition 2. (b)
+Signed mean, positive-part mean, and maximum loss delta at the rank that is safe under the signed
+mean criterion, annotated with the fraction of records having at least one future offset exceeding
+$\epsilon$; the gap between signed and positive-part means shows cancellation rather than rare
+spikes. Source: `figures/elasticmla_risk_spectrum.pdf`.
 
 ### 5.3 Quality-constraint generalization is imperfect
 
@@ -270,6 +365,41 @@ the Pareto point relative to noncontextual allocation, but a small validation se
 calibrate an absolute quality constraint. A deployable system should use a larger calibration set,
 a conservative risk margin, or online fallback to a higher tier.
 
+### 5.4 The router does not consistently beat simple causal heuristics
+
+The random and matched-histogram-shuffle controls above are content-independent given the router's
+realized budget, but they are weak baselines: nothing prevents a simple, cheap, strictly causal
+rule (depending only on the current token and/or absolute position, never on future tokens or a
+sequence-global budget) from doing better. We fit four such rules -- absolute position, token
+identity (frequency-smoothed), inverse token rarity, and coarse token type -- using only the
+original 16 training sequences, select an additive rate bias on the original 4 validation
+sequences under the same +0.15-nat budget rule as the router, and evaluate once on the same 24
+frozen fresh sequences at the router's own per-sequence byte budget.
+
+| Scale | Control | Router − control (nat) | 95% CI | Result |
+|---|---|---:|---|---|
+| 30M | position | +0.0138 | [0.0025, 0.0254] | **router loses** |
+| 30M | lexical identity | -0.0253 | [-0.0399, -0.0114] | router wins |
+| 30M | token rarity | -0.0268 | [-0.0412, -0.0124] | router wins |
+| 30M | token type | +0.0065 | [-0.0042, 0.0174] | tie |
+| 122M | position | +0.0040 | [-0.0098, 0.0171] | tie |
+| 122M | lexical identity | +0.0067 | [-0.0044, 0.0177] | tie |
+| 122M | token rarity | +0.0468 | [0.0340, 0.0593] | **router clearly loses** |
+| 122M | token type | +0.0117 | [-0.0028, 0.0258] | tie |
+
+At 30M a trivial position-dependent rate schedule beats the trained router with a confidence
+interval that excludes zero. At 122M a trivial inverse-token-frequency rule beats the router
+decisively, and two more controls are statistically tied. Only two of eight scale/control pairs
+show a router win with a CI excluding zero. **This narrows the paper's central claim**: contextual
+placement is better than *random or shuffled* placement at equal bytes, but current evidence does
+not show it is better than the strongest simple hand-designed causal heuristic at that budget. We
+report this as an honest negative finding (`notes/causal_heuristic_baseline_results.md`,
+`experiments/evaluate_causal_heuristic_routers.py`) rather than omit it: it indicates that the
+isolated-position future-loss signal used to construct oracle labels, and the joint-rollout
+straight-through training that refines it, are not yet strong enough to reliably out-perform
+inexpensive non-learned rules, motivating stronger joint objectives, larger calibration sets, or
+hybrid heuristic-plus-learned designs as future work.
+
 ## 6. Validity, Reproducibility, and Limitations
 
 **Statistical scope.** The unit of inference is a full sequence, not an individual token. Twenty-
@@ -277,7 +407,11 @@ four clusters per scale support paired uncertainty estimates but remain modest. 
 sign-flip p-values enumerate all sign assignments conditional on the observed magnitudes, but
 their inferential interpretation still requires exchangeability of paired-difference signs under
 the null. The intervals and tests do not incorporate checkpoint, policy-seed, or training-run
-variability. We evaluate one checkpoint per scale, one data distribution, and one router seed.
+variability. We evaluate one checkpoint per scale, one data distribution, and one router seed. The
+per-record raw deltas underlying the risk-capacity spectrum (Section 5.1) were computed on
+ephemeral cloud job storage and could not be retrieved after job completion; only the aggregate
+summary statistics (independently checkpoint/data-hash verified) were recovered, so that spectrum
+is not re-auditable at the per-position level the way the confirmation results are.
 
 **Threshold scope.** Raw rank-loss curves are frequently nonmonotone: 83.6%/89.3% of
 mean-over-horizon curves and 59.4%/69.7% of maximum-over-horizon curves at 30M/122M,
@@ -287,8 +421,12 @@ intrinsic rank.
 
 **Control scope.** The primary control randomizes rank placement conditional on each router
 sequence's realized total rank; it is therefore position-independent, but not a globally fixed-
-budget policy. Twenty random allocations estimate its per-sequence loss. The experiments do not
-compare against stronger heuristic or separately optimized byte-matched allocation policies.
+budget policy. Twenty random allocations estimate its per-sequence loss. Section 5.4 adds four
+causal heuristic baselines (position, lexical identity, rarity, type) at the same realized budget;
+the router does not consistently beat these, and loses to two of them with high confidence. We
+still lack a comparison against separately optimized global-budget static policies, a learned
+orthogonal (PCA/SVD) nested basis, and eviction/quantization baselines from the wider KV-cache
+compression literature.
 
 **Oracle scope.** Capacity labels are isolated-position interventions, not joint-rollout-optimal
 labels. Joint training alleviates but does not solve this limitation.
@@ -314,14 +452,25 @@ results. Future runs fail unless their manifest inputs match.
 
 ## 7. Conclusion
 
-ElasticMLA replaces a single fixed MLA latent width with contextual token-level tiers stored in a
-genuine packed cache. Corrected interventions show that typical and tail latent requirements are
-widely separated at both 30M and 122M scales. More importantly, frozen rollout-trained routers
-beat random position-independent exact-byte static allocations conditional on each router budget on untouched sequences at both scales.
-This provides small-scale evidence for contextual allocation in persistent cache storage. The next
-systems step is to remove dense reconstruction through grouped-tier or fused packed attention and
-to benchmark peak memory and latency against optimized MHA, GQA, MLA, and FlashMLA baselines. The
-next modeling step is conservative quality calibration across more seeds, domains, and scales.
+We formalize token-wise MLA latent width as a basis-dependent operational rate allocation problem:
+persistent cache bytes are exactly affine in summed token rates (Proposition 1), and upper-tail
+future-loss risk induces a provably monotone spectrum of safe rates between average and worst-case
+reuse (Proposition 2). Measured at 30M and 122M, this spectrum is nearly scale-invariant in its
+normalized tail-capacity premium (~0.65 at both scales) and shows that the mean/tail separation
+arises from pervasive cancellation across the reuse horizon rather than rare catastrophic tokens --
+a mechanistic finding that revises the intuitive "rare spike" story. Frozen, pre-registered
+contextual routers beat random and shuffled placement at equal cache bytes at both scales, but a
+rigorous comparison against simple causal heuristics (position, token identity, rarity, type) shows
+the router does not consistently win, and in two cases loses with high confidence. We report this
+transparently rather than overclaim: the present evidence establishes a formal allocation framework
+and a real but limited placement effect, not superiority over hand-designed heuristics, not
+peak-memory or latency gains (the correctness-first implementation reconstructs dense temporaries),
+and not a reliably calibrated quality constraint at 122M. Priority future work is (1) stronger joint
+-rollout objectives or hybrid heuristic-plus-learned routers that can beat causal baselines with
+statistical confidence, (2) a grouped-tier or fused packed attention kernel to convert the
+established persistent-byte savings into measured peak-memory and latency gains against optimized
+MHA/GQA/MLA/FlashMLA baselines, and (3) replication across more seeds, domains, and a
+larger-parameter, more realistically trained checkpoint.
 
 ## References (draft)
 
@@ -338,3 +487,12 @@ Any Transformer-based LLMs,” arXiv:2502.14837, 2025.
 [5] “Lossless KV Cache Compression to 2%,” arXiv:2410.15252, 2024.
 
 [6] “TransMLA: Multi-Head Latent Attention Is All You Need,” arXiv:2502.07864, 2025.
+
+[7] "EG-MLA: Embedding-Gated Multi-head Latent Attention for Scalable and Efficient LLMs,”
+arXiv:2509.16686, 2025.
+
+[8] “CARE: Covariance-Aware and Rank-Enhanced Decomposition for Enabling Multi-Head Latent
+Attention,” arXiv:2603.17946.
+
+[9] Through the Bottleneck: How Multi-head Latent Attention Separates Content from Position in
+Language Models,” arXiv:2607.23054.
