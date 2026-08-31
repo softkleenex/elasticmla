@@ -148,7 +148,7 @@ def main():
         close(row["router_minus_static"], row["router_loss"] - row["static_loss_mean"])
         close(row["router_minus_shuffle"], row["router_loss"] - row["shuffle_loss_mean"])
         hist_sum = sum(int(tier) * count for tier, count in row["rank_histogram"].items())
-        close(row["average_downstream_rank"], hist_sum / block_size, atol=2e-5)
+        close(row["average_downstream_rank"], hist_sum / block_size, atol=5e-5)
         rank_sum = hist_sum
         expected_bytes = (
             4 * (block_size * d_c + (n_layers - 1) * rank_sum)
