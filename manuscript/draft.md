@@ -14,26 +14,34 @@ upper-tail future-loss risk induces a formally ordered spectrum of safe rates be
 average and worst reuse offset (Risk-Capacity Ordering, proved here). We implement a variable-width
 packed MLA cache with token-specific nested latent prefixes, offsets, ranks, and channel-order
 metadata, and a layer-0-full contextual router trained with a straight-through joint-rollout
-surrogate for the corresponding rate-penalized Lagrangian. On 30.6M-, 122.1M-, and 249.3M-parameter MLA
-language models (an 8x parameter range), we measure the full risk-capacity spectrum (not only mean
-and max): required rate rises monotonically from 9.00%/8.22%/7.15% of the full latent width at the
-mean criterion to 74.07%/72.92%/76.03% at the worst-offset criterion, with an almost scale-invariant
-normalized tail-capacity premium (0.651/0.647/0.689 at 30M/122M/250M). Diagnostic decomposition shows this separation
-reflects **pervasive cancellation across the reuse horizon, not rare catastrophic tokens**: over 93%
-of mean-safe positions still have at least one future offset exceeding the loss budget, and the
-positive-part mean loss is roughly double the signed mean. The frozen, pre-registered router beats
-random and matched-histogram-shuffle placement on 24 untouched sequences per scale (30M: -0.0196
-nat, 95% CI [-0.0291,-0.0094]; 122M: -0.0325 nat, CI [-0.0458,-0.0196]) at 68.80%/61.46% of
-fixed-width MLA cache bytes. However, against simple **causal heuristic** baselines (absolute
-position, token identity, token rarity) selected only on the original training/validation splits
-and evaluated at the identical byte budget, the router does not consistently win: it loses to a
-trivial position rule at 30M and to a trivial rarity rule at 122M. We report this negative result
-transparently. The 122M policy also misses its own +0.15-nat validation-time quality budget on
-fresh data (+0.1823 nat realized). Overall, this work provides a formal rate-allocation framework
-and a rigorously audited, mostly negative empirical picture: contextual placement beats naive
-random allocation but has not yet been shown to beat simple hand-designed heuristics, and a direct T4 GPU benchmark shows a modest measured peak-memory reduction (3.5-4.2%) alongside
-a severe measured decode-latency cost (168-201x slower than full MLA), traced to an unvectorized
-Python-loop cache reconstruction that must be fixed before any serving benefit is possible.
+surrogate for the corresponding rate-penalized Lagrangian. On 30.6M-, 122.1M-, and 249.3M-parameter
+MLA language models (an 8x parameter range), we measure the full risk-capacity spectrum (not only
+mean and max): required rate rises monotonically from 9.00%/8.22%/7.15% of the full latent width at
+the mean criterion to 74.07%/72.92%/76.03% at the worst-offset criterion, with an almost
+scale-invariant normalized tail-capacity premium (0.651/0.647/0.689 at 30M/122M/250M). Diagnostic
+decomposition shows this separation reflects **pervasive cancellation across the reuse horizon, not
+rare catastrophic tokens**: over 93% of mean-safe positions at every scale still have at least one
+future offset exceeding the loss budget, and the positive-part mean loss is roughly double the
+signed mean. This risk-capacity result is scale-consistent and robust.
+
+The routing result is not. The frozen, pre-registered router beats random and matched-histogram-
+shuffle placement on 24 untouched sequences at 30M (-0.0196 nat, 95% CI [-0.0291,-0.0094]) and 122M
+(-0.0325 nat, CI [-0.0458,-0.0196]), but **the same pre-registered protocol fails outright at
+250M**: router-minus-static is +0.0019 nat with a CI that includes zero (13/24 sequence wins,
+exact sign-flip p=0.806). Against simple **causal heuristic** baselines (absolute position, token
+identity, token rarity, token type) selected only on the original training/validation splits and
+evaluated at the identical byte budget, the router's advantage is inconsistent and *shrinks with
+scale*: it loses to a trivial position rule at 30M, to a trivial rarity rule at 122M, and to three
+of four heuristics at 250M. We report this negative and scale-dependent trend transparently rather
+than omit it. The 122M policy also misses its own +0.15-nat validation-time quality budget on
+fresh data (+0.1823 nat realized), independently of the allocation result. Overall, this work
+provides a formal rate-allocation framework, a scale-consistent risk-capacity finding, and a
+rigorously audited routing result that is positive at small scale and null-to-negative at 250M --
+evidence that the current isolated-position oracle and straight-through joint-rollout training do
+not yet scale. A direct T4 GPU benchmark additionally shows a modest measured peak-memory reduction
+(3.5-4.2%) alongside a severe measured decode-latency cost (168-201x slower than full MLA), traced
+to an unvectorized Python-loop cache reconstruction that must be fixed before any serving benefit
+is possible.
 
 ## 1. Introduction
 
@@ -322,8 +330,9 @@ scales.
 
 The 250M model (249.3M unique parameters, $d_{model}=1024$, 16 layers, $d_c=512$) was trained for
 3,000 steps on the same TinyStories corpus construction as the 122M model (byte-identical held-out
-validation stream), reaching validation loss 1.6588. It was not used for router training or fresh-
-window confirmation in this version; it contributes only to the risk-capacity spectrum result.
+validation stream), reaching validation loss 1.6588. It contributes to the risk-capacity spectrum
+result here and, as described in Sections 5.2-5.4, to a full contextual-router replication whose
+pre-registered confirmation fails at this scale.
 
 The normalized 122M-minus-30M difference in the original mean/max endpoints is -0.781 percentage
 points for the mean (95% bootstrap CI: [-1.617, +0.076]) and -1.156 points for the maximum (CI:
@@ -336,22 +345,28 @@ The per-record raw deltas underlying this spectrum were computed on ephemeral cl
 are not independently re-auditable; only the aggregate summary (with verified checkpoint/data
 provenance) was recovered. See `notes/risk_capacity_spectrum_results.md`.
 
-### 5.2 Fresh contextual routing beats exact-byte static allocation
+### 5.2 Fresh contextual routing beats exact-byte static allocation at 30M-122M, but not at 250M
 
-| Scale | Mean rank | Packed / fixed MLA | Δloss vs full | Router − static | 95% CI | Wins | Exact $p$ |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| 30M | 145.78 / 256 | 68.80% | +0.1001 | **-0.01959** | [-0.02911, -0.00938] | 20/24 | 0.000655 |
-| 122M | 206.93 / 384 | 61.46% | +0.1823 | **-0.03251** | [-0.04575, -0.01958] | 21/24 | 0.0000493 |
+| Scale | Mean rank | Packed / fixed MLA | $\Delta$loss vs full | Router - static | 95% CI | Wins | Exact $p$ | Result |
+|---|---:|---:|---:|---:|---:|---:|---:|---|
+| 30M | 145.78 / 256 | 68.80% | +0.1001 | **-0.01959** | [-0.02911, -0.00938] | 20/24 | 0.000655 | success |
+| 122M | 206.93 / 384 | 61.46% | +0.1823 | **-0.03251** | [-0.04575, -0.01958] | 21/24 | 0.0000493 | success |
+| 250M | 317.15 / 512 | 66.82% | +0.1158 | **+0.00190** | [-0.00222, +0.00610] | 13/24 | 0.806 | **failure** |
 
-Both scales satisfy their separately pre-specified primary criteria. The protocol did not
-pre-specify a family-wise two-scale test, so we do not elevate the post-hoc relationship between
-the two-sided intervals and a Bonferroni bound to a confirmatory claim. The conclusion is
-allocation efficiency at the realized budget, not lossless compression.
+At 30M and 122M the router satisfies its separately pre-specified primary criterion. At 250M it
+does not: the point estimate is in the wrong direction, the 95% CI includes zero, and the exact
+sign-flip test gives no evidence of an effect (p=0.806). This is the first scale at which the
+pre-registered criterion is not met, and we report it exactly as obtained. We did not adjust the
+protocol, tiers, or objective after seeing this result. The protocol did not pre-specify a
+family-wise three-scale test, so we do not elevate the two successes and one failure to a combined
+confirmatory claim; each scale's result stands on its own frozen protocol.
 
-The exact-histogram shuffle comparison is stronger descriptively: router-minus-shuffle is -0.07989
-nat at 30M (CI: [-0.08999, -0.06956]) and -0.13907 nat at 122M (CI: [-0.15439, -0.12408]), with
-24/24 sequence wins at both scales. This supports the interpretation that contextual placement,
-not merely the tier histogram, contributes to quality.
+The exact-histogram shuffle comparison is more forgiving at all three scales: router-minus-shuffle
+is -0.07989 nat at 30M (CI: [-0.08999, -0.06956]), -0.13907 nat at 122M (CI: [-0.15439, -0.12408]),
+and -0.01765 nat at 250M (CI: [-0.02306,-0.01228]), with 24/24, 24/24, and 21/24 sequence wins
+respectively. Even at 250M, where the router does not beat *random* rate allocation, it still beats
+a *shuffle* of its own chosen tiers across positions -- so within-sequence placement retains a
+detectable, much smaller effect even where overall rate selection does not.
 
 **Figure 1.** (a) Mean required rank under the mean- and maximum-over-32-token-horizon criteria,
 averaged over 768 probed positions per scale. (b) Per-sequence router-minus-control differences;
@@ -359,7 +374,9 @@ dots are sequences, diamonds are means, and error bars are paired sequence-boots
 intervals. (c) Mean fresh-sequence loss increases versus full MLA; both controls have exactly the
 router's per-sequence cache tensor-payload byte count. Points are discrete evaluated
 configurations, not an interpolated operating curve. Panel (a) shows only the mean/max endpoints;
-see Figure 2 for the full six-point risk-capacity spectrum. Source: `figures/elasticmla_main_results.pdf`.
+see Figure 2 for the full six-point risk-capacity spectrum. Panels (b)-(c) show only 30M/122M;
+see Section 5.2's table and `notes/contextual_router_250m_results.md` for the 250M result.
+Source: `figures/elasticmla_main_results.pdf`.
 
 **Figure 2.** (a) Normalized suffix-safe rate against upper-tail level $\alpha=1-k/H$ at all three
 scales, with paired sequence-bootstrap 95% bands; monotonicity is guaranteed by Proposition 2. (b)
@@ -368,16 +385,18 @@ mean criterion, annotated with the fraction of records having at least one futur
 $\epsilon$; the gap between signed and positive-part means shows cancellation rather than rare
 spikes. Source: `figures/elasticmla_risk_spectrum.pdf`.
 
-### 5.3 Quality-constraint generalization is imperfect
+### 5.3 Quality-constraint generalization is imperfect, independently of the allocation result
 
-The 30M policy remains within the +0.15-nat selection budget on fresh sequences. The 122M policy
-does not: validation Δloss was +0.1408, whereas fresh Δloss is +0.1823. It nevertheless beats its
-same-byte static control. This distinction matters operationally: contextual allocation improves
-the Pareto point relative to noncontextual allocation, but a small validation set did not reliably
-calibrate an absolute quality constraint. A deployable system should use a larger calibration set,
-a conservative risk margin, or online fallback to a higher tier.
+The 30M and 250M policies remain within the +0.15-nat selection budget on fresh sequences (fresh
+$\Delta$loss 0.1001 and 0.1158 respectively). The 122M policy does not: validation $\Delta$loss was
++0.1408, whereas fresh $\Delta$loss is +0.1823. Quality-budget calibration and allocation efficiency
+are separate axes: 122M keeps its allocation advantage over static despite missing its budget,
+while 250M stays within budget yet loses its allocation advantage (Section 5.2). Neither problem
+predicts the other. A deployable system should use a larger calibration set, a conservative risk
+margin, or online fallback to a higher tier for the quality-budget issue, and a fundamentally
+stronger training signal (Section 5.4, Section 6) for the allocation-advantage issue.
 
-### 5.4 The router does not consistently beat simple causal heuristics
+### 5.4 The router does not consistently beat simple causal heuristics, and loses more often as scale grows
 
 The random and matched-histogram-shuffle controls above are content-independent given the router's
 realized budget, but they are weak baselines: nothing prevents a simple, cheap, strictly causal
@@ -388,7 +407,7 @@ original 16 training sequences, select an additive rate bias on the original 4 v
 sequences under the same +0.15-nat budget rule as the router, and evaluate once on the same 24
 frozen fresh sequences at the router's own per-sequence byte budget.
 
-| Scale | Control | Router − control (nat) | 95% CI | Result |
+| Scale | Control | Router - control (nat) | 95% CI | Result |
 |---|---|---:|---|---|
 | 30M | position | +0.0138 | [0.0025, 0.0254] | **router loses** |
 | 30M | lexical identity | -0.0253 | [-0.0399, -0.0114] | router wins |
@@ -398,19 +417,28 @@ frozen fresh sequences at the router's own per-sequence byte budget.
 | 122M | lexical identity | +0.0067 | [-0.0044, 0.0177] | tie |
 | 122M | token rarity | +0.0468 | [0.0340, 0.0593] | **router clearly loses** |
 | 122M | token type | +0.0117 | [-0.0028, 0.0258] | tie |
+| 250M | position | +0.0055 | [0.0011, 0.0097] | **router loses** |
+| 250M | lexical identity | -0.0155 | [-0.0206, -0.0106] | router wins |
+| 250M | token rarity | +0.0055 | [0.0010, 0.0098] | **router loses** |
+| 250M | token type | +0.0055 | [0.0010, 0.0097] | **router loses** |
 
-At 30M a trivial position-dependent rate schedule beats the trained router with a confidence
-interval that excludes zero. At 122M a trivial inverse-token-frequency rule beats the router
-decisively, and two more controls are statistically tied. Only two of eight scale/control pairs
-show a router win with a CI excluding zero. **This narrows the paper's central claim**: contextual
-placement is better than *random or shuffled* placement at equal bytes, but current evidence does
-not show it is better than the strongest simple hand-designed causal heuristic at that budget. We
-report this as an honest negative finding (`notes/causal_heuristic_baseline_results.md`,
-`experiments/evaluate_causal_heuristic_routers.py`) rather than omit it: it indicates that the
-isolated-position future-loss signal used to construct oracle labels, and the joint-rollout
-straight-through training that refines it, are not yet strong enough to reliably out-perform
-inexpensive non-learned rules, motivating stronger joint objectives, larger calibration sets, or
-hybrid heuristic-plus-learned designs as future work.
+At 250M, position, rarity, and type collapse to numerically identical results: with only four
+coarse tiers, their validation-selected bias saturates almost the entire sequence into a single
+mid-high tier, i.e. these heuristics degenerate toward a near-uniform allocation, and even that
+beats the router with confidence intervals excluding zero. Across all three scales, only two of
+twelve scale/control pairs show a router win with a CI excluding zero (both are the lexical-
+identity control), and the router's losses become more frequent and more confident at larger
+scale: 1/4 confident losses at 30M, 1/4 at 122M, 3/4 at 250M. **This narrows the paper's central
+claim further than at two scales**: contextual placement is sometimes better than *random or
+shuffled* placement at equal bytes, but current evidence does not show it is reliably better than
+simple hand-designed heuristics, and the gap does not close -- if anything it widens -- with scale.
+We report this as an honest negative finding (`notes/causal_heuristic_baseline_results.md`,
+`notes/contextual_router_250m_results.md`, `experiments/evaluate_causal_heuristic_routers.py`)
+rather than omit it: it indicates that the isolated-position future-loss signal used to construct
+oracle labels, and the joint-rollout straight-through training that refines it, are not yet strong
+enough to reliably out-perform inexpensive non-learned rules at any tested scale, and this problem
+does not appear to improve as the base model grows, motivating stronger joint objectives, larger
+calibration sets, or hybrid heuristic-plus-learned designs as future work.
 
 ### 5.5 Measured GPU memory and latency confirm storage savings and reveal a severe latency cost
 
@@ -495,24 +523,32 @@ results. Future runs fail unless their manifest inputs match.
 We formalize token-wise MLA latent width as a basis-dependent operational rate allocation problem:
 persistent cache bytes are exactly affine in summed token rates (Proposition 1), and upper-tail
 future-loss risk induces a provably monotone spectrum of safe rates between average and worst-case
-reuse (Proposition 2). Measured at 30M, 122M, and 250M (an 8x parameter range), this spectrum is nearly
-scale-invariant in its normalized tail-capacity premium (0.65-0.69 across all three scales) and
-shows that the mean/tail separation
-arises from pervasive cancellation across the reuse horizon rather than rare catastrophic tokens --
-a mechanistic finding that revises the intuitive "rare spike" story. Frozen, pre-registered
-contextual routers beat random and shuffled placement at equal cache bytes at both scales, but a
-rigorous comparison against simple causal heuristics (position, token identity, rarity, type) shows
-the router does not consistently win, and in two cases loses with high confidence. We report this
-transparently rather than overclaim: the present evidence establishes a formal allocation framework
-and a real but limited placement effect, not superiority over hand-designed heuristics, not peak-memory or latency gains -- a direct T4 benchmark shows the packed path is 168-201x
-slower per decode step than full MLA despite modestly lower peak memory, because the packed
-cache reconstruction is an unvectorized Python loop -- and not a reliably calibrated quality
-constraint at 122M. Priority future work is (1) stronger joint
--rollout objectives or hybrid heuristic-plus-learned routers that can beat causal baselines with
-statistical confidence, (2) a grouped-tier or fused packed attention kernel to convert the
-established persistent-byte savings into measured peak-memory and latency gains against optimized
-MHA/GQA/MLA/FlashMLA baselines, and (3) replication across more seeds, domains, and a
-larger-parameter, more realistically trained checkpoint.
+reuse (Proposition 2). Measured at 30M, 122M, and 250M (an 8x parameter range), this spectrum is
+nearly scale-invariant in its normalized tail-capacity premium (0.65-0.69 across all three scales)
+and shows that the mean/tail separation arises from pervasive cancellation across the reuse
+horizon rather than rare catastrophic tokens -- a mechanistic finding that revises the intuitive
+"rare spike" story and is the paper's most robust contribution.
+
+The routing contribution is more limited than earlier two-scale evidence suggested. Frozen,
+pre-registered contextual routers beat random and shuffled placement at equal cache bytes at 30M
+and 122M, but the identical pre-registered protocol **fails outright at 250M** (router-minus-static
+CI includes zero, 13/24 wins), and a rigorous comparison against simple causal heuristics
+(position, token identity, rarity, type) shows the router's advantage shrinking with scale: one
+confident loss out of four heuristics at 30M and 122M, three of four at 250M. We report this
+transparently rather than overclaim: the present evidence establishes a formal allocation
+framework, a scale-consistent risk-capacity spectrum, and a routing method whose benefit is real
+but small at 30M/122M and statistically absent at 250M against the strongest comparisons -- not
+superiority over hand-designed heuristics at any scale, not peak-memory or latency gains (a direct
+T4 benchmark shows the packed path is 168-201x slower per decode step than full MLA despite
+modestly lower peak memory, because the packed cache reconstruction is an unvectorized Python
+loop), and not a reliably calibrated quality constraint at 122M. Priority future work is (1)
+diagnosing and fixing why the joint-rollout router's advantage vanishes with scale -- via
+larger/joint-rollout-consistent oracle labels, distillation from the causal heuristics that
+currently win, or hybrid heuristic-plus-learned designs -- before further scale-up is attempted,
+(2) a grouped-tier or fused packed attention kernel to convert the established persistent-byte
+savings into measured peak-memory and latency gains against optimized MHA/GQA/MLA/FlashMLA
+baselines, and (3) replication across more seeds, domains, and larger, more realistically trained
+checkpoints once (1) is resolved.
 
 ## References (draft)
 

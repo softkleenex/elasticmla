@@ -1,0 +1,123 @@
+Completed
+⚡ ~ bash -lc 'set -o pipefail; cd /teamspace/studios/this_studio/elasticmla_exp2_250m && /teamspace/studios/this_studio/elasticmla_exp1_v3/.venv/bin/python experiments/confirm_fresh_contextual_router.py --device cuda --checkpoint ckpt/latest.pt --data data/val.bin --oracle-summary source_v4/exp0_v4_summary.json --oracle-records source_v4/exp0_v4_records.json --policy confirmation/joint_lambda_0p4.pt --protocol-manifest confirmation/fresh_confirmation_manifest.json --contextual-summary confirmation/contextual_oracle_v1/contextual_oracle_v1_summary.json --scale 250m --output confirmation/fresh_confirmation.json --seed 91827 --n-sequences 24 --control-repeats 20 2>&1 | tee confirmation/fresh_confirmation.log' 
+{"sequence": 0, "start": 992690, "full_loss": 2.1602370738983154, "router_loss": 2.270343065261841, "router_bytes": 8935616, "average_downstream_rank": 317.25, "static_loss_mean": 2.2822099566459655, "shuffle_loss_mean": 2.3106008887290956, "router_minus_static": -0.011866891384124667, "router_minus_shuffle": -0.040257823467254816, "rank_histogram": {"32": 7, "128": 17, "320": 338, "512": 22}}
+{"sequence": 1, "start": 1007366, "full_loss": 1.9338833093643188, "router_loss": 2.087146043777466, "router_bytes": 8814656, "average_downstream_rank": 312.0, "static_loss_mean": 2.0988197326660156, "shuffle_loss_mean": 2.1203601598739623, "router_minus_static": -0.011673688888549805, "router_minus_shuffle": -0.03321411609649649, "rank_histogram": {"32": 8, "128": 17, "320": 346, "512": 13}}
+{"sequence": 2, "start": 1025216, "full_loss": 1.8637977838516235, "router_loss": 1.9617013931274414, "router_bytes": 8710976, "average_downstream_rank": 307.5, "static_loss_mean": 1.9618084907531739, "shuffle_loss_mean": 1.9861504018306733, "router_minus_static": -0.00010709762573246628, "router_minus_shuffle": -0.024449008703231856, "rank_histogram": {"32": 6, "128": 33, "320": 328, "512": 17}}
+{"sequence": 3, "start": 1051551, "full_loss": 2.0685718059539795, "router_loss": 2.194723129272461, "router_bytes": 8958656, "average_downstream_rank": 318.25, "static_loss_mean": 2.1996073961257934, "shuffle_loss_mean": 2.2239419341087343, "router_minus_static": -0.004884266853332431, "router_minus_shuffle": -0.02921880483627337, "rank_histogram": {"32": 3, "128": 20, "320": 340, "512": 21}}
+{"sequence": 4, "start": 1094691, "full_loss": 1.3586703538894653, "router_loss": 1.4828697443008423, "router_bytes": 8987456, "average_downstream_rank": 319.5, "static_loss_mean": 1.48410422205925, "shuffle_loss_mean": 1.5044071912765502, "router_minus_static": -0.0012344777584076816, "router_minus_shuffle": -0.02153744697570792, "rank_histogram": {"32": 6, "128": 10, "320": 350, "512": 18}}
+{"sequence": 5, "start": 1099984, "full_loss": 1.1828885078430176, "router_loss": 1.2409075498580933, "router_bytes": 9091136, "average_downstream_rank": 324.0, "static_loss_mean": 1.256104588508606, "shuffle_loss_mean": 1.2687651813030243, "router_minus_static": -0.015197038650512695, "router_minus_shuffle": -0.02785763144493103, "rank_histogram": {"32": 6, "128": 4, "320": 353, "512": 21}}
+{"sequence": 6, "start": 1108084, "full_loss": 1.1586806774139404, "router_loss": 1.2887802124023438, "router_bytes": 8998976, "average_downstream_rank": 320.0, "static_loss_mean": 1.285353183746338, "shuffle_loss_mean": 1.2945151209831238, "router_minus_static": 0.0034270286560058594, "router_minus_shuffle": -0.005734908580780074, "rank_histogram": {"32": 2, "128": 9, "320": 361, "512": 12}}
+{"sequence": 7, "start": 1132967, "full_loss": 2.895113706588745, "router_loss": 3.048926591873169, "router_bytes": 8814656, "average_downstream_rank": 312.0, "static_loss_mean": 3.03271484375, "shuffle_loss_mean": 3.0476065158843992, "router_minus_static": 0.016211748123168945, "router_minus_shuffle": 0.0013200759887697089, "rank_histogram": {"32": 2, "128": 32, "320": 331, "512": 19}}
+{"sequence": 8, "start": 1134724, "full_loss": 1.0409053564071655, "router_loss": 1.1727986335754395, "router_bytes": 9062336, "average_downstream_rank": 322.75, "static_loss_mean": 1.1497422099113463, "shuffle_loss_mean": 1.1666904985904694, "router_minus_static": 0.023056423664093106, "router_minus_shuffle": 0.006108134984970093, "rank_histogram": {"32": 1, "128": 17, "320": 342, "512": 24}}
+{"sequence": 9, "start": 1175656, "full_loss": 1.3635772466659546, "router_loss": 1.436284065246582, "router_bytes": 8878016, "average_downstream_rank": 314.75, "static_loss_mean": 1.437806087732315, "shuffle_loss_mean": 1.465526282787323, "router_minus_static": -0.0015220224857330766, "router_minus_shuffle": -0.029242217540740967, "rank_histogram": {"32": 7, "128": 20, "320": 337, "512": 20}}
+{"sequence": 10, "start": 1231400, "full_loss": 1.8077369928359985, "router_loss": 1.9047964811325073, "router_bytes": 8889536, "average_downstream_rank": 315.25, "static_loss_mean": 1.907056027650833, "shuffle_loss_mean": 1.9304277837276458, "router_minus_static": -0.002259546518325717, "router_minus_shuffle": -0.02563130259513846, "rank_histogram": {"32": 9, "128": 20, "320": 331, "512": 24}}
+{"sequence": 11, "start": 1232368, "full_loss": 1.6057075262069702, "router_loss": 1.6757017374038696, "router_bytes": 8975936, "average_downstream_rank": 319.0, "static_loss_mean": 1.6758699417114258, "shuffle_loss_mean": 1.6883118987083434, "router_minus_static": -0.00016820430755615234, "router_minus_shuffle": -0.012610161304473788, "rank_histogram": {"32": 6, "128": 13, "320": 345, "512": 20}}
+{"sequence": 12, "start": 1258610, "full_loss": 1.1994937658309937, "router_loss": 1.29147207736969, "router_bytes": 8895296, "average_downstream_rank": 315.5, "static_loss_mean": 1.2807504415512085, "shuffle_loss_mean": 1.3058994710445404, "router_minus_static": 0.010721635818481401, "router_minus_shuffle": -0.014427393674850464, "rank_histogram": {"32": 6, "128": 17, "320": 344, "512": 17}}
+{"sequence": 13, "start": 1262797, "full_loss": 1.424268126487732, "router_loss": 1.5477463006973267, "router_bytes": 8843456, "average_downstream_rank": 313.25, "static_loss_mean": 1.5566349387168885, "shuffle_loss_mean": 1.5931044340133667, "router_minus_static": -0.008888638019561856, "router_minus_shuffle": -0.045358133316039995, "rank_histogram": {"32": 11, "128": 18, "320": 334, "512": 21}}
+{"sequence": 14, "start": 1339960, "full_loss": 1.814225673675537, "router_loss": 1.9544833898544312, "router_bytes": 8964416, "average_downstream_rank": 318.5, "static_loss_mean": 1.9412738621234893, "shuffle_loss_mean": 1.9750322699546814, "router_minus_static": 0.013209527730941861, "router_minus_shuffle": -0.020548880100250244, "rank_histogram": {"32": 8, "128": 21, "320": 325, "512": 30}}
+{"sequence": 15, "start": 1347679, "full_loss": 1.7927457094192505, "router_loss": 1.8871015310287476, "router_bytes": 8952896, "average_downstream_rank": 318.0, "static_loss_mean": 1.8886241912841797, "shuffle_loss_mean": 1.9127729296684266, "router_minus_static": -0.001522660255432129, "router_minus_shuffle": -0.025671398639679044, "rank_histogram": {"32": 6, "128": 10, "320": 353, "512": 15}}
+{"sequence": 16, "start": 1352910, "full_loss": 1.842668056488037, "router_loss": 2.0043869018554688, "router_bytes": 8935616, "average_downstream_rank": 317.25, "static_loss_mean": 2.0027876257896424, "shuffle_loss_mean": 2.0086482882499697, "router_minus_static": 0.0015992760658263272, "router_minus_shuffle": -0.00426138639450091, "rank_histogram": {"32": 1, "128": 11, "320": 365, "512": 7}}
+{"sequence": 17, "start": 1453270, "full_loss": 2.5514566898345947, "router_loss": 2.638256549835205, "router_bytes": 8924096, "average_downstream_rank": 316.75, "static_loss_mean": 2.6341602325439455, "shuffle_loss_mean": 2.6450096487998964, "router_minus_static": 0.004096317291259588, "router_minus_shuffle": -0.00675309896469134, "rank_histogram": {"32": 3, "128": 20, "320": 343, "512": 18}}
+{"sequence": 18, "start": 1484818, "full_loss": 2.0023486614227295, "router_loss": 2.105656385421753, "router_bytes": 8889536, "average_downstream_rank": 315.25, "static_loss_mean": 2.091348934173584, "shuffle_loss_mean": 2.1126917600631714, "router_minus_static": 0.014307451248169123, "router_minus_shuffle": -0.007035374641418457, "rank_histogram": {"32": 5, "128": 18, "320": 345, "512": 16}}
+{"sequence": 19, "start": 1517841, "full_loss": 1.2524529695510864, "router_loss": 1.3813867568969727, "router_bytes": 9010496, "average_downstream_rank": 320.5, "static_loss_mean": 1.371552962064743, "shuffle_loss_mean": 1.3761546909809113, "router_minus_static": 0.00983379483222957, "router_minus_shuffle": 0.005232065916061401, "rank_histogram": {"32": 0, "128": 8, "320": 367, "512": 9}}
+{"sequence": 20, "start": 1546092, "full_loss": 1.389034390449524, "router_loss": 1.5110317468643188, "router_bytes": 9102656, "average_downstream_rank": 324.5, "static_loss_mean": 1.4920310974121094, "shuffle_loss_mean": 1.521541565656662, "router_minus_static": 0.019000649452209473, "router_minus_shuffle": -0.01050981879234314, "rank_histogram": {"32": 10, "128": 15, "320": 320, "512": 39}}
+{"sequence": 21, "start": 1601650, "full_loss": 1.9973443746566772, "router_loss": 2.156282424926758, "router_bytes": 9016256, "average_downstream_rank": 320.75, "static_loss_mean": 2.1686893105506897, "shuffle_loss_mean": 2.180393397808075, "router_minus_static": -0.012406885623931885, "router_minus_shuffle": -0.02411097288131714, "rank_histogram": {"32": 3, "128": 9, "320": 357, "512": 15}}
+{"sequence": 22, "start": 1655371, "full_loss": 2.079317808151245, "router_loss": 2.216320276260376, "router_bytes": 9016256, "average_downstream_rank": 320.75, "static_loss_mean": 2.2068958640098573, "shuffle_loss_mean": 2.2262630462646484, "router_minus_static": 0.00942441225051871, "router_minus_shuffle": -0.009942770004272461, "rank_histogram": {"32": 5, "128": 15, "320": 340, "512": 24}}
+{"sequence": 23, "start": 1694991, "full_loss": 1.587211012840271, "router_loss": 1.6928253173828125, "router_bytes": 8728256, "average_downstream_rank": 308.25, "static_loss_mean": 1.7003390669822693, "shuffle_loss_mean": 1.7106733620166779, "router_minus_static": -0.0075137495994568315, "router_minus_shuffle": -0.017848044633865356, "rank_histogram": {"32": 7, "128": 20, "320": 350, "512": 7}}
+{
+  "status": "complete",
+  "protocol": "pre-registered fresh-window one-shot confirmation",
+  "checkpoint_sha256": "8a8774502016bb98a97eeb6f90de7af23f70f82283f933c6bd70fd2a315d275b",
+  "data_sha256": "03246b576bb789ac6bf15996fd642167008620f2ee96d8a45496d69c13f073ce",
+  "policy_sha256": "bba6a67f6710a0ec87f37448cf182a30bc8080eb4a4c8b3aab82dd78460f1756",
+  "policy_file": "joint_lambda_0p4.pt",
+  "protocol_commit": "a4bcc7f",
+  "protocol_manifest_sha256": "bbcfc2e713827e072ddc74e97afe79c7759e6f5f3ae5e8984a1300a000ea4744",
+  "source_summary_sha256": "b43b33bc51898ffd9329949aa2ccb16f03b895b55d023de9e2b8fa461518a8f4",
+  "source_records_sha256": "476dcc46540852309609834f5e3a55dc2745415bde15d5468915c89fbbad489b",
+  "contextual_summary_sha256": "6d1cdec5910b8ed6033064e9c0ada6f90416eba2008a40ff4a82ac94b69cfd88",
+  "tiers": [
+    32,
+    128,
+    320,
+    512
+  ],
+  "seed": 91827,
+  "n_sequences": 24,
+  "control_repeats": 20,
+  "excluded_previous_starts": [
+    1000643,
+    1063653,
+    1080621,
+    1104538,
+    1119700,
+    1163372,
+    1201333,
+    1335106,
+    1361746,
+    1389061,
+    1416662,
+    1439468,
+    1462144,
+    1510122,
+    1553783,
+    1630944,
+    1651304,
+    1652574,
+    1665902,
+    1667691,
+    1718708,
+    1748530,
+    1763681,
+    1785995
+  ],
+  "fresh_starts": [
+    992690,
+    1007366,
+    1025216,
+    1051551,
+    1094691,
+    1099984,
+    1108084,
+    1132967,
+    1134724,
+    1175656,
+    1231400,
+    1232368,
+    1258610,
+    1262797,
+    1339960,
+    1347679,
+    1352910,
+    1453270,
+    1484818,
+    1517841,
+    1546092,
+    1601650,
+    1655371,
+    1694991
+  ],
+  "minimum_fresh_start_separation": 968,
+  "fixed_dense_mla_bytes": 13369344,
+  "mean_router_bytes": 8933216.0,
+  "router_over_fixed_dense_mla": 0.6681865617340687,
+  "mean_average_downstream_rank": 317.1458333333333,
+  "mean_router_delta_loss": 0.11581628024578094,
+  "mean_router_minus_exact_static": 0.0019017957150936071,
+  "router_minus_exact_static_bootstrap_95pct_ci": [
+    -0.0022196619709332985,
+    0.006100311471770177
+  ],
+  "router_better_than_static_sequence_count": 13,
+  "router_minus_static_sign_flip_p_less": 0.8056319436805632,
+  "mean_router_minus_tier_shuffle": -0.017648350695769005,
+  "router_minus_tier_shuffle_bootstrap_95pct_ci": [
+    -0.02305969878410304,
+    -0.012278969461719249
+  ],
+  "router_better_than_shuffle_sequence_count": 21,
+  "router_minus_shuffle_sign_flip_p_less": 9.99990000099999e-06,
+  "success_criterion": "upper 95% paired sequence-bootstrap bound for router-minus-exact-static < 0",
+  "success": false
+}
+
