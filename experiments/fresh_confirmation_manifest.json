@@ -24,6 +24,13 @@
       "source_records_sha256": "476dcc46540852309609834f5e3a55dc2745415bde15d5468915c89fbbad489b",
       "contextual_summary_sha256": "6d1cdec5910b8ed6033064e9c0ada6f90416eba2008a40ff4a82ac94b69cfd88",
       "policy_file": "joint_lambda_0p4.pt"
+    },
+    "250m_fine": {
+      "policy_sha256": "2402030240ff42952b94c93a6bca828a2fdde84676c635f4f65fa70bb34e4d49",
+      "source_summary_sha256": "b43b33bc51898ffd9329949aa2ccb16f03b895b55d023de9e2b8fa461518a8f4",
+      "source_records_sha256": "476dcc46540852309609834f5e3a55dc2745415bde15d5468915c89fbbad489b",
+      "contextual_summary_sha256": "6d1cdec5910b8ed6033064e9c0ada6f90416eba2008a40ff4a82ac94b69cfd88",
+      "policy_file": "fine_lambda_0p8.pt"
     }
   }
 }

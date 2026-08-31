@@ -26,7 +26,7 @@ def state_sha(state):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--scale", choices=("30m", "122m", "250m"), required=True)
+    p.add_argument("--scale", choices=("30m", "122m", "250m", "250m_fine"), required=True)
     p.add_argument("--original", type=Path, required=True)
     p.add_argument("--replay", type=Path, required=True)
     p.add_argument("--split-source", type=Path, required=True)
@@ -71,7 +71,7 @@ def main():
         and original.get("checkpoint_sha256") == file_sha(args.checkpoint)
         and split_source.get("checkpoint_sha256") == original.get("checkpoint_sha256")
     )
-    expected_random_init = args.scale == "122m"
+    expected_random_init = args.scale in ("122m", "250m_fine")
     scale_mode_correct = original.get("random_init") is expected_random_init
     mode_correct = replay.get("initialization_mode") == (
         "seeded_random" if expected_random_init else "router_max_weights"
