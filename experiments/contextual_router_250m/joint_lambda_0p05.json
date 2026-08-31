@@ -1,0 +1,135 @@
+{
+  "rank_lambda": 0.05,
+  "temperature": 1.0,
+  "best_score": 1.7128786385059356,
+  "history": [
+    {
+      "epoch": 1,
+      "train_lm_loss": 1.6952476650476456,
+      "train_expected_rank": 380.1647434234619,
+      "val_loss": 1.6693239510059357,
+      "val_hard_rank": 446.0,
+      "selection_score": 1.7128786385059356
+    },
+    {
+      "epoch": 2,
+      "train_lm_loss": 1.6784598529338837,
+      "train_expected_rank": 385.7478885650635,
+      "val_loss": 1.6701248288154602,
+      "val_hard_rank": 463.0625,
+      "selection_score": 1.7153457760810853
+    },
+    {
+      "epoch": 3,
+      "train_lm_loss": 1.6748534888029099,
+      "train_expected_rank": 360.2848701477051,
+      "val_loss": 1.7064864039421082,
+      "val_hard_rank": 439.6875,
+      "selection_score": 1.7494246363639832
+    },
+    {
+      "epoch": 4,
+      "train_lm_loss": 1.6650995165109634,
+      "train_expected_rank": 365.0470142364502,
+      "val_loss": 1.730588436126709,
+      "val_hard_rank": 435.0625,
+      "selection_score": 1.773075008392334
+    },
+    {
+      "epoch": 5,
+      "train_lm_loss": 1.656003698706627,
+      "train_expected_rank": 363.40996742248535,
+      "val_loss": 1.683359980583191,
+      "val_hard_rank": 452.9375,
+      "selection_score": 1.727592158317566
+    },
+    {
+      "epoch": 6,
+      "train_lm_loss": 1.6555512771010399,
+      "train_expected_rank": 358.6238422393799,
+      "val_loss": 1.7028319239616394,
+      "val_hard_rank": 448.375,
+      "selection_score": 1.7466185450553895
+    },
+    {
+      "epoch": 7,
+      "train_lm_loss": 1.642443023622036,
+      "train_expected_rank": 366.0430793762207,
+      "val_loss": 1.7449986636638641,
+      "val_hard_rank": 426.1875,
+      "selection_score": 1.7866185367107392
+    },
+    {
+      "epoch": 8,
+      "train_lm_loss": 1.6436746716499329,
+      "train_expected_rank": 366.9871463775635,
+      "val_loss": 1.709710717201233,
+      "val_hard_rank": 434.625,
+      "selection_score": 1.752154564857483
+    },
+    {
+      "epoch": 9,
+      "train_lm_loss": 1.6383215934038162,
+      "train_expected_rank": 363.92433738708496,
+      "val_loss": 1.7429792284965515,
+      "val_hard_rank": 428.8125,
+      "selection_score": 1.7848554491996764
+    },
+    {
+      "epoch": 10,
+      "train_lm_loss": 1.6278026401996613,
+      "train_expected_rank": 367.7508945465088,
+      "val_loss": 1.7124359607696533,
+      "val_hard_rank": 439.8125,
+      "selection_score": 1.7553864002227784
+    },
+    {
+      "epoch": 11,
+      "train_lm_loss": 1.6188316643238068,
+      "train_expected_rank": 365.5536689758301,
+      "val_loss": 1.7251205146312714,
+      "val_hard_rank": 429.875,
+      "selection_score": 1.7671004951000213
+    },
+    {
+      "epoch": 12,
+      "train_lm_loss": 1.6193687990307808,
+      "train_expected_rank": 367.36318016052246,
+      "val_loss": 1.7178555727005005,
+      "val_hard_rank": 442.5625,
+      "selection_score": 1.7610745668411254
+    },
+    {
+      "epoch": 13,
+      "train_lm_loss": 1.61576808989048,
+      "train_expected_rank": 371.67653465270996,
+      "val_loss": 1.7195910811424255,
+      "val_hard_rank": 432.625,
+      "selection_score": 1.7618396162986756
+    },
+    {
+      "epoch": 14,
+      "train_lm_loss": 1.602790243923664,
+      "train_expected_rank": 368.99622535705566,
+      "val_loss": 1.7107396721839905,
+      "val_hard_rank": 451.75,
+      "selection_score": 1.7548558831214904
+    },
+    {
+      "epoch": 15,
+      "train_lm_loss": 1.6048616096377373,
+      "train_expected_rank": 372.74546813964844,
+      "val_loss": 1.7375626266002655,
+      "val_hard_rank": 426.5,
+      "selection_score": 1.7792130172252656
+    }
+  ],
+  "elapsed_s": 32.62830376625061,
+  "random_init": false,
+  "seed": 3031,
+  "epochs": 15,
+  "learning_rate": 0.0005,
+  "tag": "joint",
+  "checkpoint_sha256": "8a8774502016bb98a97eeb6f90de7af23f70f82283f933c6bd70fd2a315d275b",
+  "data_sha256": "03246b576bb789ac6bf15996fd642167008620f2ee96d8a45496d69c13f073ce"
+}

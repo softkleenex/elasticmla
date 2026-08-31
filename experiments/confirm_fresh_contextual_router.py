@@ -78,7 +78,7 @@ def main():
     parser.add_argument("--policy", type=Path, required=True)
     parser.add_argument("--protocol-manifest", type=Path, required=True)
     parser.add_argument("--contextual-summary", type=Path, required=True)
-    parser.add_argument("--scale", choices=("30m", "122m"), required=True)
+    parser.add_argument("--scale", choices=("30m", "122m", "250m"), required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=91_827)
     parser.add_argument("--n-sequences", type=int, default=24)

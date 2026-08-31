@@ -53,7 +53,7 @@ def close(a, b, atol=1e-12):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--scale", choices=("30m", "122m"), required=True)
+    p.add_argument("--scale", choices=("30m", "122m", "250m"), required=True)
     p.add_argument("--manifest", type=Path, required=True)
     p.add_argument("--source-summary", type=Path, required=True)
     p.add_argument("--source-records", type=Path, required=True)

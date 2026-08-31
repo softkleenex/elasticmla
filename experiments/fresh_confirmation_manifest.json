@@ -17,6 +17,13 @@
       "source_records_sha256": "0ed88e820a06e76bba62fa7fcb9eaa09bdcff874a1134ebaa25db5564705231d",
       "contextual_summary_sha256": "5c4a3f05a323e726499382df8a1b3ef450915fbfea3e40c28027cf29e10f9b82",
       "policy_file": "fine_lambda_0p8.pt"
+    },
+    "250m": {
+      "policy_sha256": "bba6a67f6710a0ec87f37448cf182a30bc8080eb4a4c8b3aab82dd78460f1756",
+      "source_summary_sha256": "b43b33bc51898ffd9329949aa2ccb16f03b895b55d023de9e2b8fa461518a8f4",
+      "source_records_sha256": "476dcc46540852309609834f5e3a55dc2745415bde15d5468915c89fbbad489b",
+      "contextual_summary_sha256": "6d1cdec5910b8ed6033064e9c0ada6f90416eba2008a40ff4a82ac94b69cfd88",
+      "policy_file": "joint_lambda_0p4.pt"
     }
   }
 }

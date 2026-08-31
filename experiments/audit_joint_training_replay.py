@@ -26,7 +26,7 @@ def state_sha(state):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--scale", choices=("30m", "122m"), required=True)
+    p.add_argument("--scale", choices=("30m", "122m", "250m"), required=True)
     p.add_argument("--original", type=Path, required=True)
     p.add_argument("--replay", type=Path, required=True)
     p.add_argument("--split-source", type=Path, required=True)

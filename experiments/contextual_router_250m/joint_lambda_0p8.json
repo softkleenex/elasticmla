@@ -1,0 +1,135 @@
+{
+  "rank_lambda": 0.8,
+  "temperature": 1.0,
+  "best_score": 2.2550176680088043,
+  "history": [
+    {
+      "epoch": 1,
+      "train_lm_loss": 1.8462558686733246,
+      "train_expected_rank": 266.2335433959961,
+      "val_loss": 1.8126167953014374,
+      "val_hard_rank": 288.875,
+      "selection_score": 2.263983982801437
+    },
+    {
+      "epoch": 2,
+      "train_lm_loss": 1.8278983682394028,
+      "train_expected_rank": 235.03108501434326,
+      "val_loss": 1.8526739180088043,
+      "val_hard_rank": 257.5,
+      "selection_score": 2.2550176680088043
+    },
+    {
+      "epoch": 3,
+      "train_lm_loss": 1.8320060148835182,
+      "train_expected_rank": 244.33856105804443,
+      "val_loss": 1.877579689025879,
+      "val_hard_rank": 243.125,
+      "selection_score": 2.257462501525879
+    },
+    {
+      "epoch": 4,
+      "train_lm_loss": 1.8220216035842896,
+      "train_expected_rank": 238.07186889648438,
+      "val_loss": 1.9016451835632324,
+      "val_hard_rank": 234.625,
+      "selection_score": 2.2682467460632325
+    },
+    {
+      "epoch": 5,
+      "train_lm_loss": 1.8045249059796333,
+      "train_expected_rank": 237.72375297546387,
+      "val_loss": 1.9162340760231018,
+      "val_hard_rank": 227.0,
+      "selection_score": 2.2709215760231016
+    },
+    {
+      "epoch": 6,
+      "train_lm_loss": 1.8092011287808418,
+      "train_expected_rank": 231.3099241256714,
+      "val_loss": 1.933534026145935,
+      "val_hard_rank": 222.5625,
+      "selection_score": 2.281287932395935
+    },
+    {
+      "epoch": 7,
+      "train_lm_loss": 1.7885124012827873,
+      "train_expected_rank": 231.58536338806152,
+      "val_loss": 1.9531929194927216,
+      "val_hard_rank": 214.6875,
+      "selection_score": 2.2886421382427216
+    },
+    {
+      "epoch": 8,
+      "train_lm_loss": 1.7828077748417854,
+      "train_expected_rank": 230.49950122833252,
+      "val_loss": 1.9753748774528503,
+      "val_hard_rank": 208.3125,
+      "selection_score": 2.3008631587028505
+    },
+    {
+      "epoch": 9,
+      "train_lm_loss": 1.7886832505464554,
+      "train_expected_rank": 231.49496936798096,
+      "val_loss": 1.9263478815555573,
+      "val_hard_rank": 218.4375,
+      "selection_score": 2.2676564753055573
+    },
+    {
+      "epoch": 10,
+      "train_lm_loss": 1.77986079454422,
+      "train_expected_rank": 229.61901187896729,
+      "val_loss": 1.90801802277565,
+      "val_hard_rank": 237.0,
+      "selection_score": 2.27833052277565
+    },
+    {
+      "epoch": 11,
+      "train_lm_loss": 1.770670399069786,
+      "train_expected_rank": 225.4173231124878,
+      "val_loss": 1.933192789554596,
+      "val_hard_rank": 225.5,
+      "selection_score": 2.285536539554596
+    },
+    {
+      "epoch": 12,
+      "train_lm_loss": 1.7542913854122162,
+      "train_expected_rank": 227.16980457305908,
+      "val_loss": 1.9733602404594421,
+      "val_hard_rank": 211.1875,
+      "selection_score": 2.3033407092094422
+    },
+    {
+      "epoch": 13,
+      "train_lm_loss": 1.7524633556604385,
+      "train_expected_rank": 225.1906509399414,
+      "val_loss": 1.9699477553367615,
+      "val_hard_rank": 219.625,
+      "selection_score": 2.3131118178367616
+    },
+    {
+      "epoch": 14,
+      "train_lm_loss": 1.7490036338567734,
+      "train_expected_rank": 224.53607368469238,
+      "val_loss": 1.9737041294574738,
+      "val_hard_rank": 214.1875,
+      "selection_score": 2.3083720982074736
+    },
+    {
+      "epoch": 15,
+      "train_lm_loss": 1.75023103505373,
+      "train_expected_rank": 220.9063663482666,
+      "val_loss": 2.00880366563797,
+      "val_hard_rank": 204.375,
+      "selection_score": 2.32813960313797
+    }
+  ],
+  "elapsed_s": 34.562307834625244,
+  "random_init": false,
+  "seed": 3031,
+  "epochs": 15,
+  "learning_rate": 0.0005,
+  "tag": "joint",
+  "checkpoint_sha256": "8a8774502016bb98a97eeb6f90de7af23f70f82283f933c6bd70fd2a315d275b",
+  "data_sha256": "03246b576bb789ac6bf15996fd642167008620f2ee96d8a45496d69c13f073ce"
+}

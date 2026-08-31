@@ -1,0 +1,135 @@
+{
+  "rank_lambda": 0.1,
+  "temperature": 1.0,
+  "best_score": 1.7605077505111695,
+  "history": [
+    {
+      "epoch": 1,
+      "train_lm_loss": 1.715300589799881,
+      "train_expected_rank": 355.55782890319824,
+      "val_loss": 1.6952510178089142,
+      "val_hard_rank": 395.125,
+      "selection_score": 1.7724238693714143
+    },
+    {
+      "epoch": 2,
+      "train_lm_loss": 1.6869647204875946,
+      "train_expected_rank": 375.0408935546875,
+      "val_loss": 1.6721776723861694,
+      "val_hard_rank": 452.25,
+      "selection_score": 1.7605077505111695
+    },
+    {
+      "epoch": 3,
+      "train_lm_loss": 1.6791588962078094,
+      "train_expected_rank": 351.058292388916,
+      "val_loss": 1.7142735123634338,
+      "val_hard_rank": 402.875,
+      "selection_score": 1.7929600358009339
+    },
+    {
+      "epoch": 4,
+      "train_lm_loss": 1.6643744483590126,
+      "train_expected_rank": 351.88821601867676,
+      "val_loss": 1.7231454253196716,
+      "val_hard_rank": 430.9375,
+      "selection_score": 1.8073129057884216
+    },
+    {
+      "epoch": 5,
+      "train_lm_loss": 1.6638946309685707,
+      "train_expected_rank": 350.3797492980957,
+      "val_loss": 1.7243380844593048,
+      "val_hard_rank": 411.0625,
+      "selection_score": 1.804623728990555
+    },
+    {
+      "epoch": 6,
+      "train_lm_loss": 1.652033045887947,
+      "train_expected_rank": 344.0009422302246,
+      "val_loss": 1.7360627353191376,
+      "val_hard_rank": 413.625,
+      "selection_score": 1.8168488681316375
+    },
+    {
+      "epoch": 7,
+      "train_lm_loss": 1.6466245651245117,
+      "train_expected_rank": 344.2037658691406,
+      "val_loss": 1.7329891920089722,
+      "val_hard_rank": 414.6875,
+      "selection_score": 1.8139828443527222
+    },
+    {
+      "epoch": 8,
+      "train_lm_loss": 1.6350724399089813,
+      "train_expected_rank": 343.8904552459717,
+      "val_loss": 1.7431486248970032,
+      "val_hard_rank": 421.0,
+      "selection_score": 1.8253751873970032
+    },
+    {
+      "epoch": 9,
+      "train_lm_loss": 1.6429909691214561,
+      "train_expected_rank": 346.9950752258301,
+      "val_loss": 1.744819700717926,
+      "val_hard_rank": 415.75,
+      "selection_score": 1.8260208725929261
+    },
+    {
+      "epoch": 10,
+      "train_lm_loss": 1.627364344894886,
+      "train_expected_rank": 346.15303802490234,
+      "val_loss": 1.7408768832683563,
+      "val_hard_rank": 420.625,
+      "selection_score": 1.8230302035808563
+    },
+    {
+      "epoch": 11,
+      "train_lm_loss": 1.6250490546226501,
+      "train_expected_rank": 348.1021137237549,
+      "val_loss": 1.7618238627910614,
+      "val_hard_rank": 412.0625,
+      "selection_score": 1.8423048198223113
+    },
+    {
+      "epoch": 12,
+      "train_lm_loss": 1.621814340353012,
+      "train_expected_rank": 346.4844779968262,
+      "val_loss": 1.7721655070781708,
+      "val_hard_rank": 408.5,
+      "selection_score": 1.8519506633281708
+    },
+    {
+      "epoch": 13,
+      "train_lm_loss": 1.6260786056518555,
+      "train_expected_rank": 354.52754974365234,
+      "val_loss": 1.7280999720096588,
+      "val_hard_rank": 411.125,
+      "selection_score": 1.8083978235721587
+    },
+    {
+      "epoch": 14,
+      "train_lm_loss": 1.6171690002083778,
+      "train_expected_rank": 347.75327491760254,
+      "val_loss": 1.700714349746704,
+      "val_hard_rank": 444.6875,
+      "selection_score": 1.787567377090454
+    },
+    {
+      "epoch": 15,
+      "train_lm_loss": 1.60017591714859,
+      "train_expected_rank": 355.72528076171875,
+      "val_loss": 1.7358445525169373,
+      "val_hard_rank": 425.5,
+      "selection_score": 1.8189500212669372
+    }
+  ],
+  "elapsed_s": 33.83595895767212,
+  "random_init": false,
+  "seed": 3031,
+  "epochs": 15,
+  "learning_rate": 0.0005,
+  "tag": "joint",
+  "checkpoint_sha256": "8a8774502016bb98a97eeb6f90de7af23f70f82283f933c6bd70fd2a315d275b",
+  "data_sha256": "03246b576bb789ac6bf15996fd642167008620f2ee96d8a45496d69c13f073ce"
+}

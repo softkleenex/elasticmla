@@ -1,0 +1,135 @@
+{
+  "rank_lambda": 0.2,
+  "temperature": 1.0,
+  "best_score": 1.8482569873332977,
+  "history": [
+    {
+      "epoch": 1,
+      "train_lm_loss": 1.7419064491987228,
+      "train_expected_rank": 327.56624603271484,
+      "val_loss": 1.7393702864646912,
+      "val_hard_rank": 348.0625,
+      "selection_score": 1.875332200527191
+    },
+    {
+      "epoch": 2,
+      "train_lm_loss": 1.7002013847231865,
+      "train_expected_rank": 366.1569023132324,
+      "val_loss": 1.6873194873332977,
+      "val_hard_rank": 412.0,
+      "selection_score": 1.8482569873332977
+    },
+    {
+      "epoch": 3,
+      "train_lm_loss": 1.6914133951067924,
+      "train_expected_rank": 348.11140632629395,
+      "val_loss": 1.7370195984840393,
+      "val_hard_rank": 376.9375,
+      "selection_score": 1.8842608094215394
+    },
+    {
+      "epoch": 4,
+      "train_lm_loss": 1.6765251159667969,
+      "train_expected_rank": 344.06422424316406,
+      "val_loss": 1.757916808128357,
+      "val_hard_rank": 377.3125,
+      "selection_score": 1.905304503440857
+    },
+    {
+      "epoch": 5,
+      "train_lm_loss": 1.6706861928105354,
+      "train_expected_rank": 334.44399642944336,
+      "val_loss": 1.7253771126270294,
+      "val_hard_rank": 376.125,
+      "selection_score": 1.8723009407520295
+    },
+    {
+      "epoch": 6,
+      "train_lm_loss": 1.6619257554411888,
+      "train_expected_rank": 323.00797271728516,
+      "val_loss": 1.764883041381836,
+      "val_hard_rank": 365.25,
+      "selection_score": 1.9075588226318358
+    },
+    {
+      "epoch": 7,
+      "train_lm_loss": 1.6576312258839607,
+      "train_expected_rank": 320.9416313171387,
+      "val_loss": 1.7682187259197235,
+      "val_hard_rank": 348.125,
+      "selection_score": 1.9042050540447235
+    },
+    {
+      "epoch": 8,
+      "train_lm_loss": 1.651143230497837,
+      "train_expected_rank": 320.7613525390625,
+      "val_loss": 1.7767102122306824,
+      "val_hard_rank": 352.8125,
+      "selection_score": 1.9145275950431824
+    },
+    {
+      "epoch": 9,
+      "train_lm_loss": 1.65416219830513,
+      "train_expected_rank": 318.5456428527832,
+      "val_loss": 1.7555756270885468,
+      "val_hard_rank": 370.5,
+      "selection_score": 1.9003021895885468
+    },
+    {
+      "epoch": 10,
+      "train_lm_loss": 1.6394129693508148,
+      "train_expected_rank": 318.2723388671875,
+      "val_loss": 1.7447528839111328,
+      "val_hard_rank": 395.75,
+      "selection_score": 1.8993427276611328
+    },
+    {
+      "epoch": 11,
+      "train_lm_loss": 1.6349430307745934,
+      "train_expected_rank": 321.3628730773926,
+      "val_loss": 1.7730543315410614,
+      "val_hard_rank": 375.375,
+      "selection_score": 1.9196851909160615
+    },
+    {
+      "epoch": 12,
+      "train_lm_loss": 1.6292402371764183,
+      "train_expected_rank": 325.5070266723633,
+      "val_loss": 1.8040949404239655,
+      "val_hard_rank": 341.3125,
+      "selection_score": 1.9374201357364655
+    },
+    {
+      "epoch": 13,
+      "train_lm_loss": 1.62270125746727,
+      "train_expected_rank": 324.4939937591553,
+      "val_loss": 1.7860914468765259,
+      "val_hard_rank": 353.625,
+      "selection_score": 1.924226212501526
+    },
+    {
+      "epoch": 14,
+      "train_lm_loss": 1.6222075447440147,
+      "train_expected_rank": 324.4740982055664,
+      "val_loss": 1.765446662902832,
+      "val_hard_rank": 388.5,
+      "selection_score": 1.9172044754028321
+    },
+    {
+      "epoch": 15,
+      "train_lm_loss": 1.6227974966168404,
+      "train_expected_rank": 321.6623725891113,
+      "val_loss": 1.7865519523620605,
+      "val_hard_rank": 364.1875,
+      "selection_score": 1.9288126945495605
+    }
+  ],
+  "elapsed_s": 33.849079847335815,
+  "random_init": false,
+  "seed": 3031,
+  "epochs": 15,
+  "learning_rate": 0.0005,
+  "tag": "joint",
+  "checkpoint_sha256": "8a8774502016bb98a97eeb6f90de7af23f70f82283f933c6bd70fd2a315d275b",
+  "data_sha256": "03246b576bb789ac6bf15996fd642167008620f2ee96d8a45496d69c13f073ce"
+}
