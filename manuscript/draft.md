@@ -1,8 +1,14 @@
 # ElasticMLA: Context-Aware Token-Wise Latent Capacity Allocation for Multi-Head Latent Attention
 
-> **Working draft.** Numerical claims in this document use the corrected v4 analysis and the
-> pre-specified fresh-window confirmation only. Earlier v3 and four-sequence exploratory results
-> are excluded from confirmatory claims.
+> **Status.** This draft reports three model scales (30M, 122M, 250M), a formal rate-allocation
+> theory independent of the router, and four independently pre-registered router confirmations
+> (30M, 122M, 250M-coarse-tier, 250M-fine-tier). All numerical claims use the corrected v4
+> analysis and the pre-specified fresh-window confirmation protocol; earlier v3 and four-sequence
+> exploratory results are excluded from confirmatory claims. The 250M-coarse confirmation failed
+> its own pre-registered criterion; we report this alongside the three successes rather than
+> omit it, and diagnose it as a tier-granularity confound in Section 5.2. The router does not
+> reliably beat simple causal heuristics at any tested configuration (Section 5.4); this is the
+> paper's central negative finding.
 
 ## Abstract
 
@@ -82,17 +88,28 @@ Our contributions are:
 
 - a genuine variable-width packed latent cache with token-level ranks and verified dense/full-rank
   equivalence;
-- a corrected, provenance-tracked future-loss intervention that separates average from tail
-  capacity at 30M and 122M scales;
+- a formal rate-allocation theory (Section 3.2) proving an exact cache-byte identity and a
+  risk-capacity ordering across upper-tail loss criteria, and a corrected, provenance-tracked
+  future-loss intervention that measures the resulting risk-capacity spectrum at three scales
+  spanning an 8x parameter range (30M-250M);
 - a joint-rollout straight-through router objective that optimizes hard deployment tiers while
-  regularizing expected rank; and
+  regularizing expected rank;
 - a pre-specified, untouched 24-sequence-per-scale confirmation against exact-byte static and
-  matched-histogram shuffle controls.
+  matched-histogram shuffle controls at four scale/tier-grid configurations, together with a
+  diagnostic experiment that isolates tier granularity from model scale as a cause of one
+  configuration's failure; and
+- a comparison against simple, non-learned causal heuristics that the random/shuffle controls
+  alone would miss, plus a direct GPU benchmark of persistent cache bytes, peak memory, and decode
+  latency.
 
-The strongest supported conclusion is narrow but useful: at both evaluated scales, contextual
-allocation produces lower next-token loss than random position-independent allocation conditional on the router's realized per-sequence budget at the same
-persistent cache tensor-payload bytes. We do not claim optimized serving speed, lower peak memory,
-scale invariance, or reliable satisfaction of a fixed quality constraint at 122M.
+The risk-capacity spectrum (contribution 2) is the paper's most robust finding: it is scale-
+consistent and does not involve the router. The routing contribution is narrower and more mixed,
+and we report it as such rather than rounding it up: contextual allocation beats *random*
+matched-budget placement at 30M and 122M, and at 250M once tier resolution is matched to 122M's
+scheme, but we do not find it reliably beats simple hand-designed *heuristic* placement at any
+scale or tier grid we tested. We do not claim optimized serving speed, lower peak memory beyond
+the small measured effect in Section 5.5, or a reliably calibrated quality constraint at every
+scale.
 
 ## 2. Background and Related Work
 
@@ -167,12 +184,14 @@ framework-object overhead, router weights, and workspace memory. During attentio
 reconstructs a dense temporary latent tensor; the metric is therefore neither process/device
 memory nor a peak-memory or kernel-latency measurement.
 
-### 3.1a Terminology and two propositions
+### 3.2 Terminology and two propositions
 
 We deliberately avoid calling $r_t$ an intrinsic matrix rank. Because MLA's latent coordinates can
 be rotated while compensating the up-projections ($c\mapsto Qc$, $W_U\mapsto W_UQ^{-1}$ for
 invertible $Q$), a coordinate-wise nested prefix is **basis dependent**: full-model equivalence
-under $Q$ does not imply prefix-code equivalence. We therefore call $r_t$ an operational retained-
+under $Q$ does not imply prefix-code equivalence. This basis dependence echoes prior evidence that
+MLA's latent coordinates separate reusable content from position-specific information in a way
+that is sensitive to how the latent basis is analyzed [9]. We therefore call $r_t$ an operational retained-
 coordinate rate in the calibrated nested codebook $P_{\ell,r_1}\preceq\cdots\preceq P_{\ell,d_c}=I$.
 
 **Proposition 1 (exact budget affinity).** From the byte formula above, for any two per-sequence
@@ -204,7 +223,7 @@ the constrained joint rate-distortion formulation that motivates the router obje
 statement of the straight-through surrogate's scope, and further falsifiable predictions are given
 in `notes/theory_contextual_tail_rate.md`.
 
-### 3.2 Corrected future-loss capacity analysis
+### 3.3 Corrected future-loss capacity analysis
 
 For each source position $p$ and candidate rank $r$, we simultaneously zero channels outside the
 layer-specific nested prefix at position $p$ in every layer; all other positions remain full rank.
@@ -226,18 +245,20 @@ with $H=32$ and $\epsilon=0.10$ nat. Version 4 fixes an earlier off-by-one error
 calibration windows, and evaluation windows are nonoverlapping. Each scale uses 24 sequences and
 32 probed positions per sequence, with checkpoint, data, source, and record hashes stored for audit.
 
-### 3.3 Contextual router
+### 3.4 Contextual router
 
 Layer 0 runs at full rank. Let $z_t$ be the normalized pre-attention state entering layer 1 after
 the layer-0 contextual update. A two-layer MLP router produces tier logits
 
 $$a_t=g_\theta(z_t), \qquad r_t\in\mathcal T.$$
 
-The selected tier is shared by all downstream layers. The 30M policy uses
-$\mathcal T=\{16,64,160,256\}$. The 122M rollout policy uses a finer 14-tier grid from 16 to 384,
-with 16-step spacing up to 64 and 32-step spacing thereafter.
+The selected tier is shared by all downstream layers. The 30M and 250M-coarse policies use a
+4-tier grid at 6.25%/25%/62.5%/100% of $d_c$ ($\{16,64,160,256\}$ at 30M, $\{32,128,320,512\}$ at
+250M). The 122M and 250M-fine policies use an 18-point grid from 16 to $d_c$ with 16-step spacing
+up to 64 and 32-step spacing thereafter (14 tiers at 122M's $d_c=384$, 18 tiers at 250M's
+$d_c=512$).
 
-### 3.4 Joint-rollout training
+### 3.5 Joint-rollout training
 
 Deployment uses the hard one-hot choice $y_t=\text{onehot}(\arg\max a_t)$. During training we use
 the straight-through estimator
@@ -254,11 +275,14 @@ $$\mathcal J(\theta)=\mathcal L_{LM}(\hat y)+\lambda\frac{1}{Td_c}
 The base model receives no gradients. Candidate $\lambda$ values are trained on 16 sequences and
 selected on four validation sequences. The selection rule chooses the minimum-byte candidate
 within a +0.15-nat validation loss budget that also beats an exact-byte static control. The chosen
-policies are $\lambda=0.4$ at 30M and $\lambda=0.8$ at 122M. Four older development sequences
-were repeatedly observed and are treated only as exploratory; they are not used for the final
-claim.
+policies are $\lambda=0.4$ at 30M, $\lambda=0.8$ at 122M, $\lambda=0.4$ at 250M-coarse, and
+$\lambda=0.8$ at 250M-fine; the two 250M policies are trained and frozen independently to
+disentangle tier granularity from scale (Section 5.2). The 122M and 250M-fine routers use random
+router initialization; the others initialize from the isolated-position supervised router. Four
+older development sequences were repeatedly observed during method development and are treated
+only as exploratory; they are not used for any confirmatory claim.
 
-### 3.5 Exact-byte controls
+### 3.6 Exact-byte controls
 
 For the primary static control, let the router's downstream rank sum on one sequence be $R$.
 Writing $R=qT+m$, the control assigns rank $q+1$ to $m$ random positions independently of token
@@ -275,7 +299,8 @@ rank placement matters.
 
 ### 4.1 Models and data
 
-We train two decoder-only MLA language models on TinyStories-tokenized data.
+We train three decoder-only MLA language models on TinyStories-tokenized data, spanning an 8x
+parameter range.
 
 | Model | Parameters | Layers | $d_{model}$ | Heads | $d_c$ | $d_R$ | Context | Training tokens seen |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -283,21 +308,32 @@ We train two decoder-only MLA language models on TinyStories-tokenized data.
 | MLA-122M | 122.14M | 12 | 768 | 12 | 384 | 32 | 384 | 147.46M tokens |
 | MLA-250M | 249.27M | 16 | 1024 | 16 | 512 | 32 | 384 | 288M sampled tokens |
 
-The 30M model was trained for 3,000 steps from an approximately 8.8M-token training corpus and its checkpoint has validation loss 1.9618. The 122M final step-8,000 checkpoint has validation
-loss 1.5662; the best logged value, 1.5179 at step 7,250, was not checkpointed. The 250M model was
-trained for 3,000 steps on the same TinyStories corpus construction as the 122M model (byte-
-identical held-out validation stream) and reached validation loss 1.6588. We make no
-best-checkpoint claim for any model: all three use the final training step.
+The 30M model was trained for 3,000 steps from an approximately 8.8M-token training corpus and its
+checkpoint has validation loss 1.9618. The 122M and 250M models share byte-identical held-out
+validation streams (same TinyStories corpus construction, seed, and split fraction) despite their
+different architectures. The 122M final step-8,000 checkpoint has validation loss 1.5662; the best
+logged value, 1.5179 at step 7,250, was not checkpointed. The 250M model was trained for 3,000
+steps and reached validation loss 1.6588. We make no best-checkpoint claim for any model: all
+three use the final training step. 30M was trained locally (Apple Silicon MPS); 122M and 250M were
+trained on Kaggle (Tesla P100).
 
 ### 4.2 Confirmation protocol
 
-Commit `a4bcc7f` froze both policy files, their SHA-256 hashes, seed 91,827, 24 fresh sequences per
-scale, 20 control permutations, endpoints, and the success rule before examining new results.
-Fresh windows are sampled from the held-out evaluation region and separated from all 24 prior
-oracle/development windows and from one another by at least `block_size + 1` tokens. The primary
-endpoint is paired per-sequence router loss minus mean exact-byte static loss. A scale passes when
-the upper bound of its 95% sequence-cluster bootstrap interval is below zero. We also report exact
-one-sided paired sign-flip tests and sequence win counts.
+Commit `a4bcc7f` established a manifest-based pre-registration protocol: before viewing any
+fresh-window result, we commit each policy's file, SHA-256 hash, the deterministic sampling seed
+(91,827), 24 fresh sequences, 20 control permutations, the primary endpoint, and the success rule
+to `experiments/fresh_confirmation_manifest.json`. Every scale/tier-grid configuration we report
+(30M, 122M, 250M-coarse, 250M-fine) has its own manifest entry frozen before its confirmation run;
+the 250M-fine entry, added after diagnosing the 250M-coarse tier-granularity confound, follows the
+identical procedure rather than a relaxed one. Fresh windows are sampled from the held-out
+evaluation region and separated from all 24 prior oracle/development windows and from one another
+by at least `block_size + 1` tokens. The primary endpoint is paired per-sequence router loss minus
+mean exact-byte static loss. A configuration passes when the upper bound of its 95%
+sequence-cluster bootstrap interval is below zero. We also report exact one-sided paired sign-flip
+tests and sequence win counts. `experiments/audit_fresh_confirmation.py` independently reconstructs
+the seeded sampler and recomputes every statistic from the raw per-sequence rows before a result is
+treated as valid; `experiments/audit_joint_training_replay.py` additionally verifies that a
+from-scratch retrain reproduces the frozen policy bit-for-bit.
 
 ## 5. Results
 
@@ -334,11 +370,9 @@ against negative excursions elsewhere in the horizon. **Figure 2**
 (`figures/elasticmla_risk_spectrum.pdf`) shows the spectrum and this diagnostic across all three
 scales.
 
-The 250M model (249.3M unique parameters, $d_{model}=1024$, 16 layers, $d_c=512$) was trained for
-3,000 steps on the same TinyStories corpus construction as the 122M model (byte-identical held-out
-validation stream), reaching validation loss 1.6588. It contributes to the risk-capacity spectrum
-result here and, as described in Sections 5.2-5.4, to a full contextual-router replication whose
-pre-registered confirmation fails at this scale.
+The 250M model (Section 4.1) contributes to the risk-capacity spectrum result here and, as
+described in Sections 5.2-5.4, to a full contextual-router replication under two different tier
+grids.
 
 The normalized 122M-minus-30M difference in the original mean/max endpoints is -0.781 percentage
 points for the mean (95% bootstrap CI: [-1.617, +0.076]) and -1.156 points for the maximum (CI:
@@ -503,19 +537,20 @@ summary statistics (independently checkpoint/data-hash verified) were recovered,
 is not re-auditable at the per-position level the way the confirmation results are.
 
 **Threshold scope.** Raw rank-loss curves are frequently nonmonotone: 83.6%/89.3% of
-mean-over-horizon curves and 59.4%/69.7% of maximum-over-horizon curves at 30M/122M,
-respectively. Accordingly, $r^*$ uses the conservative suffix rule and is defined only on the
+mean-over-horizon curves and 59.4%/69.7% of maximum-over-horizon curves at 30M/122M respectively
+(not separately re-measured at 250M, though the identical conservative suffix rule is applied
+there too). Accordingly, $r^*$ uses the conservative suffix rule and is defined only on the
 tested discrete rank grid; it should not be interpreted as a smooth or uniquely identified
 intrinsic rank.
 
 **Control scope.** The primary control randomizes rank placement conditional on each router
 sequence's realized total rank; it is therefore position-independent, but not a globally fixed-
 budget policy. Twenty random allocations estimate its per-sequence loss. Section 5.4 adds four
-causal heuristic baselines (position, lexical identity, rarity, type) at the same realized budget;
-the router does not consistently beat these, and loses to two of them with high confidence. We
-still lack a comparison against separately optimized global-budget static policies, a learned
-orthogonal (PCA/SVD) nested basis, and eviction/quantization baselines from the wider KV-cache
-compression literature.
+causal heuristic baselines (position, lexical identity, rarity, type) at the same realized budget
+across all four scale/tier-grid configurations (16 scale-heuristic comparisons); the router shows
+a confident win in only 2 of 16. We still lack a comparison against separately optimized
+global-budget static policies, a learned orthogonal (PCA/SVD) nested basis, and
+eviction/quantization baselines from the wider KV-cache compression literature.
 
 **Oracle scope.** Capacity labels are isolated-position interventions, not joint-rollout-optimal
 labels. Joint training alleviates but does not solve this limitation.
@@ -532,8 +567,9 @@ claim any latency, throughput, or superiority to optimized MHA/GQA/FlashMLA kern
 contrary, we now have direct evidence that the current implementation is roughly two orders of
 magnitude too slow for real decoding, and identify the specific unvectorized code path responsible.
 
-**Quality scope.** Both compressed policies increase loss relative to full MLA, and the 122M policy
-misses the held-out +0.15-nat budget. Task-level generation quality is not evaluated.
+**Quality scope.** Every compressed policy increases loss relative to full MLA, and the 122M and
+250M-fine policies miss their held-out +0.15-nat budget (30M and 250M-coarse do not). Task-level
+generation quality is not evaluated.
 
 **Architecture scope.** Layer 0 is always full, and one tier is shared by every downstream layer.
 Per-layer routing could improve efficiency but increases metadata, training complexity, and
@@ -581,31 +617,27 @@ reconstruction is an unvectorized Python loop), and not a reliably calibrated qu
 joint-rollout-consistent oracle labels, distillation from the heuristics that currently win, tier-
 resolution-aware training, or hybrid heuristic-plus-learned designs -- before further scale-up is
 attempted, since scale alone does not fix this, (2) a grouped-tier or fused packed attention kernel
-to convert the established persistent-byte savings into measured peak-memory and latency gains
-against optimized MHA/GQA/MLA/FlashMLA baselines, and (3) replication across more seeds, domains,
-and larger, more realistically trained checkpoints once (1) is resolved.
+to convert the established persistent-byte savings into measured## References
 
-## References (draft)
+[1] A. Vaswani et al., "Attention Is All You Need," NeurIPS, 2017.
 
-[1] A. Vaswani et al., “Attention Is All You Need,” NeurIPS, 2017.
+[2] DeepSeek-AI, "DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language
+Model," arXiv:2405.04434, 2024.
 
-[2] DeepSeek-AI, “DeepSeek-V2: A Strong, Economical, and Efficient Mixture-of-Experts Language
-Model,” arXiv:2405.04434, 2024.
+[3] DeepSeek-AI, "DeepSeek-V3 Technical Report," arXiv:2412.19437, 2024.
 
-[3] DeepSeek-AI, “DeepSeek-V3 Technical Report,” arXiv:2412.19437, 2024.
+[4] T. Ji et al., "Towards Economical Inference: Enabling DeepSeek's Multi-Head Latent Attention in
+Any Transformer-based LLMs," arXiv:2502.14837, 2025.
 
-[4] T. Ji et al., “Towards Economical Inference: Enabling DeepSeek's Multi-Head Latent Attention in
-Any Transformer-based LLMs,” arXiv:2502.14837, 2025.
+[5] "Lossless KV Cache Compression to 2%" (Cross-Layer Latent Attention), arXiv:2410.15252, 2024.
 
-[5] “Lossless KV Cache Compression to 2%,” arXiv:2410.15252, 2024.
+[6] "TransMLA: Multi-Head Latent Attention Is All You Need," arXiv:2502.07864, 2025.
 
-[6] “TransMLA: Multi-Head Latent Attention Is All You Need,” arXiv:2502.07864, 2025.
-
-[7] "EG-MLA: Embedding-Gated Multi-head Latent Attention for Scalable and Efficient LLMs,”
+[7] "EG-MLA: Embedding-Gated Multi-head Latent Attention for Scalable and Efficient LLMs,"
 arXiv:2509.16686, 2025.
 
-[8] “CARE: Covariance-Aware and Rank-Enhanced Decomposition for Enabling Multi-Head Latent
-Attention,” arXiv:2603.17946.
+[8] "CARE: Covariance-Aware and Rank-Enhanced Decomposition for Enabling Multi-Head Latent
+Attention," arXiv:2603.17946.
 
-[9] Through the Bottleneck: How Multi-head Latent Attention Separates Content from Position in
-Language Models,” arXiv:2607.23054.
+[9] "Through the Bottleneck: How Multi-head Latent Attention Separates Content from Position in
+Language Models," arXiv:2607.23054.
