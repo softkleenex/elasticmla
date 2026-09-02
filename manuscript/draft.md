@@ -402,7 +402,7 @@ independently pre-registered confirmation at 250M with an 18-tier fine grid (mir
 scheme; same base checkpoint, oracle, and channel orders; random router initialization, exactly as
 the 122M fine-grid policy was built). It **succeeds**: -0.01165 nat, CI excludes zero, p=0.0044.
 This shows the initial 250M failure was, at least in part, a tier-resolution artifact of our own
-design rather than purely an intrinsic scale limitation: at d_c=512, four coarse tiers are too
+design rather than purely an intrinsic scale limitation: at $d_c=512$, four coarse tiers are too
 low-resolution for the router to reliably beat random matched-budget allocation, but 18 finer tiers
 restore that advantage. We did not adjust either protocol after seeing its result; both were frozen
 in advance (`experiments/fresh_confirmation_manifest.json`, scale keys `250m` and `250m_fine`), and
@@ -617,7 +617,11 @@ reconstruction is an unvectorized Python loop), and not a reliably calibrated qu
 joint-rollout-consistent oracle labels, distillation from the heuristics that currently win, tier-
 resolution-aware training, or hybrid heuristic-plus-learned designs -- before further scale-up is
 attempted, since scale alone does not fix this, (2) a grouped-tier or fused packed attention kernel
-to convert the established persistent-byte savings into measured## References
+to convert the established persistent-byte savings into measured peak-memory and latency gains
+against optimized MHA/GQA/MLA/FlashMLA baselines, and (3) replication across more seeds, domains,
+and larger, more realistically trained checkpoints once (1) is resolved.
+
+## References
 
 [1] A. Vaswani et al., "Attention Is All You Need," NeurIPS, 2017.
 
