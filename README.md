@@ -6,7 +6,7 @@ risk-capacity spectrum, and a rigorously audited, pre-registered evaluation of a
 contextual router against random, shuffled, and simple causal-heuristic baselines at three model
 scales (30M, 122M, 250M parameters).
 
-**Start here:** `manuscript/draft.md` is the paper. Its headline claims are, in order of how
+**Start here:** `manuscript/draft.md` is the paper (source of truth); `manuscript/latex/main.pdf` is a compiled LaTeX version (regenerate via `uv run python manuscript/convert_to_latex.py` after editing the markdown). Its headline claims are, in order of how
 robust they are:
 
 1. **Risk-capacity spectrum (robust, three scales, does not involve the router).** Required
