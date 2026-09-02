@@ -50,11 +50,17 @@ class TieredRankRouter(nn.Module):
 
 
 class ElasticMLAGPT(nn.Module):
-    """Attach per-layer tier routers to a pretrained ``MLAGPT`` base model.
+    """Attach per-layer, independently-routed tier routers to a pretrained ``MLAGPT`` base model.
 
     The base model owns all language-model parameters.  Routers observe the
     pre-attention normalized hidden state at each layer and choose how many
     saliency-ordered latent channels are persistently stored for each new token.
+
+    Not part of the confirmatory pipeline: every result reported in
+    ``manuscript/draft.md`` uses ``ContextualElasticMLAGPT`` (a single shared
+    downstream tier chosen from a layer-0-full contextual state), not this
+    per-layer-independent variant.  Kept for the early per-layer-router
+    experiments and exercised only by unit tests.
     """
 
     def __init__(self, base_model, channel_orders, tiers=(16, 64, 160, 256)):
@@ -170,6 +176,12 @@ class GlobalElasticMLAGPT(nn.Module):
     The router observes the first block's pre-attention normalized hidden state,
     which is unaffected by earlier compression and therefore avoids rollout feature
     shift at the routing decision.
+
+    Dead code relative to the current pipeline: not imported by any script under
+    ``experiments/`` (excluding ``archive/``) and not covered by any test. It
+    predates ``ContextualElasticMLAGPT`` (layer-0-full, not layer-0-routed) and
+    was superseded by it before any reported result was generated. Kept only for
+    history; do not cite it as the routing architecture used in the paper.
     """
 
     def __init__(self, base_model, channel_orders, tiers=(16, 64, 160, 256)):

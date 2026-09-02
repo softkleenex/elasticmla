@@ -34,8 +34,8 @@ spectra visually nearly overlap across an 8x parameter range (Figure 2a).
 
 Normalized premium `E[r*_max - r*_mean]/d_c`:
 
-- 30M: 0.6507 (95% CI [0.6335, 0.6673])
-- 122M: 0.6470 (95% CI [0.6283, 0.6641])
+- 30M: 0.6507 (95% CI [0.6326, 0.6669])
+- 122M: 0.6470 (95% CI [0.6283, 0.6652])
 - 250M: 0.6888 (95% CI [0.6647, 0.7129])
 
 The 30M/122M intervals overlap almost completely; the 250M interval is adjacent/slightly higher

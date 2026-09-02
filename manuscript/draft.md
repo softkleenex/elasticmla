@@ -41,8 +41,9 @@ grid **succeeds** (-0.0117 nat, CI excludes zero), showing the coarse-grid failu
 a tier-resolution artifact of our design, not purely a scale limitation. However, a separate,
 more robust comparison against simple **causal heuristic** baselines (absolute position, token
 identity, token rarity, token type), fit only on the original training/validation splits and
-evaluated at the identical byte budget, shows the router winning only 2 of 16 tested scale/tier/
-heuristic combinations with a confidence interval excluding zero -- and losing more decisively with
+evaluated at the identical byte budget, shows the router winning only 3 of 16 tested scale/tier/
+heuristic combinations with a confidence interval excluding zero (all three at the coarser tier
+grids: 2 at 30M, 1 at 250M-coarse) -- and losing more decisively with
 the *finer* tier grid, because heuristics benefit from added resolution at least as much as the
 learned router does. We report this negative finding transparently across all four tested
 scale/tier configurations. The 122M and 250M-fine policies also miss their own +0.15-nat
@@ -355,7 +356,7 @@ $k\in\{32,16,8,4,2,1\}$, and take the smallest suffix-safe rank.
 
 Every step is monotone nondecreasing at all three scales, exactly as Proposition 2 (risk-capacity
 ordering) guarantees. The normalized **tail-capacity premium** $\mathrm{TCP}=\mathbb E[r^*_{\max}
--r^*_{\mathrm{mean}}]/d_c$ is 0.6507 (95% CI [0.6335, 0.6673]) at 30M, 0.6470 (CI [0.6283, 0.6641])
+-r^*_{\mathrm{mean}}]/d_c$ is 0.6507 (95% CI [0.6326, 0.6669]) at 30M, 0.6470 (CI [0.6283, 0.6652])
 at 122M, and 0.6888 (CI [0.6647, 0.7129]) at 250M -- three overlapping-to-adjacent intervals across
 an 8x parameter range, making this the most scale-consistent quantitative result in the paper.
 
@@ -482,14 +483,19 @@ frozen fresh sequences at the router's own per-sequence byte budget.
 At 250M-coarse, position, rarity, and type collapse to numerically identical results: with only
 four coarse tiers, their validation-selected bias saturates almost the entire sequence into a
 single mid-high tier, degenerating toward near-uniform allocation, and even that beats the router.
+Lexical identity is the one heuristic the router still beats at 250M-coarse (-0.0155 nat, CI
+excludes zero), consistent with its wins at 30M-coarse -- the router's advantage over heuristics,
+where it exists at all, is specifically an advantage over *lexical identity* at coarse tier grids.
 At 250M-fine, giving every heuristic the same finer 18-tier resolution that let the router beat
 *random* allocation (Section 5.2) makes the heuristics stronger too -- strong enough that **all
-four now beat the router**, including lexical identity, which had been the router's best result at
-every other configuration. Finer tiers help simple heuristics at least as much as they help the
-learned router.
+four now beat the router**, including lexical identity, which is the only heuristic the router had
+beaten at every coarser configuration. Finer tiers help simple heuristics at least as much as they
+help the learned router, and specifically erase the router's one consistent heuristic win.
 
-Across all four scale/tier configurations (16 scale-control pairs), only two pairs show a router
-win with a CI excluding zero, both at 30M. **This is the paper's most durable negative finding**:
+Across all four scale/tier configurations (16 scale-control pairs), only three pairs show a
+router win with a CI excluding zero: 30M-coarse/lexical identity, 30M-coarse/token rarity, and
+250M-coarse/lexical identity (visible in the table above). All three wins occur at a coarse tier
+grid; none occur at the fine tier grid. **This is the paper's most durable negative finding**:
 contextual placement is sometimes better than *random or shuffled* placement at equal bytes -- and
 whether it is depends on tier granularity, not simply model scale (Section 5.2) -- but current
 evidence does not show it is reliably better than simple hand-designed heuristics, at any of the
@@ -518,9 +524,13 @@ cache (`experiments/benchmark_cache_memory_latency.py`).
 Measured cache-byte ratios closely track the derived formula. Peak allocated memory is modestly
 *lower* for packed configurations (3.5-4.2% at the router's realized rank), a small positive result
 we had not previously claimed. Decode latency, however, is two orders of magnitude worse for the
-packed path, because `pack_latents`/`unpack_latents` reconstruct the entire cached history with a
-per-token Python loop on every decode step -- an implementation limitation, not a property of the
-packed representation itself. See `notes/measured_cache_memory_latency.md` for full results at both
+packed path. The root cause is two independent unvectorized Python loop sites, not one:
+`pack_latents`/`unpack_latents` (`code/elastic_mla/elastic_cache.py`) reconstruct the entire cached
+history with a per-token Python loop on every decode step, and
+`MultiHeadLatentAttention.forward_cached_packed` (`code/elastic_mla/mla.py`) separately builds its
+per-token rank mask with a nested `for b / for t` Python double loop. Both are implementation
+limitations, not properties of the packed representation itself, and both would need to be
+vectorized (or replaced with a fused kernel) to close the latency gap. See `notes/measured_cache_memory_latency.md` for full results at both
 configurations (uniform and router) and both scales.
 
 ## 6. Validity, Reproducibility, and Limitations
@@ -548,7 +558,7 @@ sequence's realized total rank; it is therefore position-independent, but not a 
 budget policy. Twenty random allocations estimate its per-sequence loss. Section 5.4 adds four
 causal heuristic baselines (position, lexical identity, rarity, type) at the same realized budget
 across all four scale/tier-grid configurations (16 scale-heuristic comparisons); the router shows
-a confident win in only 2 of 16. We still lack a comparison against separately optimized
+a confident win in only 3 of 16 (all at coarse tier grids). We still lack a comparison against separately optimized
 global-budget static policies, a learned orthogonal (PCA/SVD) nested basis, and
 eviction/quantization baselines from the wider KV-cache compression literature.
 
@@ -561,8 +571,9 @@ decode on a Tesla T4 GPU at both scales (`experiments/benchmark_cache_memory_lat
 byte-formula predictions (67.2-67.4% of full MLA at 30M, 54.2-59.6% at 122M). Peak allocated GPU
 memory is modestly lower for packed configurations (1.3-4.2% reduction), a small positive result
 we had not previously claimed. However, **decode latency is 168-201x slower** for the packed path
-than full-width dense MLA at both scales, because `pack_latents`/`unpack_latents` reconstruct the
-entire cached history with a per-token Python loop on every decode step. We therefore still do not
+than full-width dense MLA at both scales, because `pack_latents`/`unpack_latents` and, separately,
+`forward_cached_packed`'s rank-mask construction each reconstruct/build per-token structures with
+Python loops on every decode step (Section 5.5). We therefore still do not
 claim any latency, throughput, or superiority to optimized MHA/GQA/FlashMLA kernels; on the
 contrary, we now have direct evidence that the current implementation is roughly two orders of
 magnitude too slow for real decoding, and identify the specific unvectorized code path responsible.
@@ -604,7 +615,8 @@ our own design, which we diagnosed and corrected rather than let stand. Second, 
 importantly, whether the router beats simple **causal heuristics** (position, token identity,
 rarity, type) does *not* depend favorably on tier granularity: across four tested scale/tier-grid
 configurations (16 scale-heuristic comparisons), the router wins with a confidence interval
-excluding zero in only 2 cases, and its losses become more numerous and more confident with the
+excluding zero in only 3 cases (all at coarse tier grids: 30M-coarse/lexical, 30M-coarse/rarity,
+250M-coarse/lexical), and its losses become more numerous and more confident with the
 finer tier grid at 250M, because simple heuristics benefit from added resolution at least as much
 as the learned router does. We report both axes transparently rather than overclaim: the present
 evidence establishes a formal allocation framework, a scale-consistent risk-capacity spectrum, and
