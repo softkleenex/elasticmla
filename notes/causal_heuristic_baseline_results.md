@@ -68,3 +68,16 @@ demonstrated superiority over hand-designed causal heuristics.
 - Selection uses only the original 16 train / 4 validation sequences; fresh windows are the same
   24 pre-registered, audited windows used for the router confirmation. All checkpoint/data/policy/
   oracle/audit hashes are verified before scoring (see script provenance checks).
+
+## Update: this note covers only 30M/122M
+
+This note predates the 250M causal-heuristic runs and reports the correct 30M/122M-only tally at
+the time it was written (2 wins: 30M-coarse/lexical, 30M-coarse/rarity). It is now superseded as a
+*complete* tally by `notes/contextual_router_250m_results.md` (250M-coarse: router also beats
+position/rarity/type but *loses* to lexical identity there) and
+`notes/contextual_router_250m_tier_granularity_diagnostic.md` (250M-fine: router loses all four,
+including lexical identity). The correct all-scale tally, used in `manuscript/draft.md`, is
+**3 of 16** scale-heuristic comparisons won by the router (30M-coarse/lexical, 30M-coarse/rarity,
+250M-coarse/lexical), not 2. An earlier version of the manuscript itself under-counted this as
+"2 of 16, both at 30M" before an independent fresh review caught the discrepancy; see commit
+`c9de709`.

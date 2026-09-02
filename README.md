@@ -17,8 +17,9 @@ robust they are:
    30M and 122M; fails with a coarse tier grid at 250M and succeeds again with a finer grid at
    250M -- diagnosed and reported as a tier-resolution confound, not spun as a clean scale trend.
 3. **Router does not beat simple causal heuristics (the main negative finding).** Across four
-   tested scale/tier-grid configurations, the router shows a confident win in only 2 of 16
-   scale-heuristic comparisons, and loses more decisively at finer tier resolution.
+   tested scale/tier-grid configurations, the router shows a confident win in only 3 of 16
+   scale-heuristic comparisons (all at coarse tier grids: 2 at 30M, 1 at 250M-coarse), and loses
+   more decisively at finer tier resolution.
 4. **Decode latency is 168-201x slower for the packed path (measured, unfixed).** Persistent cache
    bytes and a small peak-memory reduction are real and measured on a T4 GPU; decode speed is not,
    because of an unvectorized Python-loop cache reconstruction.
