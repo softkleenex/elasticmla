@@ -17,3 +17,6 @@ experiments/*/ckpt/*.pt
 
 # downloaded Kaggle checkpoints and datasets
 kaggle_output/
+
+# macOS
+.DS_Store
