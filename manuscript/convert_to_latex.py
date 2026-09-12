@@ -83,7 +83,7 @@ def convert_table(block_lines):
         else:
             col_spec.append("c" if "-" in a else "l")
     colspec = "".join(col_spec)
-    wide = n >= 7
+    wide = n >= 5
     out = [r"\begin{table}[t]", r"\centering"]
     if wide:
         out.append(r"\resizebox{\textwidth}{!}{%")

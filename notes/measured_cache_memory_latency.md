@@ -57,3 +57,56 @@ tensor-payload size of the cache object at the end, using the same `cache_num_by
 - Lightning jobs: `elasticmla-bench-30m-0826`, `elasticmla-bench-122m-0826` (T4, both Completed)
 - Checkpoint/data/policy SHA-256 verified against the same values used in the fresh-window
   confirmation results before running.
+
+
+---
+
+# Measured GPU cache memory and decode latency -- before and after vectorization
+
+## Update: the latency regression is now mostly fixed
+
+The original benchmark (`notes/measured_cache_memory_latency.md`) found the packed decode path
+168-201x slower than full-width dense MLA, and traced this to three unvectorized per-token Python
+loop sites: `pack_latents`/`unpack_latents`/`append_packed_latents`
+(`code/elastic_mla/elastic_cache.py`) and the rank-mask construction in
+`MultiHeadLatentAttention.forward_cached_packed` (`code/elastic_mla/mla.py`). All three were
+rewritten to pure vectorized PyTorch operations (`torch.repeat_interleave` plus a single gather for
+pack/unpack; a broadcasted inverse-permutation comparison for the rank mask) with **no change to
+the packed representation, byte accounting, or numerical results** -- validated by 500 random-trial
+cross-checks against the original loop-based implementations (`torch.equal`, zero mismatches) and
+the full 49-test unit suite before and after (both pass).
+
+## Results (Tesla T4, batch=8, same benchmark script/config as the original measurement)
+
+| Scale | Metric | Full MLA | Packed (router) -- before | Packed (router) -- after vectorization |
+|---|---|---:|---:|---:|
+| 30M | Cache bytes (router/full) | -- | 67.4% | 67.4% (unchanged) |
+| 30M | Peak allocated (router/full) | -- | 96.5% | 96.5% (unchanged) |
+| 30M | Mean decode step | 8.50 ms | 1412.6 ms (167.9x) | **25.48 ms (3.00x)** |
+| 122M | Cache bytes (router/full) | -- | 59.6% | 59.6% (unchanged) |
+| 122M | Peak allocated (router/full) | -- | 95.8% | 95.8% (unchanged) |
+| 122M | Mean decode step | 20.99 ms | 3592.9 ms (201.1x) | **62.13 ms (2.96x)** |
+
+Vectorizing the three Python loop sites gives a **~55-58x decode-step speedup** on the packed
+path at both scales, cutting the latency regression from two orders of magnitude to roughly 3x.
+Cache-byte and peak-memory ratios are numerically unchanged (as expected -- these fixes only
+change how the same computation is expressed, not what is computed).
+
+## Remaining gap
+
+A ~3x per-step latency cost remains, from real, expected sources that vectorizing pack/unpack does
+not remove: (1) the packed path still reconstructs a dense `(B, T, d_c)` latent tensor via a gather
+before every attention call, an unavoidable consequence of the correctness-first design described
+in the paper; (2) `append_packed_latents` still fully unpacks and repacks the entire cache history
+on every single-token decode step, rather than appending only the new token in place -- this is an
+algorithmic (not just a vectorization) limitation and is the next target for a genuine O(1)-per-step
+incremental packed update. We do not claim latency parity with full MLA; we do claim the regression
+is now small enough (~3x) to be a plausible target for further, more modest optimization, rather
+than a two-orders-of-magnitude blocker.
+
+## Provenance
+
+- `code/elastic_mla/elastic_cache.py`, `code/elastic_mla/mla.py` (vectorized; commit `169c286`)
+- `experiments/contextual_router_{30m,122m}/measured_cache_memory_latency_vectorized.json`
+- Lightning jobs: `elasticmla-bench-30m-vec-0902`, `elasticmla-bench-122m-vec-0902` (T4, Completed)
+- Checkpoint/data SHA-256 verified identical to the original (pre-vectorization) benchmark run.

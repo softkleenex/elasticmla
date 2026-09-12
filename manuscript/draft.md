@@ -51,10 +51,12 @@ validation-time quality budgets on fresh data, independently of the allocation r
 work provides a formal rate-allocation framework, a scale-consistent risk-capacity finding, and a
 rigorously audited routing method whose advantage over pure random allocation is real but
 tier-grid-dependent, and whose advantage over simple non-learned heuristics is not established at
-any tested configuration. A direct T4 GPU benchmark additionally shows a modest measured
+any tested configuration. A direct T4 GPU benchmark found a modest measured
 peak-memory reduction (3.5-4.2%) alongside a severe measured decode-latency cost (168-201x slower
-than full MLA), traced to an unvectorized Python-loop cache reconstruction that must be fixed
-before any serving benefit is possible.
+than full MLA), traced to three unvectorized Python cache-construction loops. We fixed all three
+(validated by 500 random-trial cross-checks against the original implementations and the full unit
+suite), cutting the regression to roughly 3x at both scales -- a real remaining cost, but no
+longer a two-orders-of-magnitude blocker to a future serving claim.
 
 ## 1. Introduction
 
@@ -509,29 +511,39 @@ inexpensive non-learned rules, and simply changing tier resolution or model scal
 this on its own, motivating stronger joint objectives, larger calibration sets, or hybrid
 heuristic-plus-learned designs as future work.
 
-### 5.5 Measured GPU memory and latency confirm storage savings and reveal a severe latency cost
+### 5.5 Measured GPU memory and latency: an initial severe cost, and a subsequent 55-58x fix
 
-Section 3.1's byte formula is a derived tensor-payload count. We additionally benchmarked real
+Section 3.1's byte formula is a derived tensor-payload count. We benchmarked real
 prefill-then-128-step incremental decode on a Tesla T4 GPU at both scales, comparing full-width
 dense MLA, a uniform packed cache matched to the router's realized rank, and the router's packed
 cache (`experiments/benchmark_cache_memory_latency.py`).
 
-| Scale | Cache bytes (router / full) | Peak allocated (router / full) | Mean decode step (router vs full) |
-|---|---:|---:|---:|
-| 30M | 67.4% | 96.5% | 1412.6 ms vs 8.41 ms (**167.9x slower**) |
-| 122M | 59.6% | 95.8% | 3592.9 ms vs 17.87 ms (**201.1x slower**) |
+| Scale | Cache bytes (router / full) | Peak allocated (router / full) | Mean decode step, before fix | Mean decode step, after fix |
+|---|---:|---:|---:|---:|
+| 30M | 67.4% | 96.5% | 1412.6 ms vs 8.50 ms (**167.9x slower**) | 25.48 ms vs 8.50 ms (**3.00x slower**) |
+| 122M | 59.6% | 95.8% | 3592.9 ms vs 17.87 ms (**201.1x slower**) | 62.13 ms vs 20.99 ms (**2.96x slower**) |
 
-Measured cache-byte ratios closely track the derived formula. Peak allocated memory is modestly
-*lower* for packed configurations (3.5-4.2% at the router's realized rank), a small positive result
-we had not previously claimed. Decode latency, however, is two orders of magnitude worse for the
-packed path. The root cause is two independent unvectorized Python loop sites, not one:
-`pack_latents`/`unpack_latents` (`code/elastic_mla/elastic_cache.py`) reconstruct the entire cached
-history with a per-token Python loop on every decode step, and
-`MultiHeadLatentAttention.forward_cached_packed` (`code/elastic_mla/mla.py`) separately builds its
-per-token rank mask with a nested `for b / for t` Python double loop. Both are implementation
-limitations, not properties of the packed representation itself, and both would need to be
-vectorized (or replaced with a fused kernel) to close the latency gap. See `notes/measured_cache_memory_latency.md` for full results at both
-configurations (uniform and router) and both scales.
+Measured cache-byte ratios closely track the derived formula and are unaffected by the fix below.
+Peak allocated memory is modestly *lower* for packed configurations (3.5-4.2% at the router's
+realized rank), a small positive result we had not previously claimed. Decode latency was initially
+two orders of magnitude worse for the packed path, traced to three independent unvectorized Python
+loop sites: `pack_latents`/`unpack_latents`/`append_packed_latents`
+(`code/elastic_mla/elastic_cache.py`) reconstructed the entire cached history with a per-token
+Python loop on every decode step, and `MultiHeadLatentAttention.forward_cached_packed`
+(`code/elastic_mla/mla.py`) separately built its per-token rank mask with a nested
+`for b / for t` Python double loop. We rewrote all three as vectorized PyTorch operations
+(`torch.repeat_interleave` plus a single gather for pack/unpack; a broadcasted inverse-permutation
+comparison for the rank mask), changing nothing about the packed representation, byte accounting,
+or numerical results -- verified by 500 random-trial cross-checks against the original
+implementations (`torch.equal`, zero mismatches) and the full unit suite (49/49, both before and
+after). This cuts the packed decode step by 55-58x at both scales, reducing the latency regression
+from 168-201x to roughly 3x. A ~3x cost remains from sources vectorization does not remove: the
+packed path still reconstructs a dense `(B,T,d_c)` tensor via a gather before every attention call,
+and `append_packed_latents` still unpacks and repacks the *entire* history on every single-token
+decode step rather than appending only the new token in place -- an algorithmic, not merely a
+vectorization, limitation and the next target for genuine O(1)-per-step incremental packing. See
+`notes/measured_cache_memory_latency.md` for full before/after results at both configurations and
+both scales.
 
 ## 6. Validity, Reproducibility, and Limitations
 
@@ -570,13 +582,15 @@ decode on a Tesla T4 GPU at both scales (`experiments/benchmark_cache_memory_lat
 `notes/measured_cache_memory_latency.md`). Measured persistent cache bytes closely track the
 byte-formula predictions (67.2-67.4% of full MLA at 30M, 54.2-59.6% at 122M). Peak allocated GPU
 memory is modestly lower for packed configurations (1.3-4.2% reduction), a small positive result
-we had not previously claimed. However, **decode latency is 168-201x slower** for the packed path
-than full-width dense MLA at both scales, because `pack_latents`/`unpack_latents` and, separately,
-`forward_cached_packed`'s rank-mask construction each reconstruct/build per-token structures with
-Python loops on every decode step (Section 5.5). We therefore still do not
-claim any latency, throughput, or superiority to optimized MHA/GQA/FlashMLA kernels; on the
-contrary, we now have direct evidence that the current implementation is roughly two orders of
-magnitude too slow for real decoding, and identify the specific unvectorized code path responsible.
+we had not previously claimed. Decode latency was initially 168-201x slower for the packed path at
+both scales, traced to three unvectorized Python loop sites; we rewrote all three as vectorized
+PyTorch operations (Section 5.5), reducing the regression to roughly 3x at both scales, validated
+against 500 random-trial correctness cross-checks and the full unit suite. We still do not claim
+latency parity, throughput gains, or superiority to optimized MHA/GQA/FlashMLA kernels -- a ~3x
+per-step cost remains from the packed path's dense-reconstruction gather and from
+`append_packed_latents` repacking the entire cache history on every decode step -- but this is no
+longer a two-orders-of-magnitude blocker, and we identify the specific remaining algorithmic
+limitation (repack-the-whole-history rather than append-in-place) as the next concrete target.
 
 **Quality scope.** Every compressed policy increases loss relative to full MLA, and the 122M and
 250M-fine policies miss their held-out +0.15-nat budget (30M and 250M-coarse do not). Task-level
@@ -622,15 +636,18 @@ as the learned router does. We report both axes transparently rather than overcl
 evidence establishes a formal allocation framework, a scale-consistent risk-capacity spectrum, and
 a routing method with a real but tier-grid-dependent advantage over random placement and no
 established advantage over cheap non-learned heuristics at any tested configuration -- not
-peak-memory or latency gains (a direct T4 benchmark shows the packed path is 168-201x slower per
-decode step than full MLA despite modestly lower peak memory, because the packed cache
-reconstruction is an unvectorized Python loop), and not a reliably calibrated quality constraint at
-122M or 250M-fine. Priority future work is (1) closing the gap to causal heuristics -- via
-joint-rollout-consistent oracle labels, distillation from the heuristics that currently win, tier-
-resolution-aware training, or hybrid heuristic-plus-learned designs -- before further scale-up is
-attempted, since scale alone does not fix this, (2) a grouped-tier or fused packed attention kernel
-to convert the established persistent-byte savings into measured peak-memory and latency gains
-against optimized MHA/GQA/MLA/FlashMLA baselines, and (3) replication across more seeds, domains,
+peak-memory or throughput superiority (a direct T4 benchmark initially showed the packed path
+168-201x slower per decode step than full MLA; vectorizing three Python cache-construction loops
+we identified cut this to roughly 3x at both scales, validated against 500 random-trial
+correctness cross-checks, but a real ~3x cost remains from the packed path's dense-reconstruction
+gather and from repacking the entire cache history on every decode step), and not a reliably
+calibrated quality constraint at 122M or 250M-fine. Priority future work is (1) closing the gap to
+causal heuristics -- via joint-rollout-consistent oracle labels, distillation from the heuristics
+that currently win, tier-resolution-aware training, or hybrid heuristic-plus-learned designs --
+before further scale-up is attempted, since scale alone does not fix this, (2) an incremental,
+append-in-place packed-cache update (rather than repacking the whole history every step) and a
+grouped-tier or fused packed attention kernel to convert the established persistent-byte savings
+into measured peak-memory and throughput gains against optimized MHA/GQA/MLA/FlashMLA baselines, and (3) replication across more seeds, domains,
 and larger, more realistically trained checkpoints once (1) is resolved.
 
 ## References
