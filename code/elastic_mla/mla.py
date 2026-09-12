@@ -294,10 +294,11 @@ class MultiHeadLatentAttention(nn.Module):
             dense_cache = {"c_kv": past_c_kv, "k_rope": cache["k_rope"]}
 
         # Boolean masking preserves the projection output dtype under autocast.
-        rank_mask = torch.zeros((B, T_new, self.d_c), device=x.device, dtype=torch.bool)
-        for b in range(B):
-            for t in range(T_new):
-                rank_mask[b, t, order[: int(ranks[b, t])]] = 1
+        # Vectorized: channel c is active for token (b,t) iff its position in
+        # ``order`` (its "rank") is below ranks[b,t]; avoids a per-(b,t) Python loop.
+        inverse_order = torch.empty_like(order)
+        inverse_order[order] = torch.arange(self.d_c, device=order.device)
+        rank_mask = inverse_order.view(1, 1, self.d_c) < ranks.unsqueeze(-1)
 
         out, dense_new_cache = self.forward_cached(
             x, cache=dense_cache, rank_mask=rank_mask

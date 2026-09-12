@@ -34,12 +34,34 @@ def validate_ranks(ranks: torch.Tensor, batch: int, length: int, d_c: int) -> to
     return ranks
 
 
+def _ragged_prefix_positions(flat_ranks: torch.Tensor, device) -> tuple[torch.Tensor, torch.Tensor]:
+    """Vectorized helper for ragged nested-prefix packing/unpacking.
+
+    Given the per-token rank of each of ``N`` tokens, returns
+    ``(token_index, prefix_position)`` of length ``sum(flat_ranks)``: for the
+    ``k``-th value in the flat packed buffer, ``token_index[k]`` is which
+    token it belongs to and ``prefix_position[k]`` is its 0-indexed position
+    within that token's nested prefix (``0 <= prefix_position[k] < rank``).
+    Replaces an equivalent per-token Python loop with ``repeat_interleave``.
+    """
+    token_index = torch.repeat_interleave(
+        torch.arange(flat_ranks.shape[0], device=device), flat_ranks
+    )
+    starts = torch.cat(
+        (torch.zeros(1, device=device, dtype=torch.int64), flat_ranks.cumsum(0)[:-1])
+    )
+    segment_starts = torch.repeat_interleave(starts, flat_ranks)
+    prefix_position = torch.arange(int(flat_ranks.sum()), device=device) - segment_starts
+    return token_index, prefix_position
+
+
 def pack_latents(c_kv: torch.Tensor, ranks: torch.Tensor, channel_order: torch.Tensor):
     """Pack ``c_kv`` values selected by token-specific prefix ranks.
 
     Token ordering in the flat buffer is row-major ``(batch, sequence)``.
     ``offsets`` has length ``B*S+1`` and int32 dtype; ``ranks`` is stored as
-    int16 when possible to keep metadata small.
+    int16 when possible to keep metadata small. Vectorized: no per-token
+    Python loop, using ``repeat_interleave`` plus a single gather.
     """
     if c_kv.ndim != 3:
         raise ValueError("c_kv must have shape (B, S, d_c)")
@@ -49,13 +71,17 @@ def pack_latents(c_kv: torch.Tensor, ranks: torch.Tensor, channel_order: torch.T
 
     flat = c_kv.reshape(B * S, d_c)
     flat_ranks = ranks64.reshape(-1)
-    pieces = [flat[i, order[: int(rank)]] for i, rank in enumerate(flat_ranks.tolist())]
-    values = torch.cat(pieces, dim=0) if pieces else c_kv.new_empty((0,))
     cumulative = torch.cat(
         (torch.zeros(1, device=c_kv.device, dtype=torch.int64), flat_ranks.cumsum(0))
     )
     if cumulative[-1].item() >= 2**31:
         raise OverflowError("packed cache offsets exceed int32 capacity")
+    if flat_ranks.numel() == 0 or int(cumulative[-1]) == 0:
+        values = c_kv.new_empty((0,))
+    else:
+        token_index, prefix_position = _ragged_prefix_positions(flat_ranks, c_kv.device)
+        channel_index = order[prefix_position]
+        values = flat[token_index, channel_index]
     rank_dtype = torch.int16 if d_c <= torch.iinfo(torch.int16).max else torch.int32
     return {
         "values": values.detach(),
@@ -89,9 +115,10 @@ def unpack_latents(cache, d_c: int, channel_order: torch.Tensor) -> torch.Tensor
         raise ValueError("packed offsets and ranks disagree")
 
     dense = values.new_zeros((B * S, d_c))
-    for i, rank in enumerate(flat_ranks.tolist()):
-        start, end = int(offsets[i]), int(offsets[i + 1])
-        dense[i, order[:rank]] = values[start:end]
+    if values.numel() > 0:
+        token_index, prefix_position = _ragged_prefix_positions(flat_ranks, values.device)
+        channel_index = order[prefix_position]
+        dense[token_index, channel_index] = values
     return dense.view(B, S, d_c)
 
 
