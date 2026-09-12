@@ -340,6 +340,17 @@ def token_type(token_id: int, encoder) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--future-horizon", type=int, default=32)
+    parser.add_argument(
+        "--position-horizon", type=int, default=None,
+        help=(
+            "Horizon used only to decide which source positions are eligible to be "
+            "probed. Defaults to --future-horizon, which reproduces the original "
+            "behaviour exactly. Set it to the longest horizon of a sweep so that every "
+            "horizon probes the same positions: otherwise a longer horizon silently "
+            "restricts probes to earlier positions (shorter prefixes), confounding "
+            "horizon length with prefix length."
+        ),
+    )
     parser.add_argument("--tail-counts", type=int, nargs="+", default=[32, 16, 8, 4, 2, 1],
                         help="top-k future losses to average; H and 1 are always included")
     parser.add_argument("--n-calib-sequences", type=int, default=16,
@@ -399,7 +410,10 @@ def main() -> None:
     d_c = int(config["d_c"])
     rank_grid = normalize_rank_grid(args.rank_grid, d_c)
     tail_counts = normalize_tail_counts(args.tail_counts, args.future_horizon)
-    valid_positions = valid_probe_positions(block_size, args.future_horizon)
+    position_horizon = args.position_horizon or args.future_horizon
+    if position_horizon < args.future_horizon:
+        raise ValueError("--position-horizon must be at least --future-horizon")
+    valid_positions = valid_probe_positions(block_size, position_horizon)
     if len(valid_positions) == 0:
         raise ValueError("future horizon leaves no valid probe positions")
 
@@ -542,6 +556,7 @@ def main() -> None:
                 "input_token_id": input_token_id,
                 "input_token_type": token_type(input_token_id, encoder),
                 "future_horizon": args.future_horizon,
+                "position_horizon": position_horizon,
                 "r_star_by_tail_count": r_star_map,
                 "future_delta_by_rank": {
                     str(rank): raw_delta_curves[seq_idx][pos_idx, rank_idx].astype(float).tolist()
@@ -589,8 +604,12 @@ def main() -> None:
     )
 
     # Horizon law and positive-part diagnostics from the saved per-offset deltas.
-    horizon_lengths = sorted({1, 2, 4, 8, 16, args.future_horizon})
-    horizon_lengths = [h for h in horizon_lengths if h <= args.future_horizon]
+    # Dyadic grid up to the requested horizon, plus the horizon itself. At the
+    # published H=32 this is {1,2,4,8,16,32}, identical to the original fixed set;
+    # a longer H now keeps the intermediate doublings instead of jumping from 16
+    # straight to H.
+    dyadic = [1 << k for k in range(0, 15)]
+    horizon_lengths = sorted({h for h in dyadic if h <= args.future_horizon} | {args.future_horizon})
     horizon_spectrum = {}
     horizon_rstars: dict[str, dict[int, dict[int, list[int]]]] = {
         metric: {h: {seq: [] for seq in range(args.n_eval_sequences)} for h in horizon_lengths}
@@ -730,7 +749,11 @@ def main() -> None:
         "token_attribution": "x_eval[b, pos] (the intervened source token)",
         "r_star_rule": "smallest grid rank for which this and every higher rank are <= epsilon",
         "risk_definition": "empirical upper-tail mean of the largest k truncation-induced loss deltas",
-        "horizon_population": "paired prefixes of probes eligible for the maximum requested horizon",
+        "horizon_population": (
+            "probes eligible for a horizon of "
+            f"{position_horizon} (--position-horizon); each probe's loss window is the "
+            f"first {args.future_horizon} offsets of that eligibility"
+        ),
         "analysis_source_sha256": file_sha256(Path(__file__)),
     }
 

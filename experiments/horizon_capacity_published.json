@@ -1,0 +1,795 @@
+{
+  "epsilon_nats": {
+    "30m": 0.1,
+    "122m": 0.1,
+    "250m": 0.1
+  },
+  "future_horizon_exact": {
+    "30m": 32,
+    "122m": 32,
+    "250m": 32
+  },
+  "n_positions_total": {
+    "30m": 768,
+    "122m": 768,
+    "250m": 768
+  },
+  "checkpoint_sha256": {
+    "30m": "18646f1fdd2d97396e687aaf5e60900b0f825ce96a0d11ffe9b6ac600acc8dc1",
+    "122m": "eeb8abf6366399298350eb183d2ff740b0966b9e1bf4426adaa6dde60dcf8b93",
+    "250m": "8a8774502016bb98a97eeb6f90de7af23f70f82283f933c6bd70fd2a315d275b"
+  },
+  "criteria": {
+    "maximum": {
+      "30m": {
+        "points": [
+          {
+            "horizon": 1,
+            "normalized_r_star": 0.2099609375,
+            "mean_r_star": 53.75,
+            "normalized_ci": [
+              0.19287109375,
+              0.22639973958333334
+            ]
+          },
+          {
+            "horizon": 2,
+            "normalized_r_star": 0.4540201822916667,
+            "mean_r_star": 116.22916666666667,
+            "normalized_ci": [
+              0.4303385416666667,
+              0.4750162760416667
+            ]
+          },
+          {
+            "horizon": 4,
+            "normalized_r_star": 0.6055501302083334,
+            "mean_r_star": 155.02083333333334,
+            "normalized_ci": [
+              0.5791809082031251,
+              0.6298828125
+            ]
+          },
+          {
+            "horizon": 8,
+            "normalized_r_star": 0.6719563802083334,
+            "mean_r_star": 172.02083333333334,
+            "normalized_ci": [
+              0.64697265625,
+              0.6940104166666666
+            ]
+          },
+          {
+            "horizon": 16,
+            "normalized_r_star": 0.7200520833333334,
+            "mean_r_star": 184.33333333333334,
+            "normalized_ci": [
+              0.6962056477864583,
+              0.7408040364583334
+            ]
+          },
+          {
+            "horizon": 32,
+            "normalized_r_star": 0.74072265625,
+            "mean_r_star": 189.625,
+            "normalized_ci": [
+              0.720947265625,
+              0.7581380208333334
+            ]
+          }
+        ],
+        "verdict": {
+          "nondecreasing": true,
+          "decreases": [],
+          "step_sizes": [
+            0.24405924479166669,
+            0.15152994791666669,
+            0.06640625,
+            0.048095703125,
+            0.02067057291666663
+          ],
+          "steps_are_shrinking": true,
+          "final_step": 0.02067057291666663,
+          "total_change": 0.53076171875
+        }
+      },
+      "122m": {
+        "points": [
+          {
+            "horizon": 1,
+            "normalized_r_star": 0.14539930555555555,
+            "mean_r_star": 55.833333333333336,
+            "normalized_ci": [
+              0.1281439887152778,
+              0.16368272569444445
+            ]
+          },
+          {
+            "horizon": 2,
+            "normalized_r_star": 0.3912760416666667,
+            "mean_r_star": 150.25,
+            "normalized_ci": [
+              0.3587782118055556,
+              0.4259453667534722
+            ]
+          },
+          {
+            "horizon": 4,
+            "normalized_r_star": 0.5523546006944444,
+            "mean_r_star": 212.10416666666666,
+            "normalized_ci": [
+              0.5230563693576389,
+              0.5821953667534722
+            ]
+          },
+          {
+            "horizon": 8,
+            "normalized_r_star": 0.6505533854166666,
+            "mean_r_star": 249.8125,
+            "normalized_ci": [
+              0.6233167860243055,
+              0.6765407986111112
+            ]
+          },
+          {
+            "horizon": 16,
+            "normalized_r_star": 0.7013888888888888,
+            "mean_r_star": 269.3333333333333,
+            "normalized_ci": [
+              0.6766479492187499,
+              0.7259657118055555
+            ]
+          },
+          {
+            "horizon": 32,
+            "normalized_r_star": 0.7291666666666666,
+            "mean_r_star": 280.0,
+            "normalized_ci": [
+              0.7094184027777778,
+              0.7489691840277778
+            ]
+          }
+        ],
+        "verdict": {
+          "nondecreasing": true,
+          "decreases": [],
+          "step_sizes": [
+            0.24587673611111113,
+            0.16107855902777773,
+            0.09819878472222221,
+            0.05083550347222221,
+            0.02777777777777779
+          ],
+          "steps_are_shrinking": true,
+          "final_step": 0.02777777777777779,
+          "total_change": 0.583767361111111
+        }
+      },
+      "250m": {
+        "points": [
+          {
+            "horizon": 1,
+            "normalized_r_star": 0.1875,
+            "mean_r_star": 96.0,
+            "normalized_ci": [
+              0.16324869791666666,
+              0.21276957194010415
+            ]
+          },
+          {
+            "horizon": 2,
+            "normalized_r_star": 0.4212646484375,
+            "mean_r_star": 215.6875,
+            "normalized_ci": [
+              0.39367370605468754,
+              0.4527180989583333
+            ]
+          },
+          {
+            "horizon": 4,
+            "normalized_r_star": 0.5712483723958334,
+            "mean_r_star": 292.4791666666667,
+            "normalized_ci": [
+              0.5413004557291666,
+              0.6029469807942708
+            ]
+          },
+          {
+            "horizon": 8,
+            "normalized_r_star": 0.6729736328125,
+            "mean_r_star": 344.5625,
+            "normalized_ci": [
+              0.6421284993489583,
+              0.7033284505208334
+            ]
+          },
+          {
+            "horizon": 16,
+            "normalized_r_star": 0.7307535807291666,
+            "mean_r_star": 374.1458333333333,
+            "normalized_ci": [
+              0.701171875,
+              0.7598073323567708
+            ]
+          },
+          {
+            "horizon": 32,
+            "normalized_r_star": 0.7602945963541666,
+            "mean_r_star": 389.2708333333333,
+            "normalized_ci": [
+              0.7344146728515625,
+              0.7872334798177083
+            ]
+          }
+        ],
+        "verdict": {
+          "nondecreasing": true,
+          "decreases": [],
+          "step_sizes": [
+            0.2337646484375,
+            0.14998372395833337,
+            0.10172526041666663,
+            0.05777994791666663,
+            0.029541015625
+          ],
+          "steps_are_shrinking": true,
+          "final_step": 0.029541015625,
+          "total_change": 0.5727945963541666
+        }
+      }
+    },
+    "positive_mean": {
+      "30m": {
+        "points": [
+          {
+            "horizon": 1,
+            "normalized_r_star": 0.2099609375,
+            "mean_r_star": 53.75,
+            "normalized_ci": [
+              0.19278971354166666,
+              0.22640177408854165
+            ]
+          },
+          {
+            "horizon": 2,
+            "normalized_r_star": 0.342041015625,
+            "mean_r_star": 87.5625,
+            "normalized_ci": [
+              0.322344970703125,
+              0.36083984375
+            ]
+          },
+          {
+            "horizon": 4,
+            "normalized_r_star": 0.3467610677083333,
+            "mean_r_star": 88.77083333333333,
+            "normalized_ci": [
+              0.3251953125,
+              0.3677571614583333
+            ]
+          },
+          {
+            "horizon": 8,
+            "normalized_r_star": 0.2752278645833333,
+            "mean_r_star": 70.45833333333333,
+            "normalized_ci": [
+              0.2521952311197917,
+              0.2998046875
+            ]
+          },
+          {
+            "horizon": 16,
+            "normalized_r_star": 0.18147786458333334,
+            "mean_r_star": 46.458333333333336,
+            "normalized_ci": [
+              0.16845703125,
+              0.19539388020833334
+            ]
+          },
+          {
+            "horizon": 32,
+            "normalized_r_star": 0.111572265625,
+            "mean_r_star": 28.5625,
+            "normalized_ci": [
+              0.10498046875,
+              0.1181640625
+            ]
+          }
+        ],
+        "verdict": {
+          "nondecreasing": false,
+          "decreases": [
+            {
+              "from": 4,
+              "to": 8,
+              "drop": 0.071533203125
+            },
+            {
+              "from": 8,
+              "to": 16,
+              "drop": 0.09374999999999997
+            },
+            {
+              "from": 16,
+              "to": 32,
+              "drop": 0.06990559895833334
+            }
+          ],
+          "step_sizes": [
+            0.132080078125,
+            0.004720052083333315,
+            -0.071533203125,
+            -0.09374999999999997,
+            -0.06990559895833334
+          ],
+          "steps_are_shrinking": false,
+          "final_step": -0.06990559895833334,
+          "total_change": -0.098388671875
+        }
+      },
+      "122m": {
+        "points": [
+          {
+            "horizon": 1,
+            "normalized_r_star": 0.14539930555555555,
+            "mean_r_star": 55.833333333333336,
+            "normalized_ci": [
+              0.12765706380208336,
+              0.16373697916666666
+            ]
+          },
+          {
+            "horizon": 2,
+            "normalized_r_star": 0.2819552951388889,
+            "mean_r_star": 108.27083333333333,
+            "normalized_ci": [
+              0.2564019097222222,
+              0.30816107855902775
+            ]
+          },
+          {
+            "horizon": 4,
+            "normalized_r_star": 0.2999131944444445,
+            "mean_r_star": 115.16666666666667,
+            "normalized_ci": [
+              0.2764756944444445,
+              0.32497965494791664
+            ]
+          },
+          {
+            "horizon": 8,
+            "normalized_r_star": 0.25390625,
+            "mean_r_star": 97.5,
+            "normalized_ci": [
+              0.23307291666666666,
+              0.2753377278645833
+            ]
+          },
+          {
+            "horizon": 16,
+            "normalized_r_star": 0.18733723958333334,
+            "mean_r_star": 71.9375,
+            "normalized_ci": [
+              0.16943223741319446,
+              0.20643446180555555
+            ]
+          },
+          {
+            "horizon": 32,
+            "normalized_r_star": 0.11778428819444443,
+            "mean_r_star": 45.229166666666664,
+            "normalized_ci": [
+              0.10753038194444443,
+              0.12901611328124998
+            ]
+          }
+        ],
+        "verdict": {
+          "nondecreasing": false,
+          "decreases": [
+            {
+              "from": 4,
+              "to": 8,
+              "drop": 0.046006944444444475
+            },
+            {
+              "from": 8,
+              "to": 16,
+              "drop": 0.06656901041666666
+            },
+            {
+              "from": 16,
+              "to": 32,
+              "drop": 0.06955295138888891
+            }
+          ],
+          "step_sizes": [
+            0.13655598958333334,
+            0.01795789930555558,
+            -0.046006944444444475,
+            -0.06656901041666666,
+            -0.06955295138888891
+          ],
+          "steps_are_shrinking": true,
+          "final_step": -0.06955295138888891,
+          "total_change": -0.02761501736111112
+        }
+      },
+      "250m": {
+        "points": [
+          {
+            "horizon": 1,
+            "normalized_r_star": 0.1875,
+            "mean_r_star": 96.0,
+            "normalized_ci": [
+              0.1631256103515625,
+              0.2124847412109375
+            ]
+          },
+          {
+            "horizon": 2,
+            "normalized_r_star": 0.3067220052083333,
+            "mean_r_star": 157.04166666666666,
+            "normalized_ci": [
+              0.28226623535156253,
+              0.3344319661458333
+            ]
+          },
+          {
+            "horizon": 4,
+            "normalized_r_star": 0.3082682291666667,
+            "mean_r_star": 157.83333333333334,
+            "normalized_ci": [
+              0.2837727864583333,
+              0.333740234375
+            ]
+          },
+          {
+            "horizon": 8,
+            "normalized_r_star": 0.2566324869791667,
+            "mean_r_star": 131.39583333333334,
+            "normalized_ci": [
+              0.23490397135416666,
+              0.28092549641927084
+            ]
+          },
+          {
+            "horizon": 16,
+            "normalized_r_star": 0.17769368489583334,
+            "mean_r_star": 90.97916666666667,
+            "normalized_ci": [
+              0.16064453125,
+              0.1961273193359375
+            ]
+          },
+          {
+            "horizon": 32,
+            "normalized_r_star": 0.103759765625,
+            "mean_r_star": 53.125,
+            "normalized_ci": [
+              0.0933837890625,
+              0.11446126302083333
+            ]
+          }
+        ],
+        "verdict": {
+          "nondecreasing": false,
+          "decreases": [
+            {
+              "from": 4,
+              "to": 8,
+              "drop": 0.0516357421875
+            },
+            {
+              "from": 8,
+              "to": 16,
+              "drop": 0.07893880208333334
+            },
+            {
+              "from": 16,
+              "to": 32,
+              "drop": 0.07393391927083334
+            }
+          ],
+          "step_sizes": [
+            0.11922200520833331,
+            0.0015462239583333703,
+            -0.0516357421875,
+            -0.07893880208333334,
+            -0.07393391927083334
+          ],
+          "steps_are_shrinking": false,
+          "final_step": -0.07393391927083334,
+          "total_change": -0.083740234375
+        }
+      }
+    },
+    "signed_mean": {
+      "30m": {
+        "points": [
+          {
+            "horizon": 1,
+            "normalized_r_star": 0.2099609375,
+            "mean_r_star": 53.75,
+            "normalized_ci": [
+              0.19270833333333334,
+              0.22623697916666666
+            ]
+          },
+          {
+            "horizon": 2,
+            "normalized_r_star": 0.316162109375,
+            "mean_r_star": 80.9375,
+            "normalized_ci": [
+              0.297607421875,
+              0.3334147135416667
+            ]
+          },
+          {
+            "horizon": 4,
+            "normalized_r_star": 0.2845865885416667,
+            "mean_r_star": 72.85416666666667,
+            "normalized_ci": [
+              0.2662760416666667,
+              0.3015950520833333
+            ]
+          },
+          {
+            "horizon": 8,
+            "normalized_r_star": 0.210205078125,
+            "mean_r_star": 53.8125,
+            "normalized_ci": [
+              0.193115234375,
+              0.2275390625
+            ]
+          },
+          {
+            "horizon": 16,
+            "normalized_r_star": 0.133056640625,
+            "mean_r_star": 34.0625,
+            "normalized_ci": [
+              0.12451171875,
+              0.14168294270833334
+            ]
+          },
+          {
+            "horizon": 32,
+            "normalized_r_star": 0.09000651041666667,
+            "mean_r_star": 23.041666666666668,
+            "normalized_ci": [
+              0.085205078125,
+              0.094970703125
+            ]
+          }
+        ],
+        "verdict": {
+          "nondecreasing": false,
+          "decreases": [
+            {
+              "from": 2,
+              "to": 4,
+              "drop": 0.031575520833333315
+            },
+            {
+              "from": 4,
+              "to": 8,
+              "drop": 0.07438151041666669
+            },
+            {
+              "from": 8,
+              "to": 16,
+              "drop": 0.0771484375
+            },
+            {
+              "from": 16,
+              "to": 32,
+              "drop": 0.04305013020833333
+            }
+          ],
+          "step_sizes": [
+            0.106201171875,
+            -0.031575520833333315,
+            -0.07438151041666669,
+            -0.0771484375,
+            -0.04305013020833333
+          ],
+          "steps_are_shrinking": false,
+          "final_step": -0.04305013020833333,
+          "total_change": -0.11995442708333333
+        }
+      },
+      "122m": {
+        "points": [
+          {
+            "horizon": 1,
+            "normalized_r_star": 0.14539930555555555,
+            "mean_r_star": 55.833333333333336,
+            "normalized_ci": [
+              0.1284708658854167,
+              0.16368272569444445
+            ]
+          },
+          {
+            "horizon": 2,
+            "normalized_r_star": 0.2618272569444445,
+            "mean_r_star": 100.54166666666667,
+            "normalized_ci": [
+              0.23844401041666666,
+              0.28548312717013885
+            ]
+          },
+          {
+            "horizon": 4,
+            "normalized_r_star": 0.24533420138888887,
+            "mean_r_star": 94.20833333333333,
+            "normalized_ci": [
+              0.22330593532986112,
+              0.2686089409722222
+            ]
+          },
+          {
+            "horizon": 8,
+            "normalized_r_star": 0.18929036458333334,
+            "mean_r_star": 72.6875,
+            "normalized_ci": [
+              0.1694878472222222,
+              0.2108303493923611
+            ]
+          },
+          {
+            "horizon": 16,
+            "normalized_r_star": 0.130859375,
+            "mean_r_star": 50.25,
+            "normalized_ci": [
+              0.11675211588541669,
+              0.14572618272569443
+            ]
+          },
+          {
+            "horizon": 32,
+            "normalized_r_star": 0.08219401041666667,
+            "mean_r_star": 31.5625,
+            "normalized_ci": [
+              0.07530381944444445,
+              0.08919270833333333
+            ]
+          }
+        ],
+        "verdict": {
+          "nondecreasing": false,
+          "decreases": [
+            {
+              "from": 2,
+              "to": 4,
+              "drop": 0.016493055555555608
+            },
+            {
+              "from": 4,
+              "to": 8,
+              "drop": 0.056043836805555525
+            },
+            {
+              "from": 8,
+              "to": 16,
+              "drop": 0.05843098958333334
+            },
+            {
+              "from": 16,
+              "to": 32,
+              "drop": 0.04866536458333333
+            }
+          ],
+          "step_sizes": [
+            0.11642795138888892,
+            -0.016493055555555608,
+            -0.056043836805555525,
+            -0.05843098958333334,
+            -0.04866536458333333
+          ],
+          "steps_are_shrinking": false,
+          "final_step": -0.04866536458333333,
+          "total_change": -0.06320529513888888
+        }
+      },
+      "250m": {
+        "points": [
+          {
+            "horizon": 1,
+            "normalized_r_star": 0.1875,
+            "mean_r_star": 96.0,
+            "normalized_ci": [
+              0.16401977539062504,
+              0.21337890625
+            ]
+          },
+          {
+            "horizon": 2,
+            "normalized_r_star": 0.2733968098958333,
+            "mean_r_star": 139.97916666666666,
+            "normalized_ci": [
+              0.2502848307291667,
+              0.2985026041666667
+            ]
+          },
+          {
+            "horizon": 4,
+            "normalized_r_star": 0.2452392578125,
+            "mean_r_star": 125.5625,
+            "normalized_ci": [
+              0.2250152587890625,
+              0.2660319010416667
+            ]
+          },
+          {
+            "horizon": 8,
+            "normalized_r_star": 0.18404134114583334,
+            "mean_r_star": 94.22916666666667,
+            "normalized_ci": [
+              0.16678873697916666,
+              0.20279947916666666
+            ]
+          },
+          {
+            "horizon": 16,
+            "normalized_r_star": 0.12320963541666667,
+            "mean_r_star": 63.083333333333336,
+            "normalized_ci": [
+              0.10994466145833333,
+              0.13704427083333334
+            ]
+          },
+          {
+            "horizon": 32,
+            "normalized_r_star": 0.07145182291666667,
+            "mean_r_star": 36.583333333333336,
+            "normalized_ci": [
+              0.06412760416666667,
+              0.07906087239583333
+            ]
+          }
+        ],
+        "verdict": {
+          "nondecreasing": false,
+          "decreases": [
+            {
+              "from": 2,
+              "to": 4,
+              "drop": 0.028157552083333315
+            },
+            {
+              "from": 4,
+              "to": 8,
+              "drop": 0.06119791666666666
+            },
+            {
+              "from": 8,
+              "to": 16,
+              "drop": 0.06083170572916667
+            },
+            {
+              "from": 16,
+              "to": 32,
+              "drop": 0.0517578125
+            }
+          ],
+          "step_sizes": [
+            0.08589680989583331,
+            -0.028157552083333315,
+            -0.06119791666666666,
+            -0.06083170572916667,
+            -0.0517578125
+          ],
+          "steps_are_shrinking": false,
+          "final_step": -0.0517578125,
+          "total_change": -0.11604817708333333
+        }
+      }
+    }
+  },
+  "prediction_3": {
+    "statement": "worst-offset safe rate rises or saturates with a longer matched-prefix horizon; signed mean need not be monotone",
+    "maximum_nondecreasing_at_all_scales": true,
+    "maximum_saturating_at_all_scales": true,
+    "signed_mean_nonmonotone_at_all_scales": true
+  }
+}

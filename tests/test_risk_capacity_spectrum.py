@@ -16,6 +16,26 @@ class RiskCapacitySpectrumTests(unittest.TestCase):
     def test_tail_counts_include_mean_and_max_and_are_nested(self):
         self.assertEqual(MODULE.normalize_tail_counts([8, 4], 16), [16, 8, 4, 1])
 
+    def test_probe_positions_shrink_with_horizon_so_sweeps_must_pin_them(self):
+        """A longer horizon leaves fewer eligible positions, all of them earlier.
+
+        This is why a horizon sweep must compute eligibility from one fixed
+        (longest) horizon via --position-horizon; otherwise longer horizons only
+        probe shorter prefixes and horizon length is confounded with position.
+        """
+        short = MODULE.valid_probe_positions(256, 32)
+        long_h = MODULE.valid_probe_positions(256, 128)
+        self.assertEqual(len(short), 225)
+        self.assertEqual(len(long_h), 129)
+        self.assertEqual(int(long_h[-1]), 128)
+        # The long-horizon set is a prefix of the short-horizon set, never a shift.
+        np.testing.assert_array_equal(long_h, short[: len(long_h)])
+
+    def test_future_loss_slice_rejects_a_window_past_the_sequence(self):
+        self.assertEqual(MODULE.future_loss_slice(10, 4, 255), slice(10, 14))
+        with self.assertRaises(ValueError):
+            MODULE.future_loss_slice(252, 4, 255)
+
     def test_upper_tail_mean_matches_discrete_expected_shortfall(self):
         values = [-2.0, 1.0, 3.0, 4.0]
         self.assertEqual(MODULE.upper_tail_mean(values, 4), 1.5)
