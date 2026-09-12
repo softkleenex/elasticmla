@@ -110,3 +110,73 @@ than a two-orders-of-magnitude blocker.
 - `experiments/contextual_router_{30m,122m}/measured_cache_memory_latency_vectorized.json`
 - Lightning jobs: `elasticmla-bench-30m-vec-0902`, `elasticmla-bench-122m-vec-0902` (T4, Completed)
 - Checkpoint/data SHA-256 verified identical to the original (pre-vectorization) benchmark run.
+
+---
+
+# Update 3: in-place incremental append (2026-09-12)
+
+## What changed
+
+The "remaining gap" section above names two residual costs. The second one --
+`append_packed_latents` fully unpacking and repacking the entire cache history on every
+single-token decode step -- is now fixed, along with a third cost that the earlier diagnosis
+missed.
+
+**1. Sequence-major flat layout enables a true in-place append.** The packed `values`/`offsets`
+buffers were laid out row-major `(batch, sequence)`, so a new token for batch row 0 landed in the
+*middle* of the buffer and every later batch row's offsets shifted -- a full rebuild was
+unavoidable. Switching the flat ordering to sequence-major `(sequence, batch)` makes every new
+token sort after every stored token, so appending is a plain concatenation of the packed buffers.
+`ranks` keeps its `(B, S)` shape, the dense reconstruction is bit-identical, and the byte
+accounting is unchanged, so the layout is invisible outside `elastic_cache.py`.
+
+**2. The dominant cost was actually per-call validation, not the repacking.** Profiling the fixed
+append showed it still costing ~200x the actual data movement (1.91 ms vs. 0.007 ms for the
+`values` concatenation, one 30M layer, B=8, S=320, MPS). The cause is accelerator
+synchronisation in the defensive guards, which ran on every decode step for every layer:
+`validate_channel_order` copies the order to host and sorts it; `validate_ranks` issued two
+separate device-side reductions; `pack_latents` read the final offset twice via `.item()`;
+`_ragged_prefix_positions` recomputed `int(flat_ranks.sum())` that `repeat_interleave` had
+already determined; and `unpack_latents` audited its offsets with two more `.item()` calls.
+Every guard is retained -- none was deleted -- but each now runs where its guarantee is
+actually established rather than on every step: full permutation validation happens on the
+prefill call that creates the cache's coordinate system, and the decode path checks the order
+by equality against the cache's own stored (already validated) order, which is itself a proof
+of permutation-ness. The bounds and offset audits were folded into single fused comparisons.
+
+## Measured effect (Apple M-series MPS, 30M, batch=8, prefill=192, decode=128, 4 runs, median)
+
+| Config | Before | After | Speedup |
+|---|---:|---:|---:|
+| Full MLA (dense, untouched control) | 5.54 ms | 5.47 ms | 1.01x |
+| Packed uniform, matched rank | 49.67 ms | 31.10 ms | **1.60x** |
+| Packed router | 54.82 ms | 35.43 ms | **1.55x** |
+
+Latency regression versus full MLA on this device: **8.96x -> 5.69x** (uniform) and
+**9.89x -> 6.48x** (router). A same-process steady-state profile attributes the remaining packed
+step as: unpack-for-attention 45.5%, append 27.5%, the dense attention work itself 21.6%.
+
+## Correctness
+
+- 54/54 unit tests pass (five new `IncrementalAppendTest` cases lock in incremental-equals-one-shot
+  packing, append-does-not-rewrite-the-existing-prefix, and the relocated int32 overflow guard).
+- 500 random-trial cross-check against the previous row-major implementation: dense round-trip,
+  incremental append versus one-shot pack, and `packed_cache_num_bytes` all match exactly.
+- End-to-end: 30M contextual-router decode (prefill 64 + 24 steps, B=3) produces **bit-identical
+  logits** (max absolute difference 0.0), identical chosen ranks, and identical cache bytes
+  before and after. No reported number in the manuscript changes.
+
+## Status and what is still open
+
+**These MPS numbers are not comparable to the T4 numbers above and do not supersede them.** The
+manuscript's ~3x figure is a Tesla T4 measurement; this device has a very different
+synchronisation cost profile (its own pre-fix regression measures ~9x, not ~3x). Re-running
+`experiments/benchmark_cache_memory_latency.py` on T4 at both scales is required before any
+manuscript claim is updated.
+
+The first residual cost named above is untouched and is now the dominant one: the packed path
+still reconstructs the dense latent history via a gather before every attention call. That is
+inherent to the correctness-first design -- the persistent representation is packed, so a decoder
+that wants dense `c_kv` must rebuild it. Removing it means either keeping a dense working set
+resident (which would make the persistent-byte saving irrelevant at decode time, and is a claim
+change, not an optimization) or computing `W_UK`/`W_UV` directly against the ragged packed buffer.

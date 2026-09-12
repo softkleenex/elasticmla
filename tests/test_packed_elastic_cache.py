@@ -6,7 +6,7 @@ import torch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "code"))
 from elastic_mla import MLAGPT
-from elastic_mla.elastic_cache import pack_latents, unpack_latents
+from elastic_mla.elastic_cache import append_packed_latents, pack_latents, unpack_latents
 
 
 class PackedElasticCacheTest(unittest.TestCase):
@@ -123,6 +123,69 @@ class PackedElasticCacheTest(unittest.TestCase):
         self.assertEqual(measured, expected)
         dense_bytes = B * S * 3 * (20 + 8) * 4
         self.assertLess(measured, dense_bytes)
+
+
+class IncrementalAppendTest(unittest.TestCase):
+    """The decode path appends into the packed buffers instead of rebuilding them."""
+
+    def setUp(self):
+        self.d_c = 20
+        generator = torch.Generator().manual_seed(5150)
+        self.order = torch.randperm(self.d_c, generator=generator)
+        self.c = torch.randn(3, 11, self.d_c, generator=generator)
+        self.ranks = torch.randint(1, self.d_c + 1, (3, 11), generator=generator)
+
+    def test_incremental_append_matches_one_shot_pack(self):
+        one_shot = pack_latents(self.c, self.ranks, self.order)
+        cache, pos = None, 0
+        for step in (1, 1, 3, 1, 2, 3):
+            cache = append_packed_latents(
+                cache,
+                self.c[:, pos:pos + step],
+                self.ranks[:, pos:pos + step],
+                self.order,
+            )
+            pos += step
+        self.assertEqual(pos, self.c.shape[1])
+        for key in ("values", "offsets", "ranks", "channel_order"):
+            self.assertTrue(torch.equal(cache[key], one_shot[key]), key)
+        torch.testing.assert_close(
+            unpack_latents(cache, self.d_c, self.order),
+            unpack_latents(one_shot, self.d_c, self.order),
+        )
+
+    def test_append_does_not_rewrite_existing_packed_values(self):
+        """Appending must leave the already-stored prefix of the buffer untouched."""
+        cache = pack_latents(self.c[:, :6], self.ranks[:, :6], self.order)
+        before = cache["values"].clone()
+        grown = append_packed_latents(
+            cache, self.c[:, 6:7], self.ranks[:, 6:7], self.order
+        )
+        self.assertTrue(torch.equal(grown["values"][: before.numel()], before))
+        self.assertTrue(torch.equal(grown["offsets"][: cache["offsets"].numel()], cache["offsets"]))
+
+    def test_append_rejects_int32_offset_overflow(self):
+        cache = pack_latents(self.c[:, :1], self.ranks[:, :1], self.order)
+        cache["offsets"] = torch.full_like(cache["offsets"], 2**31 - 8)
+        cache["offsets"][0] = 0
+        with self.assertRaises(OverflowError):
+            append_packed_latents(
+                cache, self.c[:, 1:2], self.ranks[:, 1:2], self.order
+            )
+
+    def test_append_rejects_channel_order_change(self):
+        cache = pack_latents(self.c[:, :4], self.ranks[:, :4], self.order)
+        with self.assertRaisesRegex(ValueError, "channel_order does not match"):
+            append_packed_latents(
+                cache, self.c[:, 4:5], self.ranks[:, 4:5], torch.flip(self.order, dims=(0,))
+            )
+
+    def test_append_rejects_batch_size_change(self):
+        cache = pack_latents(self.c[:, :4], self.ranks[:, :4], self.order)
+        with self.assertRaisesRegex(ValueError, "batch size does not match"):
+            append_packed_latents(
+                cache, self.c[:1, 4:5], self.ranks[:1, 4:5], self.order
+            )
 
 
 if __name__ == "__main__":

@@ -32,11 +32,12 @@ doubt, trust the manuscript over any single note here.
   (succeeds), separates the tier-granularity confound from a pure scale effect, and gives the
   complete, correct 3-of-16 causal-heuristic tally across all four scale/tier configurations.
   **This is the authoritative source for the 250M and cross-scale causal-heuristic story.**
-- `measured_cache_memory_latency.md` -- two sections: the original T4 benchmark (168-201x decode
-  slowdown, root-caused to three Python loop sites) followed by an update section with the
-  post-vectorization benchmark (~3x, same cache-byte/peak-memory numbers, from a different
-  Lightning job) and the identified remaining algorithmic gap. Read the whole file, not just the
-  first half.
+- `measured_cache_memory_latency.md` -- three sections: the original T4 benchmark (168-201x decode
+  slowdown, root-caused to three Python loop sites); the post-vectorization T4 benchmark (~3x, same
+  cache-byte/peak-memory numbers, from a different Lightning job); and Update 3, the in-place
+  incremental append plus hot-path validation-sync removal (verified bit-identical, measured only
+  on MPS -- **not** comparable to the T4 figures and not yet reflected in the manuscript). Read the
+  whole file, not just the first half.
 - `submission_readiness_roadmap.md` -- current status per claim/work-package, and the recommended
   next action. **Read this first when resuming work in a new session.**
 - `literature_review.md`, `compute_fallback_policy.md`, `resources_check.md` -- process/reference

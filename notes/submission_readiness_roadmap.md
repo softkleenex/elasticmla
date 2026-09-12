@@ -60,10 +60,24 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
   cross-checks vs. the originals plus the full unit suite). This cut the measured decode-latency
   regression from 168-201x to ~3x at both benchmarked scales (T4 GPU, see
   `notes/measured_cache_memory_latency.md`).
-- REMAINING: `append_packed_latents` still unpacks and repacks the *entire* cache history on every
-  single-token decode step rather than appending only the new token in place -- an algorithmic
-  limitation, not a vectorization one, and the next concrete target for closing the residual ~3x
-  gap toward true O(1)-per-step incremental packing.
+- DONE (implementation, pending T4 re-measurement): `append_packed_latents` now appends in place
+  instead of unpacking and repacking the whole history, enabled by switching the flat buffer to a
+  sequence-major `(sequence, batch)` layout. Profiling then showed the real dominant cost was
+  per-call validation synchronisation rather than the repacking, so the guards were moved to where
+  their guarantee is established (full permutation validation on the prefill that creates the
+  cache; equality against the cache's stored order on every decode step) and the bounds/offset
+  audits were fused. No guard was removed. Verified bit-identical: 54/54 unit tests, a 500-trial
+  cross-check against the previous layout, and identical 30M router decode logits/ranks/bytes.
+  Measured on MPS the packed step is ~1.6x faster (regression versus full MLA 9.0x -> 5.7x
+  uniform, 9.9x -> 6.5x router); see `notes/measured_cache_memory_latency.md` Update 3.
+- REMAINING: the manuscript's ~3x figure is a **T4** number and this fix has not been measured on
+  T4, so no manuscript claim has been updated yet. That benchmark rerun (both scales) is the
+  immediate next step.
+- REMAINING: the packed path still reconstructs the dense latent history via a gather before every
+  attention call -- now the dominant per-step cost (45% of the packed step on MPS). Removing it is
+  a design/claim question, not an optimization: either a dense working set stays resident (which
+  makes the persistent-byte saving irrelevant at decode time) or `W_UK`/`W_UV` are computed
+  directly against the ragged packed buffer.
 - Still no comparison against optimized MHA/GQA/FlashMLA baselines, and peak memory/latency are
   only benchmarked at 30M/122M (not 250M).
 
@@ -82,9 +96,12 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
 
 ## Recommended next action
 
-Package D's vectorization is now done and measured (168-201x -> ~3x). The next highest-value,
-still-bounded steps are: (1) the append-in-place incremental packing fix to close the residual ~3x
-gap, (2) **Package A**'s horizon-length sweep (reuses already-authenticated checkpoints/data, needs
-no new training), or (3) extending the 250M benchmark and a first MHA/GQA baseline comparison.
+Package D's vectorization is done and measured (168-201x -> ~3x on T4), and the append-in-place
+fix that was the stated next step is now implemented and verified bit-identical, but measured only
+on MPS. The next highest-value, still-bounded steps are: (1) re-run
+`experiments/benchmark_cache_memory_latency.py` on a Lightning T4 at 30M and 122M so the
+append-in-place fix has a number comparable to the manuscript's ~3x, (2) **Package A**'s
+horizon-length sweep (reuses already-authenticated checkpoints/data, needs no new training), or
+(3) extending the 250M benchmark and a first MHA/GQA baseline comparison.
 Package C (more seeds, a second domain, a >=1B checkpoint) requires a resourcing decision (days of
 paid GPU time) rather than more engineering effort and should be scoped explicitly before starting.

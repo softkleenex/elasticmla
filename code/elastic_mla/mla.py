@@ -14,6 +14,7 @@ import torch.nn.functional as F
 
 from .elastic_cache import (
     PACKED_KEYS,
+    _as_order,
     append_packed_latents,
     packed_cache_num_bytes,
     unpack_latents,
@@ -275,7 +276,15 @@ class MultiHeadLatentAttention(nn.Module):
         B, T_new, _ = x.shape
         if ranks is None or channel_order is None:
             raise ValueError("ranks and channel_order are required for packed caching")
-        order = validate_channel_order(channel_order, self.d_c).to(x.device)
+        # Full permutation validation belongs on the prefill step that establishes
+        # the cache's coordinate system.  On subsequent decode steps the order is
+        # checked for equality against the cache's stored (already validated)
+        # order, so re-validating per step only buys a synchronisation.
+        order = (
+            validate_channel_order(channel_order, self.d_c)
+            if cache is None
+            else _as_order(channel_order, self.d_c)
+        ).to(x.device)
         ranks = validate_ranks(ranks, B, T_new, self.d_c).to(x.device)
 
         if cache is None:
