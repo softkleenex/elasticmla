@@ -1,7 +1,7 @@
 [project]
 name = "elastic-mla"
 version = "0.1.0"
-description = "Add your description here"
+description = "ElasticMLA: contextual tail-rate allocation for Multi-Head Latent Attention"
 requires-python = ">=3.11"
 dependencies = [
     "datasets>=5.0.1",

@@ -6,8 +6,10 @@ risk-capacity spectrum, and a rigorously audited, pre-registered evaluation of a
 contextual router against random, shuffled, and simple causal-heuristic baselines at three model
 scales (30M, 122M, 250M parameters).
 
-**Start here:** `manuscript/draft.md` is the paper (source of truth); `manuscript/latex/main.pdf` is a compiled LaTeX version (regenerate via `uv run python manuscript/convert_to_latex.py` after editing the markdown). Its headline claims are, in order of how
-robust they are:
+**Start here:** `manuscript/draft.md` is the paper (source of truth); `manuscript/latex/main.pdf`
+is a compiled LaTeX version (regenerate via `uv run python manuscript/convert_to_latex.py &&
+cd manuscript/latex && tectonic main.tex` after editing the markdown). Its headline claims, in
+order of how robust they are:
 
 1. **Risk-capacity spectrum (robust, three scales, does not involve the router).** Required
    latent rate rises monotonically from ~8-9% of full width at a mean-loss criterion to ~73-76% at
@@ -20,23 +22,40 @@ robust they are:
    tested scale/tier-grid configurations, the router shows a confident win in only 3 of 16
    scale-heuristic comparisons (all at coarse tier grids: 2 at 30M, 1 at 250M-coarse), and loses
    more decisively at finer tier resolution.
-4. **Decode latency is 168-201x slower for the packed path (measured, unfixed).** Persistent cache
-   bytes and a small peak-memory reduction are real and measured on a T4 GPU; decode speed is not,
-   because of an unvectorized Python-loop cache reconstruction.
+4. **Decode latency was 168-201x slower for the packed path; vectorizing three Python loop sites
+   cut this to ~3x (measured, fixed).** Persistent cache bytes and a small peak-memory reduction
+   were always real; the latency regression was root-caused to three unvectorized per-token Python
+   loops and mostly (not fully) fixed -- see `notes/measured_cache_memory_latency.md` for the
+   before/after numbers and the remaining ~3x gap's cause.
+
+## Current status snapshot
+
+As of commit `6294db8` (see `git log` for the latest): working tree clean, all commits pushed to
+`origin/master`, 49/49 unit tests pass, the LaTeX PDF compiles with no errors. No cloud resources
+(Lightning studios/jobs, Kaggle kernels) are left running. An independent "naive fresh reviewer"
+pass (no prior context, spawned as a sub-agent) re-derived 15+ numbers from raw JSON and found one
+real P0 tally bug and one real P1 CI-rounding mismatch in the manuscript; both are fixed. See
+`notes/submission_readiness_roadmap.md` for exactly what is done, what remains, and the
+recommended next action -- read that file first if resuming work in a new session.
 
 ## Repository layout
 
 - `manuscript/draft.md` -- the paper (theory, method, results, limitations, references).
+  `manuscript/convert_to_latex.py` regenerates `manuscript/latex/main.tex` from it (see docstring
+  and `manuscript/latex/README.md` for the converter's scope/limitations); do not hand-edit
+  `main.tex`.
 - `code/elastic_mla/` -- the MLA / packed-cache / contextual-router implementation.
-  - `mla.py` (dense + packed cached attention), `model.py` (`MLAGPT`), `elastic_cache.py` (packed
-    prefix storage), `router.py` (`TieredRankRouter`, `ElasticMLAGPT`, `ContextualElasticMLAGPT`).
+  - `mla.py` (dense + packed cached attention, now vectorized), `model.py` (`MLAGPT`),
+    `elastic_cache.py` (packed prefix storage, now vectorized), `router.py`
+    (`TieredRankRouter`, `ContextualElasticMLAGPT` -- the one actually used for every reported
+    result; `ElasticMLAGPT`/`GlobalElasticMLAGPT` are earlier, non-pipeline variants, marked as
+    such in their docstrings).
 - `experiments/` -- the current, citable analysis/training/evaluation pipeline (see below) plus
   one results subdirectory per scale (`exp0_rank_variance/`, `exp1_rank_variance_122m/`,
   `exp2_rank_variance_250m/`, `contextual_router_{30m,122m,250m}/`).
-- `notes/` -- a dated research log. Read chronologically; later notes correct or supersede earlier
-  ones (e.g. the v4 methodology note supersedes v2/v3; the 250M tier-granularity diagnostic
-  supersedes the first, confounded 250M result note). This is a lab notebook, not a curated
-  "results" folder -- `manuscript/draft.md` is the curated, authoritative summary.
+- `notes/` -- a dated research log; see `notes/README.md` for an index of which notes are current
+  vs. superseded. This is a lab notebook, not a curated "results" folder --
+  `manuscript/draft.md` is the curated, authoritative summary.
 - `figures/` -- the two figures actually used in the manuscript
   (`elasticmla_main_results.*`, `elasticmla_risk_spectrum.*`) plus their generating scripts.
 - `tests/` -- unit tests for the packed cache, routers, analysis helpers, and audit scripts.
@@ -62,20 +81,26 @@ robust they are:
 5. `experiments/train_contextual_router.py` -- supervised `router_max.pt` on isolated-position
    oracle labels; also fixes the reproducible 16/4/4 train/val/test sequence split.
 6. `experiments/train_joint_rollout_router.py` -- straight-through, joint-rollout training of the
-   deployed hard-tier router under a rank-penalized Lagrangian; sweeps `--rank-lambda`.
-7. `experiments/evaluate_joint_rollout_sweep.py` -- selects one policy per scale using only the
-   original 16 training / 4 validation sequences (never the frozen fresh-confirmation windows).
+   deployed hard-tier router under a rank-penalized Lagrangian; sweeps `--rank-lambda`. Two
+   independent policies are frozen per scale where tier granularity is varied (see 250M coarse vs.
+   fine in the results).
+7. `experiments/evaluate_joint_rollout_sweep.py` -- selects one policy per scale/tier-grid using
+   only the original 16 training / 4 validation sequences (never the frozen fresh-confirmation
+   windows).
 8. `experiments/confirm_fresh_contextual_router.py` -- the one-shot, pre-registered confirmation
    on 24 new nonoverlapping windows, run only after `experiments/fresh_confirmation_manifest.json`
-   is committed with that scale's frozen policy/oracle hashes.
+   is committed with that configuration's frozen policy/oracle hashes. Four configurations are
+   frozen and confirmed: `30m`, `122m`, `250m` (coarse tiers), `250m_fine`.
 9. `experiments/audit_fresh_confirmation.py` and `experiments/audit_joint_training_replay.py` --
    independent recomputation of every reported statistic and a from-scratch bit-exact retrain
    check, respectively. Both must report `"status": "passed"` for a result to be cited.
 10. `experiments/evaluate_causal_heuristic_routers.py` -- position/lexical/rarity/type causal
-    baselines fit only on the training/validation split, evaluated once on the same frozen fresh
-    windows at the router's own byte budget.
+    baselines fit only on the training/validation split, evaluated once per configuration on the
+    same frozen fresh windows at the router's own byte budget.
 11. `experiments/benchmark_cache_memory_latency.py` -- measured T4 GPU peak memory and decode
-    latency for full/packed-uniform/packed-router configurations.
+    latency for full/packed-uniform/packed-router configurations, run once before and once after
+    vectorizing `code/elastic_mla/{elastic_cache,mla}.py` (see
+    `notes/measured_cache_memory_latency.md` for both sets of numbers).
 
 Every script in this list authenticates its inputs by SHA-256 against the files that produced
 them and refuses to run (or the corresponding audit script refuses to pass) if provenance does
@@ -92,4 +117,7 @@ uv run python -m unittest discover -s tests
 
 GPU-heavy steps (steps 2-4, 8, 11 above) were run on Kaggle (P100, `code/kaggle_notebook*`) and
 Lightning AI (T4, via `lightning job run` / `lightning studio ssh`); see
-`notes/compute_fallback_policy.md` for the compute-provider fallback policy used throughout.
+`notes/compute_fallback_policy.md` for the compute-provider fallback policy used throughout. No
+cloud resources should ever be left running between sessions -- always check
+`lightning studio list` / `lightning job list` / `kaggle kernels status <name>` and stop/verify
+completion before ending a session.
