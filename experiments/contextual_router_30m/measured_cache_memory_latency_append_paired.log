@@ -1,0 +1,96 @@
+⚡ ~ cd ~/elasticmla_exp0_30m_v4 && PYTHONDONTWRITEBYTECODE=1 python -B run_paired_bench.py --root ~/elasticmla_exp0_30m_v4 --policy joint_lambda_0p4.pt --prefill 192 --repeats 3
+done before rep1
+done after rep1
+done before rep2
+done after rep2
+done before rep3
+done after rep3
+PAIRED_SUMMARY_JSON_BEGIN
+{
+  "repeats": 3,
+  "gpu": "Tesla T4",
+  "config": {
+    "vocab_size": 50257,
+    "d_model": 384,
+    "n_layers": 6,
+    "n_heads": 6,
+    "d_head": 64,
+    "d_rope": 32,
+    "d_c": 256,
+    "max_len": 256
+  },
+  "batch_size": 8,
+  "prefill_length": 192,
+  "decode_steps": 128,
+  "provenance": {
+    "checkpoint_sha256": "18646f1fdd2d97396e687aaf5e60900b0f825ce96a0d11ffe9b6ac600acc8dc1",
+    "data_sha256": "5e146271a0bbaf5581b9e71490b1c5b12910b6a59062307ab81206acec8615be",
+    "policy_sha256": "8ca2b654bbbe6e4fc050aaed0625d84d1c4586ac6bf880db01cd797056e9d71e"
+  },
+  "matched_uniform_rank": 160,
+  "configs": {
+    "full_mla": {
+      "before_ms": [
+        8.254546421875286,
+        7.8596758593749705,
+        7.8799966562499435
+      ],
+      "after_ms": [
+        7.8572585703122755,
+        7.732810921874833,
+        7.792651273437645
+      ],
+      "before_median_ms": 7.8799966562499435,
+      "after_median_ms": 7.792651273437645,
+      "cache_bytes_before": 17694720,
+      "cache_bytes_after": 17694720,
+      "peak_bytes_before": 598753792,
+      "peak_bytes_after": 598753792,
+      "regression_vs_full_before": 1.0,
+      "regression_vs_full_after": 1.0
+    },
+    "packed_uniform_matched_rank": {
+      "before_ms": [
+        24.122728101562796,
+        24.124806218750017,
+        24.30205056250001
+      ],
+      "after_ms": [
+        18.853806257812522,
+        18.71254996093752,
+        18.198971007812315
+      ],
+      "before_median_ms": 24.124806218750017,
+      "after_median_ms": 18.71254996093752,
+      "cache_bytes_before": 11891736,
+      "cache_bytes_after": 11891736,
+      "peak_bytes_before": 593112576,
+      "peak_bytes_after": 590999552,
+      "regression_vs_full_before": 3.061524930929464,
+      "regression_vs_full_after": 2.401307245035062
+    },
+    "packed_router": {
+      "before_ms": [
+        24.36076861718739,
+        24.267643023437646,
+        24.954704281249906
+      ],
+      "after_ms": [
+        20.1447603437499,
+        18.763132390624992,
+        18.831494468749987
+      ],
+      "before_median_ms": 24.36076861718739,
+      "after_median_ms": 18.831494468749987,
+      "cache_bytes_before": 11926296,
+      "cache_bytes_after": 11926296,
+      "peak_bytes_before": 577955328,
+      "peak_bytes_after": 577955328,
+      "mean_downstream_rank_before": 140.7439437984496,
+      "mean_downstream_rank_after": 140.7439437984496,
+      "regression_vs_full_before": 3.091469410442691,
+      "regression_vs_full_after": 2.416570921496231
+    }
+  }
+}
+PAIRED_SUMMARY_JSON_END

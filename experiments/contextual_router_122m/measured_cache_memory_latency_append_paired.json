@@ -1,0 +1,89 @@
+{
+  "repeats": 3,
+  "gpu": "Tesla T4",
+  "config": {
+    "vocab_size": 50257,
+    "d_model": 768,
+    "n_layers": 12,
+    "n_heads": 12,
+    "d_head": 64,
+    "d_rope": 32,
+    "d_c": 384,
+    "max_len": 384
+  },
+  "batch_size": 8,
+  "prefill_length": 256,
+  "decode_steps": 128,
+  "provenance": {
+    "checkpoint_sha256": "eeb8abf6366399298350eb183d2ff740b0966b9e1bf4426adaa6dde60dcf8b93",
+    "data_sha256": "03246b576bb789ac6bf15996fd642167008620f2ee96d8a45496d69c13f073ce",
+    "policy_sha256": "200508e6b44ccff7bd15c55e4fcf1ba9b091a1f3868ec64bacf9a4626f85c8ec"
+  },
+  "matched_uniform_rank": 192,
+  "configs": {
+    "full_mla": {
+      "before_ms": [
+        17.98481828906251,
+        17.78268373437486,
+        17.81266363281242
+      ],
+      "after_ms": [
+        17.743931554687453,
+        18.620274742187526,
+        17.718449585937712
+      ],
+      "before_median_ms": 17.81266363281242,
+      "after_median_ms": 17.743931554687453,
+      "cache_bytes_before": 61341696,
+      "cache_bytes_after": 61341696,
+      "peak_bytes_before": 1537902080,
+      "peak_bytes_after": 1537902080,
+      "regression_vs_full_before": 1.0,
+      "regression_vs_full_after": 1.0
+    },
+    "packed_uniform_matched_rank": {
+      "before_ms": [
+        54.717313624999875,
+        54.30973397656258,
+        53.70457718750021
+      ],
+      "after_ms": [
+        42.11476742968712,
+        41.41146782031235,
+        41.7539633984374
+      ],
+      "before_median_ms": 54.30973397656258,
+      "after_median_ms": 41.7539633984374,
+      "cache_bytes_before": 33260592,
+      "cache_bytes_after": 33260592,
+      "peak_bytes_before": 1507854336,
+      "peak_bytes_after": 1508416512,
+      "regression_vs_full_before": 3.048939512702609,
+      "regression_vs_full_after": 2.3531404677565475
+    },
+    "packed_router": {
+      "before_ms": [
+        54.421106421874924,
+        53.236778476562385,
+        53.18457290625034
+      ],
+      "after_ms": [
+        42.79429681249969,
+        40.063124062500236,
+        42.11297023437499
+      ],
+      "before_median_ms": 53.236778476562385,
+      "after_median_ms": 42.11297023437499,
+      "cache_bytes_before": 36541424,
+      "cache_bytes_after": 36541424,
+      "peak_bytes_before": 1472741376,
+      "peak_bytes_after": 1472741376,
+      "mean_downstream_rank_before": 195.94010416666666,
+      "mean_downstream_rank_after": 195.94010416666666,
+      "regression_vs_full_before": 2.9887039678050047,
+      "regression_vs_full_after": 2.373373122218222
+    }
+  },
+  "job_name": "elasticmla-paired-122m-0912",
+  "note": "Paired before/after decode-latency benchmark: the unmodified benchmark script run alternately against the pre-fix (commit c3bed39) and post-fix (commit 71634ad) elastic_cache.py/mla.py sources, 3 repeats each, within a single Lightning T4 job so both versions share one GPU and thermal state. before_ms/after_ms list the individual repeats in run order."
+}

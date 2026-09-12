@@ -70,9 +70,11 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
   cross-check against the previous layout, and identical 30M router decode logits/ranks/bytes.
   Measured on MPS the packed step is ~1.6x faster (regression versus full MLA 9.0x -> 5.7x
   uniform, 9.9x -> 6.5x router); see `notes/measured_cache_memory_latency.md` Update 3.
-- REMAINING: the manuscript's ~3x figure is a **T4** number and this fix has not been measured on
-  T4, so no manuscript claim has been updated yet. That benchmark rerun (both scales) is the
-  immediate next step.
+- DONE: measured on T4 with a paired design (both source versions run alternately, 3 repeats each,
+  inside one job per scale). Regression versus full MLA 3.09x -> 2.42x at 30M and 2.99x -> 2.37x at
+  122M; the untouched dense control moved <=1% within each job, and the pre-fix column reproduced
+  the published 3.00x/2.96x. Manuscript abstract, Section 5.5, Section 6 system-scope paragraph and
+  conclusion updated from "roughly 3x" to 2.4x; LaTeX regenerated and compiles clean (14 pages).
 - REMAINING: the packed path still reconstructs the dense latent history via a gather before every
   attention call -- now the dominant per-step cost (45% of the packed step on MPS). Removing it is
   a design/claim question, not an optimization: either a dense working set stays resident (which
@@ -96,12 +98,12 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
 
 ## Recommended next action
 
-Package D's vectorization is done and measured (168-201x -> ~3x on T4), and the append-in-place
-fix that was the stated next step is now implemented and verified bit-identical, but measured only
-on MPS. The next highest-value, still-bounded steps are: (1) re-run
-`experiments/benchmark_cache_memory_latency.py` on a Lightning T4 at 30M and 122M so the
-append-in-place fix has a number comparable to the manuscript's ~3x, (2) **Package A**'s
-horizon-length sweep (reuses already-authenticated checkpoints/data, needs no new training), or
-(3) extending the 250M benchmark and a first MHA/GQA baseline comparison.
+Package D is now done through the append-in-place fix: 168-201x -> ~3x (vectorization) -> 2.4x
+(in-place append plus hot-path guard hoisting), all measured on T4 and reflected in the manuscript.
+The next highest-value, still-bounded steps are: (1) **Package A**'s horizon-length sweep (reuses
+already-authenticated checkpoints/data, needs no new training), (2) extending the benchmark to 250M
+and adding a first MHA/GQA baseline comparison, or (3) removing the dense-reconstruction gather by
+computing the per-head key/value projections directly against the ragged packed buffer -- the
+largest remaining latency item, but a design change that should be scoped before it is started.
 Package C (more seeds, a second domain, a >=1B checkpoint) requires a resourcing decision (days of
 paid GPU time) rather than more engineering effort and should be scoped explicitly before starting.

@@ -144,7 +144,41 @@ prefill call that creates the cache's coordinate system, and the decode path che
 by equality against the cache's own stored (already validated) order, which is itself a proof
 of permutation-ness. The bounds and offset audits were folded into single fused comparisons.
 
-## Measured effect (Apple M-series MPS, 30M, batch=8, prefill=192, decode=128, 4 runs, median)
+## Measured effect on T4 (paired, 3 repeats per version, one job per scale)
+
+Measured as a *paired* benchmark: the unmodified benchmark script run alternately against the
+pre-fix (`c3bed39`) and post-fix (`71634ad`) sources inside one Lightning T4 job per scale, so both
+versions share a GPU instance and thermal state. Medians of 3; individual repeats are in the result
+JSONs.
+
+| Scale | Config | Before (stage 2) | After (stage 3) | Speedup | Regression vs full MLA |
+|---|---|---:|---:|---:|---|
+| 30M | Full MLA (untouched control) | 7.88 ms | 7.79 ms | 1.01x | -- |
+| 30M | Packed uniform, matched rank | 24.12 ms | 18.71 ms | 1.29x | 3.06x -> 2.40x |
+| 30M | Packed router | 24.36 ms | 18.83 ms | 1.29x | **3.09x -> 2.42x** |
+| 122M | Full MLA (untouched control) | 17.81 ms | 17.74 ms | 1.00x | -- |
+| 122M | Packed uniform, matched rank | 54.31 ms | 41.75 ms | 1.30x | 3.05x -> 2.35x |
+| 122M | Packed router | 53.24 ms | 42.11 ms | 1.26x | **2.99x -> 2.37x** |
+
+Two checks that make this comparison trustworthy. First, the untouched dense control moved by 1% or
+less within each job, whereas across the *separate* jobs of 2026-09-02 and 2026-09-12 it moved by
+4-14% -- which is why the paired design was used rather than differencing two independent runs.
+Second, the before column reproduces the separately measured 2026-09-02 result (3.09x vs. the
+published 3.00x at 30M; 2.99x vs. 2.96x at 122M), so the paired run is measuring the same thing the
+manuscript already reports.
+
+Invariants held exactly on T4 at both scales: `resident_cache_bytes` identical before and after
+(30M 11,926,296; 122M 36,541,424), `mean_downstream_rank` identical to four decimals (140.7439;
+195.9401 -- i.e. the router made the same decisions), and peak allocated memory unchanged apart
+from allocator-level jitter (30M router identical at 577,955,328 B; 122M router identical at
+1,472,741,376 B).
+
+- `experiments/contextual_router_30m/measured_cache_memory_latency_append_paired.{json,log}`
+  (Lightning job `elasticmla-paired-30m-0912`, T4, Completed)
+- `experiments/contextual_router_122m/measured_cache_memory_latency_append_paired.{json,log}`
+  (Lightning job `elasticmla-paired-122m-0912`, T4, Completed)
+
+## Measured effect during development (Apple M-series MPS, 30M, batch=8, prefill=192, decode=128, 4 runs, median)
 
 | Config | Before | After | Speedup |
 |---|---:|---:|---:|
@@ -168,11 +202,10 @@ step as: unpack-for-attention 45.5%, append 27.5%, the dense attention work itse
 
 ## Status and what is still open
 
-**These MPS numbers are not comparable to the T4 numbers above and do not supersede them.** The
-manuscript's ~3x figure is a Tesla T4 measurement; this device has a very different
-synchronisation cost profile (its own pre-fix regression measures ~9x, not ~3x). Re-running
-`experiments/benchmark_cache_memory_latency.py` on T4 at both scales is required before any
-manuscript claim is updated.
+The MPS numbers above are development measurements on a device with a very different
+synchronisation cost profile (its own pre-fix regression is ~9x, not ~3x); the T4 paired
+measurement is the one the manuscript cites. The manuscript's Section 5.5, abstract, Section 6
+system-scope paragraph and conclusion have been updated from "roughly 3x" to 2.4x accordingly.
 
 The first residual cost named above is untouched and is now the dominant one: the packed path
 still reconstructs the dense latent history via a gather before every attention call. That is

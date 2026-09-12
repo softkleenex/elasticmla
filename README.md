@@ -22,17 +22,20 @@ order of how robust they are:
    tested scale/tier-grid configurations, the router shows a confident win in only 3 of 16
    scale-heuristic comparisons (all at coarse tier grids: 2 at 30M, 1 at 250M-coarse), and loses
    more decisively at finer tier resolution.
-4. **Decode latency was 168-201x slower for the packed path; vectorizing three Python loop sites
-   cut this to ~3x (measured, fixed).** Persistent cache bytes and a small peak-memory reduction
-   were always real; the latency regression was root-caused to three unvectorized per-token Python
-   loops and mostly (not fully) fixed -- see `notes/measured_cache_memory_latency.md` for the
-   before/after numbers and the remaining ~3x gap's cause.
+4. **Decode latency was 168-201x slower for the packed path; two fixes cut this to ~2.4x
+   (measured on T4, fixed).** Persistent cache bytes and a small peak-memory reduction were always
+   real. The latency regression was root-caused first to three unvectorized per-token Python loops
+   (168-201x -> ~3x), then to the cache repacking its whole history on every decode step and
+   re-running its validation guards per step (~3x -> 2.4x, paired T4 measurement, decode output
+   bit-identical). The residual is the dense reconstruction before each attention call, which is
+   inherent to keeping the persistent representation packed -- see
+   `notes/measured_cache_memory_latency.md` for all three stages.
 
 ## Current status snapshot
 
-As of commit `6294db8` (see `git log` for the latest): working tree clean, all commits pushed to
-`origin/master`, 49/49 unit tests pass, the LaTeX PDF compiles with no errors. No cloud resources
-(Lightning studios/jobs, Kaggle kernels) are left running. An independent "naive fresh reviewer"
+As of commit `71634ad` plus the in-place-append T4 measurement (see `git log` for the latest):
+working tree clean, 54/54 unit tests pass, the LaTeX PDF compiles with no errors (14 pages).
+No cloud resources (Lightning studios/jobs, Kaggle kernels) are left running. An independent "naive fresh reviewer"
 pass (no prior context, spawned as a sub-agent) re-derived 15+ numbers from raw JSON and found one
 real P0 tally bug and one real P1 CI-rounding mismatch in the manuscript; both are fixed. See
 `notes/submission_readiness_roadmap.md` for exactly what is done, what remains, and the
@@ -45,8 +48,9 @@ recommended next action -- read that file first if resuming work in a new sessio
   and `manuscript/latex/README.md` for the converter's scope/limitations); do not hand-edit
   `main.tex`.
 - `code/elastic_mla/` -- the MLA / packed-cache / contextual-router implementation.
-  - `mla.py` (dense + packed cached attention, now vectorized), `model.py` (`MLAGPT`),
-    `elastic_cache.py` (packed prefix storage, now vectorized), `router.py`
+  - `mla.py` (dense + packed cached attention, vectorized), `model.py` (`MLAGPT`),
+    `elastic_cache.py` (packed prefix storage; sequence-major flat layout, appended in place on
+    each decode step), `router.py`
     (`TieredRankRouter`, `ContextualElasticMLAGPT` -- the one actually used for every reported
     result; `ElasticMLAGPT`/`GlobalElasticMLAGPT` are earlier, non-pipeline variants, marked as
     such in their docstrings).
