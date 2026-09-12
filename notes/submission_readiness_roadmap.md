@@ -53,12 +53,19 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
   main-track submission and requires a genuinely larger compute budget (a multi-day, not
   multi-hour, Kaggle/Lightning campaign) to address properly.
 
-### D. Systems (root cause diagnosed, not yet fixed)
-- `code/elastic_mla/elastic_cache.py`'s `pack_latents`/`unpack_latents` and
-  `code/elastic_mla/mla.py`'s `forward_cached_packed` rank-mask construction each use unvectorized
-  per-token Python loops; both need vectorizing (or replacing with a fused kernel) before any
-  peak-memory/latency/throughput serving claim is possible.
-- No comparison yet against optimized MHA/GQA/FlashMLA baselines.
+### D. Systems -- root cause diagnosed AND fixed; residual gap identified
+- DONE: `code/elastic_mla/elastic_cache.py`'s `pack_latents`/`unpack_latents`/`append_packed_latents`
+  and `code/elastic_mla/mla.py`'s `forward_cached_packed` rank-mask construction were rewritten as
+  vectorized PyTorch operations (no algorithm/representation change; validated by 500 random-trial
+  cross-checks vs. the originals plus the full unit suite). This cut the measured decode-latency
+  regression from 168-201x to ~3x at both benchmarked scales (T4 GPU, see
+  `notes/measured_cache_memory_latency.md`).
+- REMAINING: `append_packed_latents` still unpacks and repacks the *entire* cache history on every
+  single-token decode step rather than appending only the new token in place -- an algorithmic
+  limitation, not a vectorization one, and the next concrete target for closing the residual ~3x
+  gap toward true O(1)-per-step incremental packing.
+- Still no comparison against optimized MHA/GQA/FlashMLA baselines, and peak memory/latency are
+  only benchmarked at 30M/122M (not 250M).
 
 ### E. Submission package -- DONE
 - `manuscript/draft.md` (source of truth) + `manuscript/latex/main.tex`/`main.pdf` (compiled,
@@ -75,8 +82,9 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
 
 ## Recommended next action
 
-Given the size of Package C (replication) relative to available compute, the next highest-value,
-still-bounded step is **Package D** (vectorize the two Python loop sites) or **Package A**
-(horizon-length sweep, which reuses already-authenticated checkpoints/data and needs no new
-training). Package C requires a resourcing decision (days of paid GPU time) rather than more
-engineering effort and should be scoped explicitly before starting.
+Package D's vectorization is now done and measured (168-201x -> ~3x). The next highest-value,
+still-bounded steps are: (1) the append-in-place incremental packing fix to close the residual ~3x
+gap, (2) **Package A**'s horizon-length sweep (reuses already-authenticated checkpoints/data, needs
+no new training), or (3) extending the 250M benchmark and a first MHA/GQA baseline comparison.
+Package C (more seeds, a second domain, a >=1B checkpoint) requires a resourcing decision (days of
+paid GPU time) rather than more engineering effort and should be scoped explicitly before starting.
