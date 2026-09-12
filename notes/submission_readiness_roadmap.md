@@ -33,11 +33,26 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
 ## Remaining work packages, in priority order
 
 ### A. Mechanism completion (moderate effort, high value)
-- Horizon-length sweep and pairwise-interaction residual audits proposed in
-  `notes/theory_contextual_tail_rate.md` (falsifiable predictions 2 and 5) are designed but not run.
-- Basis-dependence ablation: compare the current gradient-times-activation channel order against a
-  PCA/SVD or learned orthogonal nested basis, to test whether the reported ranks are an artifact of
-  channel-ordering choice.
+- DONE: the matched-prefix horizon sweep (prediction **3**, not 2 -- the earlier entry here cited
+  the wrong number; prediction 2 is the cancellation diagnostic, already done and in Section 5.1).
+  It also turned out not to need running: `analyze_risk_capacity_spectrum.py` has emitted
+  `horizon_capacity_spectrum` since `ae187c2` and all three published summaries carry it, so the
+  prediction was testable from already-authenticated artifacts with no GPU. Confirmed at all three
+  scales -- worst-offset `r*` strictly nondecreasing and saturating in `h`, signed mean
+  non-monotone. See `notes/horizon_capacity_prediction3.md` and
+  `experiments/analyze_horizon_capacity.py`.
+- DONE: extended to h=128 at all three scales on T4 (`elasticmla-horizon-{30m,122m,250m}-0912b`).
+  Saturation is now reached, not merely setting in: the final doubling moves +0.43/+0.93/+1.30 pp
+  against +2.07/+2.78/+2.95 pp for h=16->32, still strictly nondecreasing. A position-matched H=32
+  control shows the published tail-count table shifts by at most 1.73 pp with inconsistent sign and
+  the tail-capacity premium by at most 0.009, so the published spectrum is not an artifact of which
+  positions were eligible to be probed. One honest caveat recorded: past h=32 the signed-mean curve
+  is censored at the rank grid's smallest entry (16) and its long-horizon values are bounds, not
+  estimates.
+- REMAINING: pairwise-interaction residual audit (prediction **5**) -- still designed but not run.
+- REMAINING: basis-dependence ablation (prediction 7): compare the current
+  gradient-times-activation channel order against a PCA/SVD or learned orthogonal nested basis, to
+  test whether the reported ranks are an artifact of channel-ordering choice.
 
 ### B. Stronger controls (mostly done)
 - DONE: exact-histogram position, lexical-identity, token-frequency, and token-type controls at all
