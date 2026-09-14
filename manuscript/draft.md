@@ -393,11 +393,12 @@ provenance) was recovered. See `notes/risk_capacity_spectrum_results.md`.
 **These rates are basis-dependent, and a large part of the tail requirement is the cost of axis
 alignment.** Every rank above is measured in the model's own latent coordinates, ordered by
 saliency -- a permutation, the most restricted nested basis available. Rerunning the identical
-truncation probe in a rotated basis cuts the worst-offset requirement from 74.07% to 23.56% at 30M
-and from 72.92% to 23.25% at 122M, with bootstrap intervals nowhere near overlapping (Section 6,
-`notes/basis_dependence_prediction7.md`). We report the coordinate-basis numbers because they are
-what the deployed packed cache actually uses and what the router was trained against, but they
-should be read as properties of *this basis*, not as an intrinsic rate of the latent code.
+truncation probe in a rotated basis cuts the worst-offset requirement to 23.56%/23.25%/22.15% at
+30M/122M/250M, a fall of 50-54 percentage points at every scale with bootstrap intervals nowhere
+near overlapping (Section 6, `notes/basis_dependence_prediction7.md`). We report the
+coordinate-basis numbers because they are what the deployed packed cache actually uses and what the
+router was trained against, but they should be read as properties of *this basis*, not as an
+intrinsic rate of the latent code.
 
 ### 5.2 Fresh contextual routing beats exact-byte static allocation, with a tier-granularity dependence at 250M
 
@@ -651,16 +652,18 @@ saliency we use, so the published ordering is the axis-aligned special case of t
 The rotation is applied to the weights rather than the probe -- with $W_{DKV}$, $W_{UK}$, $W_{UV}$
 bias-free, substituting $U^\top W_{DKV}$ and $W_{UK}U$, $W_{UV}U$ leaves the full-rank function
 unchanged while making a prefix mask a projection onto $\mathrm{span}(U_{:,:k})$, which is
-verified at full rank to $2.4\times10^{-5}$ logit deviation. At both tested scales the worst-offset
-required rate falls by roughly 50 percentage points, to 23.56% (30M) and 23.25% (122M), and the
+verified at full rank to $2.4\times10^{-5}$ logit deviation. At all three scales the worst-offset
+required rate falls by 50-54 percentage points, to 23.56%/23.25%/22.15% at 30M/122M/250M, and the
 required-rank histograms shift accordingly: under the coordinate basis at 30M, 410 of 768 probes
-need at least 224 of 256 channels, while under the rotated basis only 3 do. A large part of the
-tail-capacity requirement in Section 5.1 is therefore a cost of axis alignment rather than a
-property of the latent code, and the remedy is a fixed change of variables that folds permanently
-into the projection weights at identical cache bytes. Two qualifications: rotated bases *increase*
-rank-curve nonmonotonicity (59% to 82% of probes at 30M), and the mean-criterion values for the
-rotated bases sit on the rank grid's smallest entry and are upper bounds rather than estimates.
-This ablation covers 30M and 122M only. See `notes/basis_dependence_prediction7.md` and
+need at least 224 of 256 channels while under the rotated basis only 3 do; at 250M the coordinate
+basis needs the entire 512-wide latent for 389 of 768 probes against 13 for the rotated basis. A
+large part of the tail-capacity requirement in Section 5.1 is therefore a cost of axis alignment
+rather than a property of the latent code, and the remedy is a fixed change of variables that folds
+permanently into the projection weights at identical cache bytes. Two qualifications: rotated bases
+*increase* rank-curve nonmonotonicity (59% to 82% of probes at 30M, 72% to 97% at 250M), and the
+mean-criterion values for the rotated bases sit on the rank grid's smallest entry and are upper
+bounds rather than estimates. The ablation's coordinate arm reproduces the Section 5.1 spectrum
+exactly at every scale. See `notes/basis_dependence_prediction7.md` and
 `experiments/analyze_basis_dependence.py`.
 
 **Reproducibility.** Result artifacts contain checkpoint/data/policy/source hashes and exact starts.

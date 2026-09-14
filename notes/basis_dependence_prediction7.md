@@ -63,11 +63,17 @@ including a test that asserts plain `rng.integers` does *not* reproduce the publ
 | 122M | coord | 8.22% [7.52, 8.90] | **72.92%** [70.96, 74.95] | 69.7% |
 | 122M | pca | 4.63% [4.50, 4.76] | **23.25%** [21.55, 24.95] | 93.4% |
 | 122M | grad | 4.75% [4.60, 4.93] | **35.75%** [33.88, 37.69] | 89.8% |
+| 250M | coord | 7.15% [6.45, 7.98] | **76.03%** [73.42, 78.72] | 71.9% |
+| 250M | pca | 3.41% [3.31, 3.52] | **22.15%** [20.48, 23.74] | 96.9% |
+| 250M | grad | 3.49% [3.38, 3.62] | **32.48%** [30.51, 34.68] | 94.9% |
 
-The worst-offset rate falls by ~50 pp at both scales (a 3.1x reduction), with bootstrap intervals
-nowhere near overlapping. The `r*` histograms make the mechanism plain: under `coord` at 30M, 410 of
-768 probes need at least 224 of 256 channels (207 at 224, 203 at 256); under `pca` only 3 probes
-need 224 or more and none need the full width.
+The worst-offset rate falls by 50-54 pp at all three scales (a 3.1-3.4x reduction), with bootstrap
+intervals nowhere near overlapping. The effect grows slightly with scale: -50.51 pp at 30M,
+-49.66 pp at 122M, -53.88 pp at 250M. The `r*` histograms make the mechanism plain: under `coord` at
+30M, 410 of 768 probes need at least 224 of 256 channels (207 at 224, 203 at 256), while under
+`pca` only 3 probes need 224 or more and none need the full width. At 250M the contrast is starker
+still: `coord` needs the entire 512-wide latent for 389 of 768 probes (457 need at least 384),
+against 13 and 15 for `pca`.
 
 **So a large part of the paper's headline "high tail rate" is a cost of axis alignment, not an
 intrinsic property of the latent code.** This is deployable rather than merely diagnostic: the
@@ -77,11 +83,12 @@ rotation is a fixed change of variables that can be folded permanently into
 Two honest qualifications:
 
 - **The second half of prediction 7 fails.** Rotated bases do not reduce nonmonotonicity; they
-  *increase* it (59% -> 82% of probes at 30M, 70% -> 93% at 122M). Only the rate half holds.
+  *increase* it (59% -> 82% of probes at 30M, 70% -> 93% at 122M, 72% -> 97% at 250M), and the
+  increase itself grows with scale. Only the rate half holds.
 - **The mean-criterion numbers for `pca`/`grad` are floor-censored.** They sit at or just above the
-  rank grid's smallest entry (16 = 6.25% at 30M, 4.17% at 122M): 750 of 768 probes are at the floor
-  for `pca` at 30M. Read them as upper bounds. The worst-offset numbers are not censored and are
-  real measurements.
+  rank grid's smallest entry (16, i.e. 6.25% at 30M, 4.17% at 122M, 3.12% at 250M): 750 of 768
+  probes are at the floor for `pca` at 30M. Read them as upper bounds. The worst-offset numbers are
+  not censored and are real measurements.
 
 That `pca`, which never looks at the loss, beats `grad`, which is built from the first-order loss
 effect, is worth noting rather than explaining away. A plausible reading is that at the rates where
@@ -91,9 +98,7 @@ fitted at the operating rate rather than from a first-order expansion at full ra
 
 ## Scope
 
-30M and 122M only. 250M is not included: its checkpoint is 2.8 GB and the Lightning account ran out
-of credits mid-session (see below), so it was not worth a third upload before deciding what to do
-with this result.
+All three scales (30M, 122M, 250M), matching the rest of the paper's headline results.
 
 ## Compute provenance
 
@@ -104,5 +109,8 @@ the preinstalled PyTorch is built for sm_70+, so every CUDA launch failed with "
 available for execution on the device"; the kernel now installs a cu118 build first. Inputs are
 split across two datasets -- `elasticmla-basis-ablation-inputs` (checkpoints and data) and
 `elasticmla-analysis-code` (15 KB) -- so a code fix does not mean re-uploading ~600 MB.
-Kernel: `softkleenex/elasticmla-basis-ablation` version 7; log at
-`experiments/basis_dependence_kernel.log`.
+The 250M checkpoint lives in its own dataset (`elasticmla-250m-checkpoint`, 2.8 GB) because
+uploading a single top-level directory makes Kaggle extract its *contents* to the dataset root, so
+that scale arrives as `<root>/ckpt/latest.pt` rather than `<root>/exp2_250m/ckpt/latest.pt`; the
+kernel accepts both layouts. Kernels: `softkleenex/elasticmla-basis-ablation` version 7 (30M, 122M)
+and version 10 (250M); 30M/122M log at `experiments/basis_dependence_kernel.log`.

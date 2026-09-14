@@ -51,19 +51,21 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
   estimates.
 - REMAINING: pairwise-interaction residual audit (prediction **5**) -- still designed but not run.
 - DONE, and it is a negative result for the reported rates: the basis-dependence ablation
-  (prediction 7) at 30M and 122M. Rotating the latent basis cuts the worst-offset required rate
-  from 74.07% to 23.56% (30M) and 72.92% to 23.25% (122M) -- ~50 pp, bootstrap intervals nowhere
+  (prediction 7) at all three scales. Rotating the latent basis cuts the worst-offset required rate
+  to 23.56%/23.25%/22.15% at 30M/122M/250M -- a fall of 50-54 pp, bootstrap intervals nowhere
   near overlapping. A large part of the paper's headline tail rate is therefore a cost of axis
   alignment, not a property of the latent code, and the fix is deployable (a fixed change of
   variables folded into W_DKV/W_UK/W_UV, same cache bytes). Prediction 7's second half fails:
   rotated bases increase nonmonotonicity rather than reducing it. The ablation's `coord` arm
   reproduces the published spectrum exactly, which is what caught a silent sampling bug in the
   first version. See `notes/basis_dependence_prediction7.md`.
-- REMAINING: 250M basis ablation (2.8 GB checkpoint, not uploaded yet), and a basis fitted at the
-  operating rate rather than from a first-order expansion -- `pca`, which ignores the loss, beats
-  the first-order loss-effect basis `grad`, suggesting the binding regime is far from first order.
-- NOTE: this result bears directly on Section 5.1's headline numbers and the manuscript has not
-  been updated. Decide how to report it before further mechanism work.
+- REMAINING: a basis fitted at the operating rate rather than from a first-order expansion --
+  `pca`, which ignores the loss, beats the first-order loss-effect basis `grad` at every scale,
+  suggesting the binding regime is far outside the first-order expansion `grad` is built from.
+- The manuscript now reports this in Section 5.1 and a Section 6 "Basis scope" limitation, keeping
+  the coordinate-basis numbers as the deployed ones. The abstract still states
+  74.07%/72.92%/76.03% without a basis qualifier; whether to hedge it there is an open editorial
+  call.
 
 ### B. Stronger controls (mostly done)
 - DONE: exact-histogram position, lexical-identity, token-frequency, and token-type controls at all
