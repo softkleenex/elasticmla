@@ -615,8 +615,21 @@ a confident win in only 3 of 16 (all at coarse tier grids). We still lack a comp
 global-budget static policies, a learned orthogonal (PCA/SVD) nested basis, and
 eviction/quantization baselines from the wider KV-cache compression literature.
 
-**Oracle scope.** Capacity labels are isolated-position interventions, not joint-rollout-optimal
-labels. Joint training alleviates but does not solve this limitation.
+**Oracle scope (now measured).** Capacity labels are isolated-position interventions, not
+joint-rollout-optimal labels. Joint training alleviates but does not solve this limitation. We
+quantified the gap with the second-order mixed difference
+$L_{\{t_1,t_2\}}-L_{\{t_1\}}-L_{\{t_2\}}+L_{\emptyset}$, which vanishes identically for any
+additive distortion, over 1008 position pairs per scale. The residuals are nonzero -- so the
+additive special case of Section 3 is falsified and isolated labels are indeed structurally
+misaligned with joint routing -- but the misalignment is local and modest: as a fraction of the
+individual effects it is 9.09%/12.17%/13.17% at 30M/122M/250M for adjacent positions under the
+heaviest truncation, decays monotonically with separation, and falls below 1.3% beyond a separation
+of 32 tokens. It also grows with truncation severity (5.69% to 1.07% at 30M from the heaviest to
+the lightest tested rank). The trend that matters for scaling is that the violation gets *worse*
+with model size at every separation, so joint-rollout training becomes more necessary, not less, at
+larger scale. For calibration, basis choice moves the required rate by roughly 50 percentage points
+(above), an order of magnitude larger effect than isolated-versus-joint labelling. See
+`notes/pair_interaction_prediction5.md`.
 
 **System scope (now measured, not only derived).** We benchmarked real prefill+128-step incremental
 decode on a Tesla T4 GPU at both scales (`experiments/benchmark_cache_memory_latency.py`,

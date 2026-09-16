@@ -38,6 +38,13 @@ doubt, trust the manuscript over any single note here.
   incremental append plus hot-path validation-sync removal (verified bit-identical, measured only
   on MPS -- **not** comparable to the T4 figures and not yet reflected in the manuscript). Read the
   whole file, not just the first half.
+- `horizon_capacity_prediction3.md` -- theory prediction 3 (matched-prefix horizon sweep), confirmed
+  at three scales from already-published artifacts plus a T4 extension to h=128.
+- `basis_dependence_prediction7.md` -- theory prediction 7 (basis dependence). **A negative result
+  for Section 5.1's headline rates**: rotating the latent basis cuts the worst-offset required rate
+  by 50-54 pp at all three scales.
+- `pair_interaction_prediction5.md` -- theory prediction 5 (pair-interaction residuals). Additivity
+  is falsified but the violation is local and modest, and grows with scale.
 - `submission_readiness_roadmap.md` -- current status per claim/work-package, and the recommended
   next action. **Read this first when resuming work in a new session.**
 - `literature_review.md`, `compute_fallback_policy.md`, `resources_check.md` -- process/reference

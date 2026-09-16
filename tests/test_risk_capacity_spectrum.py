@@ -31,6 +31,55 @@ class RiskCapacitySpectrumTests(unittest.TestCase):
         # The long-horizon set is a prefix of the short-horizon set, never a shift.
         np.testing.assert_array_equal(long_h, short[: len(long_h)])
 
+    def test_multi_position_masking_preserves_the_single_position_path(self):
+        """Generalising probe_positions must not perturb the published one-position probe."""
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "code"))
+        import torch
+        from elastic_mla import MLAGPT
+
+        torch.manual_seed(5)
+        model = MLAGPT(
+            vocab_size=71, d_model=48, n_layers=3, n_heads=3,
+            d_head=12, d_rope=8, d_c=20, max_len=32, dropout=0.0,
+        ).eval()
+        idx = torch.randint(0, 71, (4, 16))
+        orders = np.stack([np.random.default_rng(i).permutation(20) for i in range(3)])
+        masks = MODULE.make_channel_masks(orders, 8, 4, torch.device("cpu"))
+        single = torch.tensor([3, 5, 7, 9])
+        with torch.no_grad():
+            flat = MODULE.forward_with_layer_masks(
+                model, idx, channel_masks=masks, probe_positions=single)
+            column = MODULE.forward_with_layer_masks(
+                model, idx, channel_masks=masks, probe_positions=single[:, None])
+            duplicated = MODULE.forward_with_layer_masks(
+                model, idx, channel_masks=masks,
+                probe_positions=torch.stack([single, single], dim=1))
+            pair = MODULE.forward_with_layer_masks(
+                model, idx, channel_masks=masks,
+                probe_positions=torch.stack([single, single + 2], dim=1))
+        self.assertTrue(torch.equal(flat, column))
+        self.assertTrue(torch.equal(flat, duplicated))
+        self.assertFalse(torch.equal(flat, pair))
+
+    def test_probe_positions_outside_the_sequence_are_rejected(self):
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "code"))
+        import torch
+        from elastic_mla import MLAGPT
+
+        model = MLAGPT(
+            vocab_size=71, d_model=48, n_layers=3, n_heads=3,
+            d_head=12, d_rope=8, d_c=20, max_len=32, dropout=0.0,
+        ).eval()
+        idx = torch.randint(0, 71, (2, 16))
+        orders = np.stack([np.random.default_rng(i).permutation(20) for i in range(3)])
+        masks = MODULE.make_channel_masks(orders, 8, 2, torch.device("cpu"))
+        with self.assertRaisesRegex(ValueError, "must index a token"):
+            MODULE.forward_with_layer_masks(
+                model, idx, channel_masks=masks,
+                probe_positions=torch.tensor([[0, 99], [1, 2]]))
+
     def test_future_loss_slice_rejects_a_window_past_the_sequence(self):
         self.assertEqual(MODULE.future_loss_slice(10, 4, 255), slice(10, 14))
         with self.assertRaises(ValueError):

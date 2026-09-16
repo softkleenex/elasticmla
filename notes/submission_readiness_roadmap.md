@@ -49,7 +49,13 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
   positions were eligible to be probed. One honest caveat recorded: past h=32 the signed-mean curve
   is censored at the rank grid's smallest entry (16) and its long-horizon values are bounds, not
   estimates.
-- REMAINING: pairwise-interaction residual audit (prediction **5**) -- still designed but not run.
+- DONE: pairwise-interaction residual audit (prediction 5) at all three scales, 1008 pairs each.
+  The second-order mixed difference is nonzero, so the additive special case is falsified, but the
+  violation is local and modest (9.09%/12.17%/13.17% of the individual effects for adjacent
+  positions at 30M/122M/250M, under 1.3% beyond separation 32) -- which converts the "Oracle scope"
+  limitation from a qualitative worry into a measured quantity. It grows with scale and with
+  truncation severity, so joint-rollout training becomes more necessary at larger scale, not less.
+  An order of magnitude smaller than the basis effect. See `notes/pair_interaction_prediction5.md`.
 - DONE, and it is a negative result for the reported rates: the basis-dependence ablation
   (prediction 7) at all three scales. Rotating the latent basis cuts the worst-offset required rate
   to 23.56%/23.25%/22.15% at 30M/122M/250M -- a fall of 50-54 pp, bootstrap intervals nowhere
@@ -123,6 +129,11 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
   JSON, found one real P0 arithmetic-tally bug and one real P1 CI-rounding mismatch in the
   manuscript, both fixed (commit `c9de709`), plus two smaller code/doc issues (also fixed,
   `046818a`).
+
+With predictions 3, 5 and 7 all now measured at three scales, Package A is complete apart from a
+basis fitted at the operating rate. The two mechanism findings are of very different size: basis
+choice moves the required rate by ~50 pp, isolated-versus-joint labelling by single-digit
+percentages of the effect.
 
 ## Recommended next action
 

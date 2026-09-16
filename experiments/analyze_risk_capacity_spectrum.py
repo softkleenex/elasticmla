@@ -199,7 +199,11 @@ def forward_with_layer_masks(
     """Model forward with a different position-isolated channel mask per layer.
 
     ``channel_masks`` has shape (n_layers, batch, d_c).  For item b, its mask is
-    applied only at ``probe_positions[b]``; all other positions remain full rank.
+    applied at ``probe_positions[b]``; all other positions remain full rank.
+    ``probe_positions`` is ``(batch,)`` for the usual single-position intervention,
+    or ``(batch, n_positions)`` to truncate several positions of the same sequence
+    at once -- which is what the pair-interaction test needs, since additivity of
+    per-token truncation costs can only be falsified by intervening jointly.
     Keeping this helper local avoids changing the training model's public API.
     """
     if (channel_masks is None) != (probe_positions is None):
@@ -208,8 +212,12 @@ def forward_with_layer_masks(
         expected = (model.n_layers, idx.shape[0], model.d_c)
         if tuple(channel_masks.shape) != expected:
             raise ValueError(f"channel_masks shape must be {expected}")
-        if tuple(probe_positions.shape) != (idx.shape[0],):
-            raise ValueError("probe_positions must have shape (batch,)")
+        if probe_positions.ndim == 1:
+            probe_positions = probe_positions[:, None]
+        if probe_positions.ndim != 2 or probe_positions.shape[0] != idx.shape[0]:
+            raise ValueError("probe_positions must have shape (batch,) or (batch, n_positions)")
+        if torch.any(probe_positions < 0) or torch.any(probe_positions >= idx.shape[1]):
+            raise ValueError("probe_positions must index a token of idx")
 
     active_layers = set(range(model.n_layers)) if masked_layers is None else set(masked_layers)
     if any(layer < 0 or layer >= model.n_layers for layer in active_layers):
@@ -224,7 +232,9 @@ def forward_with_layer_masks(
                 idx.shape[0], idx.shape[1], model.d_c,
                 device=hidden.device, dtype=hidden.dtype,
             )
-            rank_mask[batch_indices, probe_positions] = channel_masks[layer_idx].to(hidden.dtype)
+            rank_mask[batch_indices[:, None], probe_positions] = (
+                channel_masks[layer_idx].to(hidden.dtype)[:, None, :]
+            )
         hidden = block(hidden, rank_mask=rank_mask)
     return model.head(model.ln_f(hidden))
 
