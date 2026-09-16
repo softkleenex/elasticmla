@@ -22,9 +22,11 @@ packed MLA cache with token-specific nested latent prefixes, offsets, ranks, and
 metadata, and a layer-0-full contextual router trained with a straight-through joint-rollout
 surrogate for the corresponding rate-penalized Lagrangian. On 30.6M-, 122.1M-, and 249.3M-parameter
 MLA language models (an 8x parameter range), we measure the full risk-capacity spectrum (not only
-mean and max): required rate rises monotonically from 9.00%/8.22%/7.15% of the full latent width at
-the mean criterion to 74.07%/72.92%/76.03% at the worst-offset criterion, with an almost
-scale-invariant normalized tail-capacity premium (0.651/0.647/0.689 at 30M/122M/250M). Diagnostic
+mean and max): in the model's own latent coordinate basis, required rate rises monotonically from
+9.00%/8.22%/7.15% of the full latent width at the mean criterion to 74.07%/72.92%/76.03% at the
+worst-offset criterion, with an almost scale-invariant normalized tail-capacity premium
+(0.651/0.647/0.689 at 30M/122M/250M). A basis ablation shows this tail requirement is substantially
+a cost of that coordinate alignment: rotating the latent basis cuts it to 22-24% at every scale. Diagnostic
 decomposition shows this separation reflects **pervasive cancellation across the reuse horizon, not
 rare catastrophic tokens**: over 93% of mean-safe positions at every scale still have at least one
 future offset exceeding the loss budget, and the positive-part mean loss is roughly double the
