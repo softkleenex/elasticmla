@@ -20,6 +20,18 @@ the same truncation probe in two rotated bases:
            along ``u``. In the coordinate basis its diagonal is the signed version
            of the published saliency, so ``coord`` is the axis-aligned special case
            of the same criterion.
+``model_metric``
+           the latent only reaches the model through ``W_UK c`` and ``W_UV c``, so
+           what a truncation costs is reconstruction error *as the model sees it*,
+           ``E||W_UK(c-c^)||^2 + E||W_UV(c-c^)||^2``, not error in ``c`` itself.
+           With ``A = W_UK^T W_UK + W_UV^T W_UV`` and ``U`` the eigenvectors of
+           ``A^{1/2} E[cc^T] A^{1/2}``, storing ``T c`` for ``T = U^T A^{1/2}``
+           makes the cost of dropping the last ``d_c - k`` coordinates exactly the
+           tail sum of those eigenvalues, which is the minimum achievable at that
+           rank. Unlike the other three this ``T`` is not orthogonal: it is a
+           change of frame rather than a rotation, so it preserves the float count
+           of the packed cache but not vector norms (worth noting if the cache is
+           ever quantized).
 
 The rotation is applied to the *model*, not to the probe: since ``c = W_DKV x``
 and ``k, v = W_UK c, W_UV c`` are all bias-free, substituting
@@ -35,6 +47,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -58,7 +71,7 @@ _SPEC = importlib.util.spec_from_file_location(
 _RISK = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(_RISK)
 
-BASES = ("coord", "pca", "grad")
+BASES = ("coord", "pca", "grad", "model_metric")
 
 
 def latent_moments(
@@ -113,45 +126,88 @@ def latent_moments(
     return cc / max(total_tokens, 1), gc / max(total_tokens, 1), saliency
 
 
-def build_bases(cc, gc, saliency):
-    """Return an orthogonal ``U`` per layer per basis, columns in nested order."""
+def model_metric_transform(cc_layer, up_weights, floor=1e-10):
+    """Frame that makes truncation cost the tail eigenvalues of the model's own metric.
+
+    ``A`` is the Gram matrix of the two up-projections stacked, so ``x^T A x`` is
+    the squared size of ``x`` as it arrives at attention. Whitening by ``A^{1/2}``
+    and taking principal directions there minimises output-space reconstruction
+    error at every rank. Returns ``(forward, inverse, eigenvalues)``.
+    """
+    a = sum(w.T @ w for w in up_weights)
+    a = (a + a.T) / 2
+    values, vectors = np.linalg.eigh(a)
+    values = np.clip(values, floor * max(float(values.max()), floor), None)
+    root = vectors @ np.diag(np.sqrt(values)) @ vectors.T
+    inverse_root = vectors @ np.diag(1.0 / np.sqrt(values)) @ vectors.T
+    metric = root @ cc_layer @ root
+    metric = (metric + metric.T) / 2
+    spectrum, directions = np.linalg.eigh(metric)
+    order = np.argsort(-spectrum)
+    directions = directions[:, order]
+    return directions.T @ root, inverse_root @ directions, spectrum[order]
+
+
+def build_bases(cc, gc, saliency, up_weights=None):
+    """Return ``(forward, inverse)`` transforms per layer per basis.
+
+    For the three orthogonal bases ``forward`` is ``U^T`` and ``inverse`` is ``U``;
+    ``model_metric`` supplies a general invertible pair. In every case the latent
+    becomes ``forward @ c`` and the up-projections absorb ``inverse``, so the
+    full-rank function is unchanged and masking a prefix truncates that basis.
+    """
     n_layers, d_c, _ = cc.shape
-    out = {name: np.zeros((n_layers, d_c, d_c), dtype=np.float64) for name in BASES}
+    forward = {name: np.zeros((n_layers, d_c, d_c), dtype=np.float64) for name in BASES}
+    inverse = {name: np.zeros((n_layers, d_c, d_c), dtype=np.float64) for name in BASES}
     diagnostics = {name: [] for name in BASES}
     for layer in range(n_layers):
         order = np.argsort(-saliency[layer])
         permutation = np.zeros((d_c, d_c), dtype=np.float64)
         permutation[order, np.arange(d_c)] = 1.0
-        out["coord"][layer] = permutation
+        forward["coord"][layer] = permutation.T
+        inverse["coord"][layer] = permutation
         diagnostics["coord"].append({"criterion_values": saliency[layer][order].tolist()})
 
         values, vectors = np.linalg.eigh((cc[layer] + cc[layer].T) / 2)
         rank_order = np.argsort(-values)
-        out["pca"][layer] = vectors[:, rank_order]
+        basis = vectors[:, rank_order]
+        forward["pca"][layer], inverse["pca"][layer] = basis.T, basis
         diagnostics["pca"].append({"criterion_values": values[rank_order].tolist()})
 
         symmetric = (gc[layer] + gc[layer].T) / 2
         values, vectors = np.linalg.eigh(symmetric)
         rank_order = np.argsort(-np.abs(values))
-        out["grad"][layer] = vectors[:, rank_order]
+        basis = vectors[:, rank_order]
+        forward["grad"][layer], inverse["grad"][layer] = basis.T, basis
         diagnostics["grad"].append({"criterion_values": values[rank_order].tolist()})
-    return out, diagnostics
+
+        if up_weights is not None:
+            fwd, inv, spectrum = model_metric_transform(cc[layer], up_weights[layer])
+            forward["model_metric"][layer], inverse["model_metric"][layer] = fwd, inv
+            diagnostics["model_metric"].append({"criterion_values": spectrum.tolist()})
+    return forward, inverse, diagnostics
 
 
-def rotate_model(model: MLAGPT, bases: np.ndarray, device: torch.device) -> MLAGPT:
-    """Return a copy whose latent coordinates are the columns of ``bases``.
+def rotate_model(model: MLAGPT, forward: np.ndarray, inverse: np.ndarray,
+                 device: torch.device) -> MLAGPT:
+    """Return a copy whose latent is expressed in a new frame.
 
-    ``c' = U^T c`` so that masking the first ``k`` coordinates of ``c'`` projects
-    onto ``span(U[:, :k])`` in the original latent space.
+    The new latent is ``c' = forward @ c`` and the up-projections absorb
+    ``inverse``, so the full-rank function is unchanged whenever
+    ``inverse @ forward = I`` and masking the first ``k`` coordinates of ``c'``
+    truncates that frame. For an orthogonal basis ``U`` this is
+    ``forward = U^T, inverse = U`` and the truncation is a projection onto
+    ``span(U[:, :k])``.
     """
     rotated = copy.deepcopy(model)
     for layer_idx, block in enumerate(rotated.blocks):
-        u = torch.as_tensor(bases[layer_idx], dtype=torch.float32, device=device)
+        f = torch.as_tensor(forward[layer_idx], dtype=torch.float32, device=device)
+        g = torch.as_tensor(inverse[layer_idx], dtype=torch.float32, device=device)
         attn = block.attn
         with torch.no_grad():
-            attn.W_DKV.weight.copy_(u.T @ attn.W_DKV.weight)
-            attn.W_UK.weight.copy_(attn.W_UK.weight @ u)
-            attn.W_UV.weight.copy_(attn.W_UV.weight @ u)
+            attn.W_DKV.weight.copy_(f @ attn.W_DKV.weight)
+            attn.W_UK.weight.copy_(attn.W_UK.weight @ g)
+            attn.W_UV.weight.copy_(attn.W_UV.weight @ g)
     return rotated.to(device).eval()
 
 
@@ -240,11 +296,68 @@ def summarize(curves, rank_grid, epsilon, d_c, bootstrap_draws, seed, monotone_t
             "sequence_cluster_bootstrap_95pct_ci": [float(low), float(high)],
             "normalized_ci": [float(low) / d_c, float(high) / d_c],
             "r_star_histogram": {str(r): int(np.sum(flat == r)) for r in rank_grid},
+            # Per-probe r*, so bases can be compared as the paired measurements they
+            # are. Every basis is evaluated on the same probes, and marginal
+            # intervals can overlap while the paired difference is unambiguous.
+            "r_star_by_sequence": {str(k): [int(v) for v in vals]
+                                   for k, vals in by_sequence.items()},
             "nonmonotonicity": nonmonotonicity(
                 np.concatenate(per_sequence, axis=0), monotone_tolerance
             ),
         }
     return out
+
+
+def comparison_pairs(measured):
+    """Which bases to compare: each against ``coord``, then the informative rotations.
+
+    Order is derived from ``BASES`` rather than from whatever subset was measured,
+    so a given comparison always appears under the same name.
+    """
+    present = [name for name in BASES if name in measured]
+    pairs = [(name, "coord") for name in present if name != "coord" and "coord" in measured]
+    for a, b in (("model_metric", "pca"), ("pca", "grad")):
+        if a in measured and b in measured:
+            pairs.append((a, b))
+    return pairs
+
+
+def comparison_seed(first, second, criterion):
+    """Stable per-comparison bootstrap seed.
+
+    Deriving it from a position in a list would make the same comparison use
+    different resamples depending on which other bases happened to be measured in
+    the same run, so it is derived from the comparison's own name instead.
+    """
+    digest = hashlib.sha256(f"{first}|{second}|{criterion}".encode()).digest()
+    return _RISK.BOOTSTRAP_SEED + 700 + int.from_bytes(digest[:4], "big") % 100_000
+
+
+def paired_difference(first, second, d_c, bootstrap_draws, seed):
+    """Per-probe ``r*`` difference between two bases, bootstrapped by sequence.
+
+    The bases are measured on identical probes, so this is the comparison the
+    design supports; differencing two marginal intervals would throw away the
+    pairing and can leave a real difference looking inconclusive.
+    """
+    keys = sorted(first["r_star_by_sequence"], key=int)
+    per_sequence = {
+        int(k): list(np.asarray(first["r_star_by_sequence"][k], dtype=np.float64)
+                     - np.asarray(second["r_star_by_sequence"][k], dtype=np.float64))
+        for k in keys
+    }
+    flat = np.concatenate([np.asarray(v) for v in per_sequence.values()])
+    low, high = _RISK.sequence_cluster_bootstrap_mean_ci(
+        per_sequence, n_bootstrap=bootstrap_draws, seed=seed
+    )
+    return {
+        "mean_difference": float(flat.mean()),
+        "normalized_mean_difference": float(flat.mean()) / d_c,
+        "normalized_ci": [float(low) / d_c, float(high) / d_c],
+        "excludes_zero": bool(low > 0 or high < 0),
+        "probe_fraction_first_lower": float(np.mean(flat < 0)),
+        "probe_fraction_tied": float(np.mean(flat == 0)),
+    }
 
 
 def main():
@@ -267,6 +380,8 @@ def main():
                    help="slack before a rank step counts as a monotonicity violation")
     p.add_argument("--rotation-tolerance", type=float, default=2e-3,
                    help="max allowed full-rank logit deviation between a rotated model and the original")
+    p.add_argument("--bases", nargs="+", default=list(BASES), choices=list(BASES),
+                   help="which bases to measure (default: all)")
     args = p.parse_args()
 
     device = torch.device(args.device)
@@ -319,13 +434,18 @@ def main():
         model, data, starts_by_repeat, block_size=block_size,
         batch_size=args.calibration_batch_size, device=device,
     )
-    bases, diagnostics = build_bases(cc, gc, saliency)
+    up_weights = [
+        (block.attn.W_UK.weight.detach().cpu().double().numpy(),
+         block.attn.W_UV.weight.detach().cpu().double().numpy())
+        for block in model.blocks
+    ]
+    forward, inverse, diagnostics = build_bases(cc, gc, saliency, up_weights=up_weights)
 
     probe_idx = torch.from_numpy(eval_tokens[:2, :-1].copy()).to(device)
     results, rotation_checks = {}, {}
-    for name in BASES:
+    for name in args.bases:
         print(f"--- basis {name} ---", flush=True)
-        rotated = rotate_model(model, bases[name], device)
+        rotated = rotate_model(model, forward[name], inverse[name], device)
         deviation, exact = check_rotation_is_exact(model, rotated, probe_idx, args.rotation_tolerance)
         rotation_checks[name] = {
             "full_rank_max_abs_logit_deviation": deviation,
@@ -362,17 +482,31 @@ def main():
         "n_positions_total": sum(len(p) for p in positions_by_sequence),
         "n_evaluation_sequences": args.n_eval_sequences,
         "bootstrap_draws": args.bootstrap_draws,
+        "bases_measured": list(results),
         "rotation_exactness_check": rotation_checks,
         "results_by_basis": results,
         "basis_criterion_spectra": {
-            name: [layer["criterion_values"][:8] for layer in diagnostics[name]] for name in BASES
+            name: [layer["criterion_values"][:8] for layer in diagnostics[name]]
+            for name in results if diagnostics.get(name)
         },
     }
-    for criterion in ("signed_mean", "maximum"):
-        base = results["coord"][criterion]["normalized_mean_r_star"]
-        output.setdefault("relative_to_coord", {})[criterion] = {
-            name: results[name][criterion]["normalized_mean_r_star"] - base for name in BASES
+    if "coord" in results:
+        for criterion in ("signed_mean", "maximum"):
+            base = results["coord"][criterion]["normalized_mean_r_star"]
+            output.setdefault("relative_to_coord", {})[criterion] = {
+                name: results[name][criterion]["normalized_mean_r_star"] - base
+                for name in results
+            }
+    output["paired_comparisons"] = {
+        criterion: {
+            f"{a}_minus_{b}": paired_difference(
+                results[a][criterion], results[b][criterion], d_c, args.bootstrap_draws,
+                comparison_seed(a, b, criterion),
+            )
+            for a, b in comparison_pairs(results)
         }
+        for criterion in ("signed_mean", "maximum")
+    }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(output, indent=2))
     print("BASIS_JSON_BEGIN")

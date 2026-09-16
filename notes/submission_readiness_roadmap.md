@@ -65,9 +65,13 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
   rotated bases increase nonmonotonicity rather than reducing it. The ablation's `coord` arm
   reproduces the published spectrum exactly, which is what caught a silent sampling bug in the
   first version. See `notes/basis_dependence_prediction7.md`.
-- REMAINING: a basis fitted at the operating rate rather than from a first-order expansion --
-  `pca`, which ignores the loss, beats the first-order loss-effect basis `grad` at every scale,
-  suggesting the binding regime is far outside the first-order expansion `grad` is built from.
+- DONE: the basis fitted to the model's own metric (`model_metric`: principal directions of
+  `A^{1/2} E[cc^T] A^{1/2}` for `A = W_UK^T W_UK + W_UV^T W_UV`), which provably minimises
+  output-space reconstruction error at every rank. It confirms the diagnosis of `grad` -- both
+  reconstruction criteria beat the first-order loss criterion by 10-12 pp at every scale -- but
+  gives no reliable gain over plain PCA (wins by <1 pp at 30M/250M, indistinguishable at 122M, about
+  half of probes tied). Which rotation is used matters far less than rotating at all. Comparisons
+  are paired per-probe, since all four bases are measured on identical probes.
 - The manuscript now reports this in Section 5.1 and a Section 6 "Basis scope" limitation, keeping
   the coordinate-basis numbers as the deployed ones. The abstract still states
   74.07%/72.92%/76.03% without a basis qualifier; whether to hedge it there is an open editorial
@@ -130,10 +134,11 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
   manuscript, both fixed (commit `c9de709`), plus two smaller code/doc issues (also fixed,
   `046818a`).
 
-With predictions 3, 5 and 7 all now measured at three scales, Package A is complete apart from a
-basis fitted at the operating rate. The two mechanism findings are of very different size: basis
-choice moves the required rate by ~50 pp, isolated-versus-joint labelling by single-digit
-percentages of the effect.
+**Package A is complete.** Predictions 3, 5 and 7 are all measured at three scales, and the
+operating-rate basis question is answered. The mechanism findings are of very different size: basis
+choice moves the required rate by ~50 pp, the first-order-versus-reconstruction criterion by
+10-12 pp, isolated-versus-joint labelling by single-digit percentages of the effect, and refining
+the reconstruction metric by under a point.
 
 ## Recommended next action
 

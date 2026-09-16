@@ -36,7 +36,8 @@ class RotationEquivalenceTests(unittest.TestCase):
         ])
 
     def test_rotating_the_model_does_not_change_the_full_rank_function(self):
-        rotated = MODULE.rotate_model(self.model, self.bases, torch.device("cpu"))
+        rotated = MODULE.rotate_model(
+            self.model, self.bases.transpose(0, 2, 1), self.bases, torch.device("cpu"))
         deviation, exact = MODULE.check_rotation_is_exact(
             self.model, rotated, self.idx, tolerance=1e-4
         )
@@ -44,7 +45,7 @@ class RotationEquivalenceTests(unittest.TestCase):
 
     def test_identity_rotation_leaves_the_weights_untouched(self):
         identity = np.stack([np.eye(self.d_c) for _ in range(3)])
-        rotated = MODULE.rotate_model(self.model, identity, torch.device("cpu"))
+        rotated = MODULE.rotate_model(self.model, identity, identity, torch.device("cpu"))
         for original, copy_ in zip(self.model.blocks, rotated.blocks):
             torch.testing.assert_close(original.attn.W_DKV.weight, copy_.attn.W_DKV.weight)
             torch.testing.assert_close(original.attn.W_UK.weight, copy_.attn.W_UK.weight)
@@ -58,7 +59,8 @@ class RotationEquivalenceTests(unittest.TestCase):
         into the weights would apply at every position.
         """
         keep = 9
-        rotated = MODULE.rotate_model(self.model, self.bases, torch.device("cpu"))
+        rotated = MODULE.rotate_model(
+            self.model, self.bases.transpose(0, 2, 1), self.bases, torch.device("cpu"))
         hidden = torch.randn(2, 5, 48)
         mask = torch.zeros(self.d_c)
         mask[:keep] = 1.0
@@ -77,7 +79,8 @@ class RotationEquivalenceTests(unittest.TestCase):
 
     def test_a_full_rank_mask_in_the_rotated_basis_changes_nothing(self):
         """Sanity bound on the previous test: at keep = d_c the projection is identity."""
-        rotated = MODULE.rotate_model(self.model, self.bases, torch.device("cpu"))
+        rotated = MODULE.rotate_model(
+            self.model, self.bases.transpose(0, 2, 1), self.bases, torch.device("cpu"))
         identity_order = np.tile(np.arange(self.d_c), (3, 1))
         masks = MODULE._RISK.make_channel_masks(identity_order, self.d_c, 2, torch.device("cpu"))
         positions = torch.tensor([4, 7])
@@ -91,7 +94,8 @@ class RotationEquivalenceTests(unittest.TestCase):
     def test_the_rotation_check_rejects_a_non_orthogonal_matrix(self):
         broken = self.bases.copy()
         broken[0] *= 1.5
-        rotated = MODULE.rotate_model(self.model, broken, torch.device("cpu"))
+        rotated = MODULE.rotate_model(
+            self.model, broken.transpose(0, 2, 1), self.bases, torch.device("cpu"))
         _, exact = MODULE.check_rotation_is_exact(
             self.model, rotated, self.idx, tolerance=1e-4
         )
@@ -107,11 +111,12 @@ class BasisConstructionTests(unittest.TestCase):
         cc = np.stack([x.T @ x / 400 for x in c])
         gc = np.stack([gg.T @ x / 400 for gg, x in zip(g, c)])
         saliency = np.abs(g * c).sum(axis=1)
-        bases, diagnostics = MODULE.build_bases(cc, gc, saliency)
-        for name in MODULE.BASES:
+        forward, inverse, diagnostics = MODULE.build_bases(cc, gc, saliency)
+        for name in ("coord", "pca", "grad"):
             for layer in range(layers):
-                u = bases[name][layer]
+                u = inverse[name][layer]
                 np.testing.assert_allclose(u.T @ u, np.eye(d_c), atol=1e-9)
+                np.testing.assert_allclose(forward[name][layer], u.T, atol=1e-12)
         for layer in range(layers):
             values = diagnostics["pca"][layer]["criterion_values"]
             self.assertEqual(values, sorted(values, reverse=True))
@@ -124,8 +129,8 @@ class BasisConstructionTests(unittest.TestCase):
         cc = np.stack([np.eye(d_c)])
         gc = np.stack([rng.normal(size=(d_c, d_c))])
         saliency = np.array([[0.1, 0.9, 0.4, 0.7, 0.2]])
-        bases, _ = MODULE.build_bases(cc, gc, saliency)
-        u = bases["coord"][0]
+        _, inverse, _ = MODULE.build_bases(cc, gc, saliency)
+        u = inverse["coord"][0]
         # Column j must be the unit vector of the j-th most salient channel.
         expected_order = np.argsort(-saliency[0])
         for j, channel in enumerate(expected_order):
@@ -194,6 +199,110 @@ class SamplingParityTests(unittest.TestCase):
             np.random.default_rng(self.risk.EVALUATION_SEED).choice(valid, size=32, replace=False)
         )
         self.assertFalse(np.array_equal(first, fresh))
+
+
+class PairedDifferenceTests(unittest.TestCase):
+    """Bases are measured on identical probes, so comparisons must use the pairing."""
+
+    def entry(self, values):
+        return {"r_star_by_sequence": {"0": values[:4], "1": values[4:]}}
+
+    def test_a_uniform_shift_is_detected_and_excludes_zero(self):
+        first = self.entry([16, 32, 48, 64, 16, 32, 48, 64])
+        second = self.entry([48, 64, 80, 96, 48, 64, 80, 96])
+        out = MODULE.paired_difference(first, second, 256, 2000, 7)
+        self.assertAlmostEqual(out["mean_difference"], -32.0)
+        self.assertTrue(out["excludes_zero"])
+        self.assertEqual(out["probe_fraction_first_lower"], 1.0)
+
+    def test_identical_bases_difference_to_exactly_zero(self):
+        same = self.entry([16, 32, 48, 64, 96, 128, 160, 192])
+        out = MODULE.paired_difference(same, same, 256, 2000, 7)
+        self.assertEqual(out["mean_difference"], 0.0)
+        self.assertEqual(out["probe_fraction_tied"], 1.0)
+        self.assertFalse(out["excludes_zero"])
+
+    def test_pairing_can_resolve_a_difference_that_marginal_spreads_hide(self):
+        """The point of pairing: large common variation, small consistent offset."""
+        base = [16, 96, 192, 256, 32, 128, 224, 256]
+        first = self.entry(base)
+        second = self.entry([v + 16 for v in base])
+        out = MODULE.paired_difference(first, second, 256, 2000, 7)
+        self.assertAlmostEqual(out["mean_difference"], -16.0)
+        self.assertTrue(out["excludes_zero"])
+        # the marginal spread of either arm dwarfs the 16-rank offset
+        self.assertGreater(float(np.std(base)), 3 * 16)
+
+
+class ComparisonBookkeepingTests(unittest.TestCase):
+    def test_pairs_follow_the_declared_basis_order_not_the_measured_order(self):
+        shuffled = {"grad": None, "model_metric": None, "coord": None, "pca": None}
+        self.assertEqual(
+            MODULE.comparison_pairs(shuffled),
+            [("pca", "coord"), ("grad", "coord"), ("model_metric", "coord"),
+             ("model_metric", "pca"), ("pca", "grad")],
+        )
+
+    def test_a_subset_drops_only_the_comparisons_it_cannot_make(self):
+        self.assertEqual(
+            MODULE.comparison_pairs({"pca": None, "grad": None}), [("pca", "grad")])
+        self.assertEqual(MODULE.comparison_pairs({"pca": None}), [])
+
+    def test_the_seed_of_a_comparison_does_not_depend_on_what_else_was_measured(self):
+        """A position-derived seed would silently change with the --bases subset."""
+        seed = MODULE.comparison_seed("pca", "coord", "maximum")
+        self.assertEqual(seed, MODULE.comparison_seed("pca", "coord", "maximum"))
+        self.assertNotEqual(seed, MODULE.comparison_seed("pca", "coord", "signed_mean"))
+        self.assertNotEqual(seed, MODULE.comparison_seed("grad", "coord", "maximum"))
+        self.assertNotEqual(seed, MODULE.comparison_seed("coord", "pca", "maximum"))
+
+
+class ModelMetricBasisTests(unittest.TestCase):
+    """The frame that minimises reconstruction error as the model actually sees it."""
+
+    def setUp(self):
+        rng = np.random.default_rng(21)
+        self.d_c, self.d_out, self.n = 12, 20, 2000
+        self.w1 = rng.normal(size=(self.d_out, self.d_c))
+        self.w2 = rng.normal(size=(self.d_out, self.d_c))
+        latents = rng.normal(size=(self.n, self.d_c)) @ rng.normal(size=(self.d_c, self.d_c))
+        self.latents = latents
+        self.cc = latents.T @ latents / self.n
+
+    def transform(self):
+        return MODULE.model_metric_transform(self.cc, (self.w1, self.w2))
+
+    def test_forward_and_inverse_compose_to_the_identity(self):
+        forward, inverse, _ = self.transform()
+        np.testing.assert_allclose(inverse @ forward, np.eye(self.d_c), atol=1e-8)
+        np.testing.assert_allclose(forward @ inverse, np.eye(self.d_c), atol=1e-8)
+
+    def output_error(self, forward, inverse, keep):
+        coords = self.latents @ forward.T
+        coords[:, keep:] = 0.0
+        residual = self.latents - coords @ inverse.T
+        return (np.linalg.norm(residual @ self.w1.T) ** 2
+                + np.linalg.norm(residual @ self.w2.T) ** 2) / self.n
+
+    def test_truncation_cost_equals_the_predicted_eigenvalue_tail(self):
+        forward, inverse, spectrum = self.transform()
+        for keep in (2, 5, 9):
+            self.assertAlmostEqual(
+                self.output_error(forward, inverse, keep), spectrum[keep:].sum(), places=6)
+
+    def test_it_beats_plain_pca_on_output_space_error(self):
+        forward, inverse, _ = self.transform()
+        values, vectors = np.linalg.eigh(self.cc)
+        pca = vectors[:, np.argsort(-values)]
+        for keep in (2, 5, 9):
+            self.assertLess(
+                self.output_error(forward, inverse, keep),
+                self.output_error(pca.T, pca, keep),
+            )
+
+    def test_it_is_not_orthogonal_so_it_is_a_frame_change_not_a_rotation(self):
+        forward, _, _ = self.transform()
+        self.assertFalse(np.allclose(forward @ forward.T, np.eye(self.d_c), atol=1e-6))
 
 
 if __name__ == "__main__":
