@@ -40,6 +40,11 @@ doubt, trust the manuscript over any single note here.
   whole file, not just the first half.
 - `horizon_capacity_prediction3.md` -- theory prediction 3 (matched-prefix horizon sweep), confirmed
   at three scales from already-published artifacts plus a T4 extension to h=128.
+- `low_rank_does_not_mean_compressible.md` -- **bounds the basis result.** On public
+  pretrained checkpoints (GPT-2, GPT-2 medium) the coordinate-basis overstatement is only
+  1.1x, not the 1.65-3.2x seen here, and no fixed linear projection compresses the cache much
+  below 50 of 64 dimensions even when 95% of the key energy sits in 8 directions. Read it
+  alongside the two basis notes below; it is the control that keeps them honest.
 - `basis_dependence_prediction7.md` -- theory prediction 7 (basis dependence). **A negative result
   for Section 5.1's headline rates**: rotating the latent basis cuts the worst-offset required rate
   by 50-54 pp at all three scales.

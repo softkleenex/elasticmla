@@ -140,6 +140,21 @@ choice moves the required rate by ~50 pp, the first-order-versus-reconstruction 
 10-12 pp, isolated-versus-joint labelling by single-digit percentages of the effect, and refining
 the reconstruction metric by under a point.
 
+### F. Scope control on the basis result (done, and it bites)
+
+The basis finding was tested on public pretrained checkpoints and does **not** generalise:
+GPT-2 and GPT-2 medium give a 1.09-1.14x coordinate-basis overstatement against the 1.65-3.2x
+measured here. Chasing the reason produced a stronger result than the one that failed --
+no fixed linear projection (coordinate, principal, or the score-optimal oblique frame)
+compresses those caches much below 50 of 64 dimensions, even though GPT-2 medium holds 94.9%
+of its key energy in 8 directions. Low-rank second moments do not imply a compressible KV
+cache. See `notes/low_rank_does_not_mean_compressible.md`.
+
+Two consequences for the manuscript. The Section 5.1/Section 6 basis material must state that
+the effect is measured on this project's models and does not transfer to public checkpoints.
+And the most economical explanation -- that 3,000-step TinyStories models are unrepresentatively
+compressible -- is a caution about the whole empirical base, not only about this measurement.
+
 ## Recommended next action
 
 Package D is now done through the append-in-place fix: 168-201x -> ~3x (vectorization) -> 2.4x
