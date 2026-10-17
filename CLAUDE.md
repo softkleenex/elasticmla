@@ -18,7 +18,9 @@ has current status and the recommended next action — **read that first when re
 
 ```bash
 uv sync                                             # environment (Python 3.11)
-uv run python -m unittest discover -s tests         # full suite (49 tests, ~1s, CPU only)
+uv run python -m unittest discover -s tests         # full suite (108 tests, ~10s, CPU only;
+                                                    # test_token_type_uses_only_current_id needs
+                                                    # network on first run for the tiktoken vocab)
 uv run python -m unittest tests.test_tiered_router  # one module
 uv run python -m unittest tests.test_tiered_router.TieredRouterTest.test_name   # one test
 
@@ -72,6 +74,16 @@ Eleven scripts in strict dependency order, enumerated in `README.md`. The shape 
 → `evaluate_joint_rollout_sweep` → `confirm_fresh_contextual_router` →
 `audit_*` + `evaluate_causal_heuristic_routers`} and `benchmark_cache_memory_latency` on the side.
 
+A second group of scripts, outside the eleven-step list, tests the theory memo's falsifiable
+predictions (`notes/theory_contextual_tail_rate.md`): `analyze_horizon_capacity` (prediction 3),
+`analyze_pair_interaction` (5), `analyze_basis_dependence` (7), then `analyze_kv_basis` and
+`analyze_public_kv_basis` (does the basis effect hit a plain per-head KV cache, and public GPT-2
+checkpoints). Most of them load `analyze_risk_capacity_spectrum.py` as a module via `importlib`
+(registered as `risk_v5`) and reuse its functions, so a change there changes them too. The
+basis result is a **negative result for Section 5.1's headline rates and does not transfer to
+public checkpoints** (`notes/low_rank_does_not_mean_compressible.md`); keep both halves together
+whenever it is quoted.
+
 Results live in one directory per configuration: `experiments/exp{0,1,2}_rank_variance*/` and
 `experiments/contextual_router_{30m,122m,250m}/`. Within a router directory, `joint_lambda_*`
 files are the **coarse** tier grid and `fine_lambda_*` / `*_fine.json` are the **fine** grid —
@@ -106,9 +118,10 @@ These exist because the paper's credibility rests on them.
 ## Conventions
 
 - **Two code styles, both intentional.** `code/` and `tests/` are ordinary PEP 8 with type hints
-  and docstrings. `experiments/` scripts are deliberately compressed (one-space indent,
-  semicolon-joined statements, packed lines). Match the file you are editing; do not reformat
-  experiment scripts.
+  and docstrings. The original pipeline scripts in `experiments/` are deliberately compressed
+  (one-space indent, semicolon-joined statements, packed lines); the newer prediction/basis
+  `analyze_*` scripts are PEP 8 with long module docstrings. Match the file you are editing; do
+  not reformat either kind.
 - Device selection is explicit everywhere (`--device cuda|mps|cpu`), never inferred silently in
   confirmatory scripts.
 - Seeds are fixed and recorded in output JSON; determinism is checked by
@@ -125,3 +138,7 @@ Regenerate the 30M data with `experiments/prepare_data.py` (TinyStories, GPT-2 B
 is genuinely running five minutes after launch (scheduler `Running` alone is not a health check),
 and **never leave cloud resources running between sessions** (check `lightning studio list`,
 `lightning job list`, `kaggle kernels status <name>` before finishing).
+
+`master` has been ahead of `origin/master` with unpushed commits (a past network outage blocked
+the push and a fresh `tectonic` rebuild). Check `git status -sb`; push only with the user's
+approval, and rebuild the PDF before quoting a page count.
