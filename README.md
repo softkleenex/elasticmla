@@ -56,12 +56,9 @@ alignment artifact, stress-tested against (and not confirmed on) public GPT-2 ch
 `notes/submission_readiness_roadmap.md` for exactly what is done, what remains, and the
 recommended next action -- read that file first if resuming work in a new session. **As of this
 commit, nothing in this repository has been submitted to any external venue (no arXiv, no
-conference/workshop, no OpenReview).** As of the documentation pass that added this paragraph, the
-14 commits from `f465c34` to `10f1580` were still **unpushed** to `origin/master` (blocked by a
-local DNS/network outage that also prevented a fresh `tectonic` rebuild to re-verify page count and
-table layout after the basis-dependence additions) -- check `git status -sb` and push once network
-access is confirmed (`git fetch origin` succeeding is a good test), then rebuild and spot-check the
-PDF before treating the current page/layout state as verified.
+conference/workshop, no OpenReview).** Those commits were pushed to `origin/master` on 2026-10-17
+after a fresh `tectonic` rebuild: 15 pages, no LaTeX errors, no overfull boxes, and every page
+spot-checked for table/figure layout.
 
 ## Repository layout
 

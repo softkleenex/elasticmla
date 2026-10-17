@@ -41,6 +41,9 @@ doubt, trust the manuscript over any single note here.
   that **is** reflected in the manuscript.
 - `horizon_capacity_prediction3.md` -- theory prediction 3 (matched-prefix horizon sweep), confirmed
   at three scales from already-published artifacts plus a T4 extension to h=128.
+- `kv_cache_basis_generalization.md` -- the coordinate-basis measurement bias is not specific to
+  the MLA latent: per-head truncation of an ordinary KV cache overstates the requirement by
+  1.65-3.2x at all three scales of this project's models.
 - `low_rank_does_not_mean_compressible.md` -- **bounds the basis result.** On public
   pretrained checkpoints (GPT-2, GPT-2 medium) the coordinate-basis overstatement is only
   1.1x, not the 1.65-3.2x seen here, and no fixed linear projection compresses the cache much

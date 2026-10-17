@@ -178,7 +178,8 @@ single largest remaining latency item (45% of the packed step on MPS per Package
 but a design change that should be scoped before it is started, since it trades the persistent-byte
 saving's relevance at decode time against further speed. Package C (more seeds, a second domain, a
 >=1B checkpoint) requires a resourcing decision (days of paid GPU time) rather than more
-engineering effort and should be scoped explicitly before starting. **Before any of the above: push
-the 14 local, untested-by-a-fresh-reviewer commits from `f465c34` to `10f1580` to `origin/master`
-once network access is available, and consider a second independent review pass on the basis-
-dependence material given its significance to the paper's headline claim.**
+engineering effort and should be scoped explicitly before starting. The commits from `f465c34`
+to `10f1580` were pushed to `origin/master` on 2026-10-17 after a fresh 15-page `tectonic`
+rebuild (no errors, no overfull boxes). **Still outstanding before any of the above: a second
+independent review pass on the basis-dependence material, given its significance to the paper's
+headline claim -- those commits have not yet had a fresh-reviewer pass.**
