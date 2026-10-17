@@ -2,13 +2,17 @@
 
 ## Honest current tier
 
-With three scales (30M/122M/250M), a formal rate-allocation theory, a fully pre-registered
-routing evaluation at four scale/tier-grid configurations, causal-heuristic baselines, measured
-GPU memory/latency, an independent fresh-eyes review pass (bugs found and fixed), and a compiling
-LaTeX package, this is now solidly at **rigorous efficient-ML workshop / mechanistic-study**
-quality. It is still not a main-track MLSys/NeurIPS/ICLR submission: the main remaining blockers
+With three scales (30M/122M/250M), a formal rate-allocation theory (now including a basis-
+dependence ablation that qualifies the headline tail-rate numbers and was stress-tested, and found
+not to generalize, on public GPT-2 checkpoints), a fully pre-registered routing evaluation at four
+scale/tier-grid configurations, causal-heuristic baselines, measured GPU memory/latency (decode
+latency fixed from 168-201x down to ~2.4x), an independent fresh-eyes review pass (bugs found and
+fixed), and a compiling LaTeX package, this is now solidly at **rigorous efficient-ML workshop /
+mechanistic-study** quality -- arguably stronger than that given the basis-dependence self-
+critique. It is still not a main-track MLSys/NeurIPS/ICLR submission: the main remaining blockers
 are realistic domain/scale coverage beyond TinyStories/250M, multiple seeds per configuration, and
-an unfixed 168-201x decode-latency regression that blocks any systems/serving claim.
+a still-unremoved dense-reconstruction gather that keeps even the improved ~2.4x decode-latency
+regression from being a clean systems/serving claim.
 
 ## Claim architecture (status)
 
@@ -16,19 +20,23 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
    (Section 3.2); exact cache-byte affinity (Proposition 1); risk-capacity ordering across
    upper-tail loss criteria (Proposition 2); joint rate-distortion framing of the router objective;
    scope-limited straight-through-estimator statement. See `notes/theory_contextual_tail_rate.md`.
-2. **Mechanism -- DONE at 3 scales.** Tail-capacity premium (~0.65-0.69, nearly scale-invariant);
-   positive-part/cancellation diagnostic (mean-safe positions still exceed epsilon at 93-96% of
-   records, refuting a "rare spike" story). Horizon-law and pair-interaction residual audits from
-   the theory memo remain unimplemented (see Package A below).
+2. **Mechanism -- DONE at 3 scales, including the falsifiable predictions from the theory memo.**
+   Tail-capacity premium (~0.65-0.69, nearly scale-invariant); positive-part/cancellation
+   diagnostic (mean-safe positions still exceed epsilon at 93-96% of records, refuting a "rare
+   spike" story); horizon-length saturation (prediction 3); pair-interaction residual audit
+   (prediction 5, additivity falsified but the violation is local/modest and grows with scale);
+   and the basis-dependence ablation (prediction 7, see item 1 and Package A/F below).
 3. **Empirics -- DONE, mixed result honestly reported.** Contextual routing beats random and
    shuffled placement at 30M/122M/250M-fine but fails its own pre-registered criterion at
    250M-coarse; against causal heuristics (position, lexical, frequency, type) the router wins only
    3 of 16 scale/tier-grid comparisons. Global-budget (not just router-conditioned-budget) static
    policies and a learned orthogonal (PCA/SVD) nested basis are still not compared (Package B).
-4. **Systems -- partially done.** Persistent cache-byte reduction and a small (3.5-4.2%) peak-memory
-   reduction are measured on a real T4 GPU (not just derived), but decode latency is 168-201x worse,
-   traced to two specific unvectorized Python loop sites. No serving-benefit claim is possible until
-   these are fixed (Package D).
+4. **Systems -- mostly done.** Persistent cache-byte reduction and a small (3.5-4.2%) peak-memory
+   reduction are measured on a real T4 GPU (not just derived). Decode latency, originally 168-201x
+   worse (traced to three unvectorized Python loop sites), is now ~2.4x worse after vectorizing
+   those loops and switching to an in-place packed-cache append; the remaining gap is the dense-
+   reconstruction gather before every attention call, a design question rather than an optimization
+   (Package D).
 
 ## Remaining work packages, in priority order
 
@@ -72,10 +80,11 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
   gives no reliable gain over plain PCA (wins by <1 pp at 30M/250M, indistinguishable at 122M, about
   half of probes tied). Which rotation is used matters far less than rotating at all. Comparisons
   are paired per-probe, since all four bases are measured on identical probes.
-- The manuscript now reports this in Section 5.1 and a Section 6 "Basis scope" limitation, keeping
-  the coordinate-basis numbers as the deployed ones. The abstract still states
-  74.07%/72.92%/76.03% without a basis qualifier; whether to hedge it there is an open editorial
-  call.
+- The manuscript reports this in Section 5.1, a Section 6 "Basis scope" limitation, and the
+  abstract (which states the coordinate-basis 74.07%/72.92%/76.03% figures *and* the rotated-basis
+  22-24% figures together, explicitly framed as "a basis ablation shows this tail requirement is
+  substantially a cost of that coordinate alignment"), keeping the coordinate-basis numbers as the
+  deployed ones throughout.
 
 ### B. Stronger controls (mostly done)
 - DONE: exact-histogram position, lexical-identity, token-frequency, and token-type controls at all
@@ -121,9 +130,11 @@ an unfixed 168-201x decode-latency regression that blocks any systems/serving cl
 - Still no comparison against optimized MHA/GQA/FlashMLA baselines, and peak memory/latency are
   only benchmarked at 30M/122M (not 250M).
 
-### E. Submission package -- DONE
-- `manuscript/draft.md` (source of truth) + `manuscript/latex/main.tex`/`main.pdf` (compiled,
-  13 pages, no LaTeX errors) via `manuscript/convert_to_latex.py`.
+### E. Submission package -- DONE, pending re-verification after the basis-dependence additions
+- `manuscript/draft.md` (source of truth) + `manuscript/latex/main.tex`/`main.pdf` (compiled with
+  no LaTeX errors via `manuscript/convert_to_latex.py`; page count has grown with the Section 5.1
+  and Section 6 basis-dependence material added since the last confirmed 13/14-page build -- rerun
+  `tectonic main.tex` and re-check for table/figure overflow before citing a specific page count).
 - Full reproducibility appendix: every result JSON carries checkpoint/data/policy/oracle SHA-256
   hashes; `audit_fresh_confirmation.py` and `audit_joint_training_replay.py` independently
   recompute every reported statistic and verify bit-exact deterministic retrains.
@@ -159,10 +170,15 @@ compressible -- is a caution about the whole empirical base, not only about this
 
 Package D is now done through the append-in-place fix: 168-201x -> ~3x (vectorization) -> 2.4x
 (in-place append plus hot-path guard hoisting), all measured on T4 and reflected in the manuscript.
-The next highest-value, still-bounded steps are: (1) **Package A**'s horizon-length sweep (reuses
-already-authenticated checkpoints/data, needs no new training), (2) extending the benchmark to 250M
-and adding a first MHA/GQA baseline comparison, or (3) removing the dense-reconstruction gather by
-computing the per-head key/value projections directly against the ragged packed buffer -- the
-largest remaining latency item, but a design change that should be scoped before it is started.
-Package C (more seeds, a second domain, a >=1B checkpoint) requires a resourcing decision (days of
-paid GPU time) rather than more engineering effort and should be scoped explicitly before starting.
+Package A is complete (predictions 3, 5, 7 all measured at three scales, bounded on public
+checkpoints). The next highest-value, still-bounded steps are: (1) extending the benchmark to 250M
+and adding a first MHA/GQA baseline comparison, or (2) removing the dense-reconstruction gather by
+computing the per-head key/value projections directly against the ragged packed buffer -- now the
+single largest remaining latency item (45% of the packed step on MPS per Package D's measurement),
+but a design change that should be scoped before it is started, since it trades the persistent-byte
+saving's relevance at decode time against further speed. Package C (more seeds, a second domain, a
+>=1B checkpoint) requires a resourcing decision (days of paid GPU time) rather than more
+engineering effort and should be scoped explicitly before starting. **Before any of the above: push
+the 14 local, untested-by-a-fresh-reviewer commits from `f465c34` to `10f1580` to `origin/master`
+once network access is available, and consider a second independent review pass on the basis-
+dependence material given its significance to the paper's headline claim.**

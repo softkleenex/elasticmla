@@ -32,12 +32,13 @@ doubt, trust the manuscript over any single note here.
   (succeeds), separates the tier-granularity confound from a pure scale effect, and gives the
   complete, correct 3-of-16 causal-heuristic tally across all four scale/tier configurations.
   **This is the authoritative source for the 250M and cross-scale causal-heuristic story.**
-- `measured_cache_memory_latency.md` -- three sections: the original T4 benchmark (168-201x decode
-  slowdown, root-caused to three Python loop sites); the post-vectorization T4 benchmark (~3x, same
-  cache-byte/peak-memory numbers, from a different Lightning job); and Update 3, the in-place
-  incremental append plus hot-path validation-sync removal (verified bit-identical, measured only
-  on MPS -- **not** comparable to the T4 figures and not yet reflected in the manuscript). Read the
-  whole file, not just the first half.
+- `measured_cache_memory_latency.md` -- three sections, read all of them: the original T4
+  benchmark (168-201x decode slowdown, root-caused to three Python loop sites); the
+  post-vectorization T4 benchmark (~3x, same cache-byte/peak-memory numbers, from a different
+  Lightning job); and Update 3, the in-place incremental append plus hot-path validation-sync
+  removal, with both an MPS development measurement and a later **paired T4 measurement**
+  (~3x -> ~2.4x at both 30M/122M, same GPU instance for before/after, bit-identical decode output)
+  that **is** reflected in the manuscript.
 - `horizon_capacity_prediction3.md` -- theory prediction 3 (matched-prefix horizon sweep), confirmed
   at three scales from already-published artifacts plus a T4 extension to h=128.
 - `low_rank_does_not_mean_compressible.md` -- **bounds the basis result.** On public

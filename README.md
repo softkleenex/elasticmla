@@ -11,10 +11,19 @@ is a compiled LaTeX version (regenerate via `uv run python manuscript/convert_to
 cd manuscript/latex && tectonic main.tex` after editing the markdown). Its headline claims, in
 order of how robust they are:
 
-1. **Risk-capacity spectrum (robust, three scales, does not involve the router).** Required
-   latent rate rises monotonically from ~8-9% of full width at a mean-loss criterion to ~73-76% at
-   a worst-offset criterion, with a nearly scale-invariant tail-capacity premium (~0.65-0.69). The
-   mean/tail gap comes from pervasive cancellation across the reuse horizon, not rare spikes.
+1. **Risk-capacity spectrum (robust, three scales, does not involve the router) -- but the
+   headline rates are basis-dependent, and we show this rather than hide it.** In the model's own
+   saliency-ordered coordinate axes, required latent rate rises monotonically from ~8-9% of full
+   width at a mean-loss criterion to ~73-76% at a worst-offset criterion, with a nearly
+   scale-invariant tail-capacity premium (~0.65-0.69); the mean/tail gap comes from pervasive
+   cancellation across the reuse horizon, not rare spikes. A basis ablation then shows rotating the
+   latent axes cuts the worst-offset rate to ~22-24% at every scale (50-54 points, non-overlapping
+   bootstrap intervals), i.e. most of the reported tail requirement is a cost of axis alignment,
+   not of the latent code itself -- *which* rotation barely matters, only rotating at all does. We
+   tried to generalize this as a correction to the wider KV-cache-compression literature's
+   measurement convention; it does **not** generalize cleanly to public GPT-2 checkpoints
+   (1.09-1.14x there vs. 1.65-3.2x on our own models), a negative result we report rather than
+   suppress (see `notes/low_rank_does_not_mean_compressible.md`).
 2. **Router beats random matched-budget allocation (real, but tier-grid-dependent).** True at
    30M and 122M; fails with a coarse tier grid at 250M and succeeds again with a finer grid at
    250M -- diagnosed and reported as a tier-resolution confound, not spun as a clean scale trend.
@@ -33,13 +42,26 @@ order of how robust they are:
 
 ## Current status snapshot
 
-As of commit `71634ad` plus the in-place-append T4 measurement (see `git log` for the latest):
-working tree clean, 54/54 unit tests pass, the LaTeX PDF compiles with no errors (14 pages).
-No cloud resources (Lightning studios/jobs, Kaggle kernels) are left running. An independent "naive fresh reviewer"
-pass (no prior context, spawned as a sub-agent) re-derived 15+ numbers from raw JSON and found one
-real P0 tally bug and one real P1 CI-rounding mismatch in the manuscript; both are fixed. See
+As of commit `10f1580` (see `git log` for the latest): working tree clean, 107/108 unit tests pass
+locally (the 108th, `test_token_type_uses_only_current_id`, needs network access to download the
+GPT-2 BPE vocab via `tiktoken` on first use and fails only when offline -- not a code issue). No
+cloud resources (Lightning studios/jobs, Kaggle kernels) are left running. An independent "naive
+fresh reviewer" pass (no prior context, spawned as a sub-agent) re-derived 15+ numbers from raw
+JSON and found one real P0 tally bug and one real P1 CI-rounding mismatch in the manuscript; both
+are fixed. Since then, further work (see `git log --oneline` for the 14 commits from `f465c34` to
+`10f1580`) added: an in-place packed-cache append cutting decode latency further (~3x -> 2.4x);
+horizon-length and pair-interaction tests of the theory memo's falsifiable predictions; and a full
+basis-dependence ablation showing the reported tail-capacity rates are substantially an axis-
+alignment artifact, stress-tested against (and not confirmed on) public GPT-2 checkpoints. See
 `notes/submission_readiness_roadmap.md` for exactly what is done, what remains, and the
-recommended next action -- read that file first if resuming work in a new session.
+recommended next action -- read that file first if resuming work in a new session. **As of this
+commit, nothing in this repository has been submitted to any external venue (no arXiv, no
+conference/workshop, no OpenReview).** As of the documentation pass that added this paragraph, the
+14 commits from `f465c34` to `10f1580` were still **unpushed** to `origin/master` (blocked by a
+local DNS/network outage that also prevented a fresh `tectonic` rebuild to re-verify page count and
+table layout after the basis-dependence additions) -- check `git status -sb` and push once network
+access is confirmed (`git fetch origin` succeeding is a good test), then rebuild and spot-check the
+PDF before treating the current page/layout state as verified.
 
 ## Repository layout
 
