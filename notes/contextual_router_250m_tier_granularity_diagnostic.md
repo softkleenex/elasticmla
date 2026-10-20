@@ -1,5 +1,8 @@
 # Diagnostic: tier granularity vs scale as the cause of the 250M confirmation result
 
+> **Correction (2026-10-20, `notes/code_review_2026-10_corrections.md`).** The causal-heuristic tally here (3/16) is withdrawn: the comparison was not byte-matched. Byte-matched: router 6/8/2 (W/T/L), both losses at 250M-coarse. Also: the 250M-fine confirmation reused the 250M-coarse fresh windows (same seed and exclusions); and 250M saw 55.3M training tokens, not 288M.
+
+
 ## Motivation
 
 The initial 250M contextual-router replication used the same coarse 4-tier grid {32,128,320,512}

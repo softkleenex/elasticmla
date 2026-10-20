@@ -1,5 +1,8 @@
 # Causal heuristic baselines beat or match the learned contextual router
 
+> **Correction (2026-10-20, `notes/code_review_2026-10_corrections.md`).** Withdrawn as a placement comparison: each rule ran at its own validation-selected bytes, which differed from the router's by -6.5% to +13.0%. Byte-matched results: router 6 wins / 8 ties / 2 losses (rule chooses its own histogram at the router's exact rank total).
+
+
 ## Setup
 
 Position, lexical-identity, token-rarity, and token-type scores are estimated **only** from the

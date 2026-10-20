@@ -1,0 +1,53 @@
+{
+  "router_loss_max_abs_drift_vs_stored": 4.76837158203125e-07,
+  "fresh": {
+    "position": {
+      "mean_loss": 1.9029954175154369,
+      "mean_router_loss": 1.8897378544012706,
+      "mean_full_loss": 1.7238474786281586,
+      "mean_bytes": 8046776.0,
+      "mean_router_minus_control": -0.01325756311416626,
+      "router_minus_control_bootstrap_95pct_ci": [
+        -0.020839184895157813,
+        -0.004966515054305397
+      ],
+      "router_better_sequence_count": 18
+    },
+    "lexical_identity": {
+      "mean_loss": 1.8875405838092167,
+      "mean_router_loss": 1.8897378544012706,
+      "mean_full_loss": 1.7238474786281586,
+      "mean_bytes": 8046776.0,
+      "mean_router_minus_control": 0.0021972705920537314,
+      "router_minus_control_bootstrap_95pct_ci": [
+        -0.005266007656852404,
+        0.009985935812195142
+      ],
+      "router_better_sequence_count": 9
+    },
+    "token_rarity": {
+      "mean_loss": 1.8898012538750966,
+      "mean_router_loss": 1.8897378544012706,
+      "mean_full_loss": 1.7238474786281586,
+      "mean_bytes": 8046776.0,
+      "mean_router_minus_control": -6.33994738260905e-05,
+      "router_minus_control_bootstrap_95pct_ci": [
+        -0.008449882020552952,
+        0.00899017925063769
+      ],
+      "router_better_sequence_count": 15
+    },
+    "token_type": {
+      "mean_loss": 1.9011123180389404,
+      "mean_router_loss": 1.8897378544012706,
+      "mean_full_loss": 1.7238474786281586,
+      "mean_bytes": 8046776.0,
+      "mean_router_minus_control": -0.011374463637669882,
+      "router_minus_control_bootstrap_95pct_ci": [
+        -0.01891039398809274,
+        -0.0038555361330509276
+      ],
+      "router_better_sequence_count": 16
+    }
+  }
+}

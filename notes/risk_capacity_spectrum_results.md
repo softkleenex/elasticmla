@@ -1,5 +1,8 @@
 # Validated risk-capacity spectrum and cancellation mechanism (30M/122M/250M)
 
+> **Correction (2026-10-20, `notes/code_review_2026-10_corrections.md`).** The 250M column below was computed on a rank grid that jumped 384 -> 512. Corrected 250M: k=16/8/4/2/1 = 22.12/38.60/54.16/64.95/71.78%, premium 0.6464 [0.6257, 0.6665]; mean and positive-part diagnostic unchanged.
+
+
 ## Status
 
 All three scales completed on Lightning T4 GPUs (`elasticmla-risk-v5-30m-0819-v2`,

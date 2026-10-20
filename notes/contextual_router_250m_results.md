@@ -1,5 +1,8 @@
 # 250M contextual router: full pipeline results (oracle, training, confirmation, heuristics)
 
+> **Correction (2026-10-20, `notes/code_review_2026-10_corrections.md`).** The causal-heuristic table here is withdrawn (not byte-matched; see the correction note).
+
+
 ## Status
 
 Full pipeline replicated at 250M, mirroring 30M/122M exactly: Exp0-v4 rank-variance analysis ->

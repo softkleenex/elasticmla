@@ -1,5 +1,8 @@
 # Basis dependence of the nested latent code: theory prediction 7 (2026-09-13)
 
+> **Correction (2026-10-20, `notes/code_review_2026-10_corrections.md`).** The 250M row below used a rank grid that jumped 384 -> 512. Corrected 250M: coord max 71.78%, pca 21.89%, model_metric 21.33%; paired pca-coord -49.9 pp [-51.3, -48.5]; model_metric-pca -0.57 [-1.03, -0.12]; probes needing all 512 channels 77 (coord) vs 0 (pca); any-rise nonmonotonicity 78.0% -> 98.4%. Also: 'increases nonmonotonicity' means more probes with any rise -- by mean violation magnitude rotated bases are lower at 30M and 122M; the full-rank rotation check is <= 3.1e-5 over all runs (not 2.4e-5); the coord arm reproduces the published endpoints and histograms, not every intermediate tail count. Scope: the effect does not transfer to public GPT-2 checkpoints (low_rank_does_not_mean_compressible.md).
+
+
 ## What prediction 7 says
 
 From `notes/theory_contextual_tail_rate.md`, Section 7:

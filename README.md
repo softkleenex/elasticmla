@@ -14,26 +14,27 @@ order of how robust they are:
 1. **Risk-capacity spectrum (robust, three scales, does not involve the router) -- but the
    headline rates are basis-dependent, and we show this rather than hide it.** In the model's own
    saliency-ordered coordinate axes, required latent rate rises monotonically from ~8-9% of full
-   width at a mean-loss criterion to ~73-76% at a worst-offset criterion, with a nearly
-   scale-invariant tail-capacity premium (~0.65-0.69); the mean/tail gap comes from pervasive
+   width at a mean-loss criterion to ~72-74% at a worst-offset criterion, with a nearly
+   scale-invariant tail-capacity premium (0.651/0.647/0.646); the mean/tail gap comes from pervasive
    cancellation across the reuse horizon, not rare spikes. A basis ablation then shows rotating the
-   latent axes cuts the worst-offset rate to ~22-24% at every scale (50-54 points, non-overlapping
-   bootstrap intervals), i.e. most of the reported tail requirement is a cost of axis alignment,
+   latent axes cuts the worst-offset rate to ~22-24% at every scale (about 50 points, paired
+   intervals far from zero), i.e. most of the reported tail requirement is a cost of axis alignment,
    not of the latent code itself -- *which* rotation barely matters, only rotating at all does. We
    tried to generalize this as a correction to the wider KV-cache-compression literature's
    measurement convention; it does **not** generalize cleanly to public GPT-2 checkpoints
-   (1.09-1.14x there vs. 1.65-3.2x on our own models), a negative result we report rather than
+   (coord/pca 1.06-1.30x there vs. 1.65-3.22x on our own models), a negative result we report rather than
    suppress (see `notes/low_rank_does_not_mean_compressible.md`).
 2. **Router beats random matched-budget allocation (real, but tier-grid-dependent).** True at
    30M and 122M; fails with a coarse tier grid at 250M and succeeds again with a finer grid at
    250M -- diagnosed and reported as a tier-resolution confound, not spun as a clean scale trend.
-3. **Router does not beat simple causal heuristics (the main negative finding).** Across four
-   tested scale/tier-grid configurations, the router shows a confident win in only 3 of 16
-   scale-heuristic comparisons (all at coarse tier grids: 2 at 30M, 1 at 250M-coarse), and loses
-   more decisively at finer tier resolution.
+3. **At equal bytes the router beats position/type heuristics but only ties token identity.**
+   Holding each causal rule to exactly the router's per-sequence bytes: 6 router wins, 8 ties,
+   2 losses (both at 250M-coarse) over 16 scale-heuristic comparisons. A frequency-smoothed
+   per-token lookup table ties the router, so context beyond the current token is not shown to
+   help. (An earlier, non-byte-matched comparison reported 3 wins / 9 losses; it is withdrawn.)
 4. **Decode latency was 168-201x slower for the packed path; two fixes cut this to ~2.4x
-   (measured on T4, fixed).** Persistent cache bytes and a small peak-memory reduction were always
-   real. The latency regression was root-caused first to three unvectorized per-token Python loops
+   (measured on T4, fixed).** Persistent cache bytes (67.4%/59.6% of full MLA) were always real;
+   peak memory is essentially unchanged (an earlier 3.5-4.2% reduction was a harness artifact). The latency regression was root-caused first to three unvectorized per-token Python loops
    (168-201x -> ~3x), then to the cache repacking its whole history on every decode step and
    re-running its validation guards per step (~3x -> 2.4x, paired T4 measurement, decode output
    bit-identical). The residual is the dense reconstruction before each attention call, which is
@@ -41,6 +42,13 @@ order of how robust they are:
    `notes/measured_cache_memory_latency.md` for all three stages.
 
 ## Current status snapshot
+
+**2026-10-20: a pre-submission code review found and fixed real errors** -- a 384 -> 512 gap in the
+250M rank grid (250M max rate 76.03% -> 71.78%, premium 0.689 -> 0.646), a causal-heuristic
+comparison that was not byte-matched (Section 5.4 reversed), and a benchmark-harness artifact
+behind the reported peak-memory reduction -- plus several missing disclosures. Everything affected
+was rerun (Kaggle T4 / local MPS) and the manuscript, notes and figures updated. Full account:
+`notes/code_review_2026-10_corrections.md`. The paragraph below describes the state before it.
 
 As of commit `10f1580` (see `git log` for the latest): working tree clean, 107/108 unit tests pass
 locally (the 108th, `test_token_type_uses_only_current_id`, needs network access to download the
@@ -91,7 +99,13 @@ spot-checked for table/figure layout.
 
 1. `experiments/train_exp0.py` -- trains the 30M base MLA checkpoint (30M is the only checkpoint
    trained locally on Apple Silicon MPS; 122M and 250M were trained on Kaggle via
-   `code/kaggle_notebook/` and `code/kaggle_notebook_exp2_250m/`).
+   `code/kaggle_notebook/` and `code/kaggle_notebook_exp2_250m/`). Reproducing the checkpoints:
+   the 122M checkpoint (step 8000, no stored `train_config`) came from
+   `code/kaggle_notebook/train_kaggle.py` as of commit `aa5caee`, where `MAX_STEPS = 8000` was
+   hard-coded; the current file defaults to 1500, so set `MAX_STEPS=8000`. The 250M checkpoint
+   stores its `train_config` (3000 steps x batch 4 x grad-accum 12 x 384 tokens = 55.3M tokens).
+   `train_exp0.py` seeds torch but not numpy's batch sampler, so the 30M run is pinned by its
+   checkpoint hash, not bit-reproducible.
 2. `experiments/analyze_rank_variance_v4.py` -- corrected per-token future-loss rank intervention
    (fixes the off-by-one horizon bug documented in `notes/exp0_v3_corrected_methodology.md`).
    Produces the `exp{0,1,2}_..._122m/250m}/results_v4/exp0_v4_{summary,records}.json` pair used

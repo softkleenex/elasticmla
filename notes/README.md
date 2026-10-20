@@ -21,6 +21,13 @@ doubt, trust the manuscript over any single note here.
 
 ## Current, cited by the manuscript
 
+- `code_review_2026-10_corrections.md` -- **read first.** The October 2026 pre-submission code
+  review: a 250M rank-grid gap (changed the 250M spectrum, basis and horizon numbers), a
+  non-byte-matched causal-heuristic comparison (Section 5.4 reversed: router 6 wins / 8 ties /
+  2 losses), a peak-memory harness artifact, a mislabeled pair-interaction figure, and missing
+  disclosures. It supersedes the affected numbers in every note below; each affected note carries
+  a dated correction banner.
+
 - `exp0_v4_scale_comparison.md`, `exp1_122m_v4_results.md` -- corrected v4 mean/max endpoints.
 - `risk_capacity_spectrum_results.md` -- the full three-scale risk-capacity spectrum (Section 5.1).
 - `theory_contextual_tail_rate.md` -- the formal rate-allocation theory (Propositions 1-2).
@@ -30,8 +37,9 @@ doubt, trust the manuscript over any single note here.
   criterion) and its causal-heuristic table. Historically confounded with scale; see next entry.
 - `contextual_router_250m_tier_granularity_diagnostic.md` -- adds the 250M-fine confirmation
   (succeeds), separates the tier-granularity confound from a pure scale effect, and gives the
-  complete, correct 3-of-16 causal-heuristic tally across all four scale/tier configurations.
-  **This is the authoritative source for the 250M and cross-scale causal-heuristic story.**
+  3-of-16 causal-heuristic tally across all four scale/tier configurations (withdrawn, see below).
+  It was the source for the cross-scale causal-heuristic story until that comparison was found not
+  to be byte-matched; the byte-matched results are in `code_review_2026-10_corrections.md`.
 - `measured_cache_memory_latency.md` -- three sections, read all of them: the original T4
   benchmark (168-201x decode slowdown, root-caused to three Python loop sites); the
   post-vectorization T4 benchmark (~3x, same cache-byte/peak-memory numbers, from a different

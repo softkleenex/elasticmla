@@ -1,5 +1,8 @@
 # Measured GPU cache memory and decode latency (T4, real CUDA)
 
+> **Correction (2026-10-20, `notes/code_review_2026-10_corrections.md`).** The peak-memory reductions reported here (3.5-4.2% for the router) were a benchmark-harness artifact: the full and uniform paths kept their prefill logits referenced into decode, the router path did not. After the fix, router peak is 99.7% (30M) / 99.3% (122M) of full MLA (`measured_cache_memory_latency_review_rerun.json`). Cache bytes and the latency regressions are unaffected; stage 1's 30M dense baseline was 8.41 ms (not 8.50), and at 30M the paired run's dense control moved 1.1%. The stage-3 paired harness `run_paired_bench.py` was never committed.
+
+
 ## Setup
 
 `experiments/benchmark_cache_memory_latency.py` runs a real incremental prefill+decode loop on a

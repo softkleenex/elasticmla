@@ -1,5 +1,8 @@
 # The coordinate-basis measurement bias is not specific to MLA (2026-09-17)
 
+> **Correction (2026-10-20, `notes/code_review_2026-10_corrections.md`).** Two qualifications: only the content key (W_UK c) and value are truncated, never the RoPE key, so this is not quite an 'ordinary' per-head KV cache; and the coord/pca ratio peaks at rank 48 at 30M/122M (20.0x, 10.8x) but at rank 32 at 250M (8.8x).
+
+
 ## Why this experiment exists
 
 `notes/basis_dependence_prediction7.md` shows that measuring how far an MLA latent can be

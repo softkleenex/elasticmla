@@ -1,5 +1,8 @@
 # Low-rank second moments do not make a KV cache compressible (2026-09-18)
 
+> **Correction (2026-10-20, `notes/code_review_2026-10_corrections.md`).** The '1.09-1.14x vs 1.65-3.2x' comparison mixes denominators (coord/task_aware at 0.05-0.10 nats vs coord/pca at 0.05-0.5 nats). Like-for-like coord/pca over 0.05-0.5 nats: GPT-2 1.06-1.21x, GPT-2-medium 1.09-1.30x, vs 1.65-3.22x on our models. '94.9% of key energy in 8 directions' is layer 0 head 0 of GPT-2-medium only; over all 384 heads the top-8 share averages 76.6% (range 40-99%). 'The most anisotropic model had the least benefit' is reversed: GPT-2-medium gains more than GPT-2. The 1.88 vs 1.43 pp energy-capture figure has no artifact in the repository.
+
+
 ## How this started, and what it turned into
 
 `notes/kv_cache_basis_generalization.md` found that measuring KV-cache

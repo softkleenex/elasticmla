@@ -1,5 +1,8 @@
 # Pair-interaction residuals: theory prediction 5 (2026-09-16)
 
+> **Correction (2026-10-20, `notes/code_review_2026-10_corrections.md`).** 9.09/12.17/13.17% are separation-1 means pooled over the three ranks, not 'the heaviest truncation' (rank 16 alone: 16.79/23.28/22.78%). The ranks are fixed absolute values and so a different fraction of d_c per scale; at rank 16 the 250M value (7.98%) is below 122M (8.41%). The 'grows with scale' conclusion is withdrawn.
+
+
 ## What prediction 5 says
 
 From `notes/theory_contextual_tail_rate.md`, Section 7:

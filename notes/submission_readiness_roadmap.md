@@ -1,5 +1,16 @@
 # Submission-readiness roadmap (updated)
 
+> **2026-10-20 update -- read before the rest.** A pre-submission code review
+> (`notes/code_review_2026-10_corrections.md`) found real errors that the earlier "DONE" items below
+> did not catch: the 250M rank grid jumped 384 -> 512 (250M max rate 76.03% -> 71.78%, premium
+> 0.689 -> 0.646, basis fall 53.9 -> 49.9 pp), the causal-heuristic comparison was not byte-matched
+> (router now 6 wins / 8 ties / 2 losses; ties token identity), and the peak-memory reduction was a
+> harness artifact (now 0.3-0.7%). All were rerun and the manuscript (now 16 pages), notes and
+> Figure 2 updated; numbers below that conflict with that note are superseded. The basis material
+> has now had its independent review. Still open from the review: nothing that changes a number;
+> Package B/C/D items below are unchanged. Next decision is the venue (a workshop, per the tier
+> assessment below), which sets the page limit -- the draft must shrink from 16 pages.
+
 ## Honest current tier
 
 With three scales (30M/122M/250M), a formal rate-allocation theory (now including a basis-

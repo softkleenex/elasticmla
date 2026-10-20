@@ -1,5 +1,8 @@
 # Matched-prefix horizon sweep: theory prediction 3 (2026-09-12)
 
+> **Correction (2026-10-20, `notes/code_review_2026-10_corrections.md`).** All 250M values below came from a rank grid that jumped 384 -> 512. Corrected 250M worst-offset curve: published h=1..32 = 18.61/40.80/54.74/63.92/69.00/71.78%; extended h=1..128 = 17.70/40.38/53.60/63.30/68.69/71.61/73.12/74.28% (final doubling +1.16 pp, h=16->32 +2.78 pp). Prediction 3 and the position-control conclusion (max shift 1.73 pp, premium <= 0.009) are unchanged.
+
+
 ## What prediction 3 says
 
 From `notes/theory_contextual_tail_rate.md`, Section 7:

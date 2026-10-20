@@ -18,7 +18,7 @@ has current status and the recommended next action — **read that first when re
 
 ```bash
 uv sync                                             # environment (Python 3.11)
-uv run python -m unittest discover -s tests         # full suite (108 tests, ~10s, CPU only;
+uv run python -m unittest discover -s tests         # full suite (113 tests, ~10s, CPU only;
                                                     # test_token_type_uses_only_current_id needs
                                                     # network on first run for the tiktoken vocab)
 uv run python -m unittest tests.test_tiered_router  # one module
@@ -103,9 +103,12 @@ These exist because the paper's credibility rests on them.
    **committed before** the confirmation runs. Never retune a policy, tier grid, λ, or threshold
    after seeing fresh-window results. The 24 fresh windows are confirmatory and single-use; the
    older 4 `test` windows are exploratory and must be labeled as such.
-3. **Report negative results as negative.** The router winning only 3 of 16 causal-heuristic
-   comparisons, and the 250M-coarse confirmation failing its own criterion, are findings, not
+3. **Report negative results as negative.** The router only tying a per-token identity rule at
+   equal bytes, and the 250M-coarse confirmation failing its own criterion, are findings, not
    problems to engineer away. Don't reframe a tier-resolution confound as a scale trend.
+   Every baseline comparison must be at exactly the router's bytes -- the earlier "3 of 16"
+   heuristic tally was not, and was withdrawn (`notes/code_review_2026-10_corrections.md`).
+   Rank grids must reach `d_c` without gaps (`default_rank_grid`).
 4. **`manuscript/draft.md` is the source of truth.** Never hand-edit `manuscript/latex/main.tex` —
    it is generated. The converter is purpose-built for this document's markdown conventions
    (see `manuscript/latex/README.md`); if you add a new construct to the draft, extend the
