@@ -47,10 +47,32 @@ class JointRolloutRouterTest(unittest.TestCase):
             self.base, self.model.router, self.idx,
             [4, 8, 12, 16], keep,
         )
-        loss = logits.square().mean() + 0.1 * expected.mean()
-        loss.backward()
-        self.assertTrue(any(p.grad is not None for p in self.model.router.parameters()))
+        # Backpropagate the LM term only: the rank penalty (`expected`) is a smooth
+        # function of the soft probabilities and would reach the router even if the
+        # straight-through path were broken (gate = hard one-hot, no gradient).
+        logits.square().mean().backward()
+        grads = [p.grad for p in self.model.router.parameters() if p.grad is not None]
+        self.assertTrue(grads)
+        self.assertGreater(sum(float(g.abs().sum()) for g in grads), 0.0)
         self.assertTrue(all(p.grad is None for p in self.base.parameters()))
+        self.assertTrue(expected.requires_grad)
+
+    def test_hard_gate_without_straight_through_gives_router_no_lm_gradient(self):
+        """Control for the test above: it must fail if the estimator is removed."""
+        keep = build_keep(
+            [order.tolist() for order in self.orders],
+            [4, 8, 12, 16], torch.device("cpu"), torch.float32,
+        )
+        x = self.base.blocks[0](self.base.drop(self.base.tok_emb(self.idx)))
+        probs = torch.softmax(self.model.router(self.base.blocks[1].ln1(x)), dim=-1)
+        gate = torch.nn.functional.one_hot(probs.argmax(-1), 4).to(probs.dtype)  # no ST term
+        for i, block in enumerate(self.base.blocks[1:], start=1):
+            x = block(x, rank_mask=torch.einsum("btk,kc->btc", gate, keep[i]))
+        out = self.base.head(self.base.ln_f(x)).square().mean()
+        self.assertFalse(out.requires_grad and any(
+            g is not None and float(g.abs().sum()) > 0
+            for g in torch.autograd.grad(out, list(self.model.router.parameters()), allow_unused=True)
+        ))
 
     def test_fresh_start_sampler_excludes_all_prior_spans(self):
         old = [6000, 9000, 12000]

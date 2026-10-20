@@ -82,6 +82,13 @@ def normalize_rank_grid(ranks: Iterable[int], d_c: int) -> list[int]:
     return grid
 
 
+def default_rank_grid(d_c: int) -> list[int]:
+    """DEFAULT_RANK_GRID continued in steps of 32 up to ``d_c`` (no 384 -> 512 jump)."""
+    step = DEFAULT_RANK_GRID[-1] - DEFAULT_RANK_GRID[-2]
+    extension = range(DEFAULT_RANK_GRID[-1] + step, d_c, step)
+    return normalize_rank_grid([*DEFAULT_RANK_GRID, *extension], d_c)
+
+
 def valid_probe_positions(sequence_length: int, horizon: int) -> np.ndarray:
     """Source positions whose next-token losses have the exact horizon.
 
@@ -324,7 +331,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--bootstrap-draws", type=int, default=2000)
     parser.add_argument("--epsilon", type=float, default=0.10)
     parser.add_argument("--nonmonotonic-tolerance", type=float, default=0.0)
-    parser.add_argument("--rank-grid", type=int, nargs="+", default=list(DEFAULT_RANK_GRID))
+    parser.add_argument("--rank-grid", type=int, nargs="+", default=None,
+                        help="default: default_rank_grid(d_c)")
     parser.add_argument("--device", choices=("auto", "cuda", "mps", "cpu"), default="auto")
     parser.add_argument("--checkpoint", type=Path, default=CKPT_DIR / "latest.pt")
     parser.add_argument("--data", type=Path, default=DATA_DIR / "val.bin")
@@ -358,7 +366,7 @@ def main() -> None:
 
     block_size = int(config["max_len"])
     d_c = int(config["d_c"])
-    rank_grid = normalize_rank_grid(args.rank_grid, d_c)
+    rank_grid = normalize_rank_grid(args.rank_grid, d_c) if args.rank_grid else default_rank_grid(d_c)
     valid_positions = valid_probe_positions(block_size, args.future_horizon)
     if len(valid_positions) == 0:
         raise ValueError("future horizon leaves no valid probe positions")

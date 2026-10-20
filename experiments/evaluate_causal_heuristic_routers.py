@@ -4,6 +4,20 @@ Position, lexical identity, rarity, and token-type scores are estimated only on 
 router-training sequences. An additive rate bias is selected on the original four validation
 sequences under a loss budget. The selected causal rules are then evaluated once on the already
 opened fresh windows and are explicitly post-confirmation exploratory baselines.
+
+--placement own-budget (the original run) lets each rule spend whatever bytes its selected bias
+gives, so its comparison with the router mixes placement quality with a byte difference.
+--placement router-histogram removes that: on each fresh sequence the router's own realized tiers
+are reassigned to positions in heuristic-score order (highest score gets the highest tier), so
+bytes and tier histogram equal the router's exactly and only placement differs -- the same frame
+as the exact-histogram shuffle control in confirm_fresh_contextual_router.py. No bias is selected
+in this mode; score ties are broken by seeded random keys and averaged over --tie-repeats.
+That histogram is the router's choice, which can handicap a rule (the exact-byte static control,
+with its own near-uniform histogram, beats the router-histogram shuffle). --placement router-bytes
+therefore also matches only the per-sequence downstream rank total: rank_t = floor(score_t + b)
+clipped to [1, d_c], with b solved per sequence and the remainder given +1 by largest fractional
+part, so the rule picks its own (integer, not tier-restricted -- like the static control)
+histogram at exactly the router's bytes.
 """
 import argparse, hashlib, json, math, sys
 from pathlib import Path
@@ -35,8 +49,19 @@ def bootstrap(v,seed,draws=10000):
  for i in range(draws):m[i]=v[rng.integers(0,len(v),len(v))].mean()
  return [float(x) for x in np.percentile(m,[2.5,97.5])]
 
+def match_total(s,total,hi):
+ lo_b,hi_b=-float(hi)-s.max()-1,float(hi)-s.min()+1;alloc=lambda b:np.clip(np.floor(s+b),1,hi)
+ if alloc(lo_b).sum()>total or alloc(hi_b).sum()<total:raise ValueError("rank total outside the feasible range")
+ for _ in range(200):
+  mid=(lo_b+hi_b)/2
+  if alloc(mid).sum()<=total:lo_b=mid
+  else:hi_b=mid
+ r=alloc(lo_b);short=int(total-r.sum());frac=np.where(r<hi,s+lo_b-np.floor(s+lo_b),-1.);r[np.argsort(-frac,kind="stable")[:short]]+=1
+ if int(r.sum())!=total:raise AssertionError("rank total not matched")
+ return r.astype(np.int64)
+
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument("--checkpoint",type=Path,required=True);p.add_argument("--data",type=Path,required=True);p.add_argument("--base-dir",type=Path,required=True);p.add_argument("--policy",type=Path,required=True);p.add_argument("--fresh-result",type=Path,required=True);p.add_argument("--fresh-audit",type=Path,required=True);p.add_argument("--output",type=Path,required=True);p.add_argument("--device",choices=("cuda","mps","cpu"),required=True);p.add_argument("--biases",type=int,nargs="+",default=[-192,-128,-96,-64,-32,0,32,64,96,128,192]);p.add_argument("--max-delta-loss",type=float,default=.15);p.add_argument("--seed",type=int,default=72119);args=p.parse_args()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument("--checkpoint",type=Path,required=True);p.add_argument("--data",type=Path,required=True);p.add_argument("--base-dir",type=Path,required=True);p.add_argument("--policy",type=Path,required=True);p.add_argument("--fresh-result",type=Path,required=True);p.add_argument("--fresh-audit",type=Path,required=True);p.add_argument("--output",type=Path,required=True);p.add_argument("--device",choices=("cuda","mps","cpu"),required=True);p.add_argument("--biases",type=int,nargs="+",default=[-192,-128,-96,-64,-32,0,32,64,96,128,192]);p.add_argument("--max-delta-loss",type=float,default=.15);p.add_argument("--seed",type=int,default=72119);p.add_argument("--placement",choices=("own-budget","router-histogram","router-bytes"),default="own-budget");p.add_argument("--tie-repeats",type=int,default=5);args=p.parse_args()
  if args.device=="cuda" and not torch.cuda.is_available():raise RuntimeError("CUDA unavailable")
  if args.device=="mps" and not torch.backends.mps.is_available():raise RuntimeError("MPS unavailable")
  d=torch.device(args.device);fresh=json.load(open(args.fresh_result));audit=json.load(open(args.fresh_audit));policy=torch.load(args.policy,map_location="cpu",weights_only=False)
@@ -83,6 +108,28 @@ def main():
    for st in sequence_starts:
     a,x,y=load_start(st);full,_=base(x);rank_np=quantize(scores(name,a[:-1]),bias,policy["tiers"])[None];r=torch.from_numpy(rank_np).to(device=d,dtype=torch.long);layer=[torch.full_like(r,base.d_c)]+[r for _ in range(base.n_layers-1)];l,c=base.forward_cached_packed(x,ranks=layer,channel_orders=orders);rows.append({"start":int(st),"loss":ce(l,y),"full_loss":ce(full,y),"average_rank":float(r.float().mean()),"bytes":base.packed_cache_num_bytes(c)})
   return rows
+ if args.placement in ("router-histogram","router-bytes"):
+  fresh_out={};fresh_starts=[int(x) for x in fresh["fresh_starts"]];stored={int(r["start"]):r for r in fresh["rows"]};router_rows={}
+  with torch.no_grad():
+   for st in fresh_starts:
+    a,x,y=load_start(st);full,_=base(x);l,c,r,_=model.forward_cached_packed(x);router_rows[st]={"router_loss":ce(l,y),"full_loss":ce(full,y),"router_bytes":base.packed_cache_num_bytes(c),"ranks":r,"stored_router_loss":stored[st]["router_loss"]}
+   for idx,name in enumerate(names):
+    rows=[]
+    for k,st in enumerate(fresh_starts):
+     a,x,y=load_start(st);rr=router_rows[st];flat=rr["ranks"].cpu().reshape(-1);tiers_sorted=torch.sort(flat).values;s=np.asarray(scores(name,a[:-1]),dtype=np.float64);losses=[]
+     for rep in range(args.tie_repeats if args.placement=="router-histogram" else 1):
+      if args.placement=="router-bytes":placed=torch.from_numpy(match_total(s,int(flat.sum()),base.d_c)).to(flat.dtype)
+      else:key=np.random.default_rng(args.seed*1000+idx*100+k*10+rep).random(len(s));order=np.lexsort((key,s));placed=torch.empty_like(flat);placed[torch.from_numpy(order)]=tiers_sorted
+      placed=placed.view_as(rr["ranks"]).to(d)
+      if args.placement=="router-bytes":l,c=base.forward_cached_packed(x,ranks=[torch.full_like(placed,base.d_c)]+[placed for _ in range(base.n_layers-1)],channel_orders=orders)
+      else:l,c,_,_=model.forward_cached_packed(x,forced_ranks=placed)
+      if base.packed_cache_num_bytes(c)!=rr["router_bytes"]:raise AssertionError("heuristic placement must exactly match router bytes")
+      losses.append(ce(l,y))
+     rows.append({"start":st,"loss":float(np.mean(losses)),"tie_repeat_losses":losses,"router_loss":rr["router_loss"],"full_loss":rr["full_loss"],"bytes":rr["router_bytes"]})
+    diff=[r["router_loss"]-r["loss"] for r in rows];fresh_out[name]={"mean_loss":float(np.mean([r["loss"] for r in rows])),"mean_router_loss":float(np.mean([r["router_loss"] for r in rows])),"mean_full_loss":float(np.mean([r["full_loss"] for r in rows])),"mean_bytes":float(np.mean([r["bytes"] for r in rows])),"mean_router_minus_control":float(np.mean(diff)),"router_minus_control_bootstrap_95pct_ci":bootstrap(diff,args.seed+idx),"router_better_sequence_count":int(sum(v<0 for v in diff)),"rows":rows}
+  drift=max(abs(v["router_loss"]-v["stored_router_loss"]) for v in router_rows.values())
+  output={"status":"complete","placement":args.placement,"interpretation":"post-confirmation exploratory causal baselines at exactly the router's per-sequence bytes ("+("and tier histogram; only placement differs" if args.placement=="router-histogram" else "rank total; the rule chooses its own integer rank histogram")+"); heuristic scores fit on the original 16 training sequences, no fresh-window selection","device":str(d),"checkpoint_sha256":fresh["checkpoint_sha256"],"data_sha256":fresh["data_sha256"],"policy_sha256":fresh["policy_sha256"],"fresh_result_sha256":sha(args.fresh_result),"fresh_audit_sha256":sha(args.fresh_audit),"contextual_oracle_summary_sha256":sha(op),"contextual_oracle_records_sha256":sha(rp),"split_source_sha256":sha(args.base_dir/"router_max.pt"),"analysis_source_sha256":sha(Path(__file__)),"tie_repeats":args.tie_repeats,"seed":args.seed,"router_loss_max_abs_drift_vs_stored":drift,"training_sequences":splits["train"],"fresh_starts":fresh_starts,"score_causality":"rank order at t uses only absolute t and/or current token x[t]; the per-sequence tier multiset is the router's own","fresh":fresh_out}
+  args.output.parent.mkdir(parents=True,exist_ok=True);json.dump(output,open(args.output,"w"),indent=2);print(json.dumps({"router_loss_max_abs_drift_vs_stored":drift,"fresh":{k:{q:v for q,v in x.items() if q!="rows"} for k,x in fresh_out.items()}},indent=2));return
  val_starts=[starts[int(s)] for s in splits["val"]];validation={};chosen={}
  for name in names:
   cand=[]

@@ -49,7 +49,9 @@ def peak_bytes(device):
 def run_full(base, prefill, decode_tokens, device):
     reset_peak(device)
     with torch.no_grad():
-        _, cache = base.forward_cached(prefill)
+        # Keep only the cache: every path drops its prefill logits before decoding,
+        # so peak memory compares caches rather than which outputs stay referenced.
+        cache = base.forward_cached(prefill)[1]
         sync(device)
         t0 = time.perf_counter()
         for step in range(decode_tokens.shape[1]):
@@ -68,7 +70,7 @@ def run_packed_uniform(base, orders, rank, prefill, decode_tokens, device):
     reset_peak(device)
     with torch.no_grad():
         prefill_ranks = torch.full(prefill.shape, rank, dtype=torch.long, device=device)
-        _, cache = base.forward_cached_packed(prefill, ranks=prefill_ranks, channel_orders=orders)
+        cache = base.forward_cached_packed(prefill, ranks=prefill_ranks, channel_orders=orders)[1]
         sync(device)
         t0 = time.perf_counter()
         for step in range(decode_tokens.shape[1]):
@@ -88,21 +90,21 @@ def run_router(model, prefill, decode_tokens, device):
     reset_peak(device)
     ranks_seen = []
     with torch.no_grad():
-        _, cache, ranks, _ = model.forward_cached_packed(prefill)
-        ranks_seen.append(ranks.float().mean().item())
+        cache, ranks = model.forward_cached_packed(prefill)[1:3]
+        ranks_seen.append(ranks)
         sync(device)
         t0 = time.perf_counter()
         for step in range(decode_tokens.shape[1]):
             token = decode_tokens[:, step : step + 1]
             _, cache, ranks, _ = model.forward_cached_packed(token, caches=cache)
-            ranks_seen.append(ranks.float().mean().item())
+            ranks_seen.append(ranks)  # no host sync inside the timed loop
         sync(device)
     elapsed = time.perf_counter() - t0
     return {
         "resident_cache_bytes": model.packed_cache_num_bytes(cache),
         "peak_allocated_bytes": peak_bytes(device),
         "mean_decode_step_seconds": elapsed / decode_tokens.shape[1],
-        "mean_downstream_rank": float(np.mean(ranks_seen)),
+        "mean_downstream_rank": float(torch.cat([r.reshape(-1) for r in ranks_seen]).float().mean()),
     }
 
 
@@ -126,7 +128,8 @@ def main():
     device = torch.device(args.device)
     torch.manual_seed(args.seed)
 
-    checkpoint = torch.load(args.checkpoint, map_location=device, weights_only=False)
+    # Load to CPU: map_location=device would keep a second copy of the weights resident.
+    checkpoint = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
     base = MLAGPT(**checkpoint["config"]).to(device).eval()
     base.load_state_dict(checkpoint["model"], strict=True)
     policy = torch.load(args.policy, map_location="cpu", weights_only=False)

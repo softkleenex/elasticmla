@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -49,6 +50,28 @@ import torch
 import torch.nn.functional as F
 
 BASES = ("coord", "pca", "task_aware")
+
+
+def file_sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(8 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def state_dict_sha256(model):
+    """Hash of every parameter/buffer (name, dtype, shape, bytes) in sorted name order."""
+    digest = hashlib.sha256()
+    for name, tensor in sorted(model.state_dict().items()):
+        t = tensor.detach().to("cpu").contiguous()
+        digest.update(f"{name}|{t.dtype}|{tuple(t.shape)}".encode())
+        digest.update(t.reshape(-1).view(torch.uint8).numpy().tobytes() if t.numel() else b"")
+    return digest.hexdigest()
+
+
+def array_sha256(array):
+    return hashlib.sha256(np.ascontiguousarray(array).tobytes()).hexdigest()
 
 
 def attention_blocks(model):
@@ -220,21 +243,25 @@ def main():
     p.add_argument("--evaluation-batches", type=int, default=24)
     p.add_argument("--epsilon", type=float, nargs="+", default=[0.05, 0.10, 0.25, 0.50])
     p.add_argument("--ranks", type=int, nargs="+", default=None)
+    p.add_argument("--model-revision", default=None, help="Hub revision to pin (default: main)")
+    p.add_argument("--dataset-revision", default=None, help="Hub revision to pin (default: main)")
+    p.add_argument("--seed", type=int, default=1234)
     args = p.parse_args()
 
     from datasets import load_dataset
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     device = torch.device(args.device)
-    torch.manual_seed(1234)
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
-    model = AutoModelForCausalLM.from_pretrained(args.model).to(device).eval()
+    torch.manual_seed(args.seed)
+    tokenizer = AutoTokenizer.from_pretrained(args.model, revision=args.model_revision)
+    model = AutoModelForCausalLM.from_pretrained(args.model, revision=args.model_revision).to(device).eval()
+    weights_sha256 = state_dict_sha256(model)
     config = model.config
     d_head = config.n_embd // config.n_head
     ranks = args.ranks or sorted({r for r in (1, 2, 4, 8, 12, 16, 24, 32, 40, 48, 56, 64, d_head)
                                   if r <= d_head})
 
-    raw = load_dataset(args.dataset, args.dataset_config)
+    raw = load_dataset(args.dataset, args.dataset_config, revision=args.dataset_revision)
     def encode(split):
         text = "\n\n".join(t for t in raw[split]["text"] if t.strip())
         return np.asarray(tokenizer(text)["input_ids"], dtype=np.int64)
@@ -305,6 +332,25 @@ def main():
         budgets[str(epsilon)] = entry
 
     first = spectra["key"][0][0]["eigenvalues"]
+    # Top-8 principal energy share for every key head, not only layer 0 head 0.
+    top8 = np.asarray([sum(h["eigenvalues"][:8]) / sum(h["eigenvalues"])
+                       for layer in spectra["key"] for h in layer])
+    import datasets as datasets_lib
+    import transformers
+    provenance = {
+        "analysis_source_sha256": file_sha256(__file__),
+        "model_revision_requested": args.model_revision,
+        "model_commit_hash": getattr(model.config, "_commit_hash", None),
+        "model_state_dict_sha256": weights_sha256,
+        "dataset_revision_requested": args.dataset_revision,
+        "dataset_fingerprints": {s: getattr(raw[s], "_fingerprint", None) for s in ("train", "test")},
+        "calibration_token_ids_sha256": array_sha256(calibration_ids),
+        "evaluation_token_ids_sha256": array_sha256(evaluation_ids),
+        "seed": args.seed,
+        "torch_version": torch.__version__,
+        "transformers_version": transformers.__version__,
+        "datasets_version": datasets_lib.__version__,
+    }
     output = {
         "status": "complete",
         "question": ("does the coordinate-axis KV measurement bias appear in a public "
@@ -321,6 +367,11 @@ def main():
         "required_rank_by_budget": budgets,
         "head_spectra_first_head": {n: spectra[n][0][0] for n in ("key", "value")},
         "key_effective_rank_layer0_head0": float(sum(first) / first[0]),
+        "key_top8_energy_fraction_all_heads": {
+            "n_heads_total": int(top8.size), "mean": float(top8.mean()),
+            "median": float(np.median(top8)), "min": float(top8.min()), "max": float(top8.max()),
+        },
+        "provenance": provenance,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(output, indent=2))

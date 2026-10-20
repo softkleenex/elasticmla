@@ -375,7 +375,8 @@ def main():
     p.add_argument("--probe-batch-size", type=int, default=8)
     p.add_argument("--bootstrap-draws", type=int, default=2000)
     p.add_argument("--epsilon", type=float, default=0.10)
-    p.add_argument("--rank-grid", type=int, nargs="+", default=list(_RISK.DEFAULT_RANK_GRID))
+    p.add_argument("--rank-grid", type=int, nargs="+", default=None,
+                   help="default: default_rank_grid(d_c) from analyze_risk_capacity_spectrum")
     p.add_argument("--monotone-tolerance", type=float, default=0.0,
                    help="slack before a rank step counts as a monotonicity violation")
     p.add_argument("--rotation-tolerance", type=float, default=2e-3,
@@ -394,7 +395,8 @@ def main():
     model.load_state_dict(checkpoint["model"], strict=True)
     block_size = int(checkpoint["config"]["max_len"])
     d_c = int(checkpoint["config"]["d_c"])
-    rank_grid = _RISK.normalize_rank_grid(args.rank_grid, d_c)
+    rank_grid = (_RISK.normalize_rank_grid(args.rank_grid, d_c) if args.rank_grid
+                 else _RISK.default_rank_grid(d_c))
 
     data = np.memmap(args.data, dtype=np.uint16, mode="r")
     n_possible_starts = len(data) - block_size

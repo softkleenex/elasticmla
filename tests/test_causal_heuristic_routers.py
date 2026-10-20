@@ -8,6 +8,13 @@ class CausalHeuristicTests(unittest.TestCase):
  def test_bias_changes_rate_monotonically(self):
   scores=np.asarray([20,70,150]);tiers=[16,64,160,256]
   low=M.quantize(scores,-32,tiers);high=M.quantize(scores,32,tiers);self.assertTrue(np.all(low<=high))
+ def test_match_total_hits_the_router_rank_total_exactly_and_follows_scores(self):
+  rng=np.random.default_rng(0)
+  for total in (64*16,64*100,64*255,64*256):
+   s=rng.normal(100,60,64);r=M.match_total(s,total,256)
+   self.assertEqual(int(r.sum()),total);self.assertTrue(r.min()>=1 and r.max()<=256)
+   order=np.argsort(s);self.assertTrue(np.all(np.diff(r[order])>=-1))  # nondecreasing in score up to the +1 remainder
+  with self.assertRaises(ValueError):M.match_total(np.zeros(4),4*257,256)
  def test_token_type_uses_only_current_id(self):
   import tiktoken
   enc=tiktoken.get_encoding("gpt2");self.assertEqual(M.kind(13,enc),"punct");self.assertEqual(M.kind(220,enc),"space")

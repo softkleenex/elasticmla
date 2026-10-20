@@ -13,6 +13,17 @@ SPEC.loader.exec_module(MODULE)
 
 
 class RiskCapacitySpectrumTests(unittest.TestCase):
+    def test_default_rank_grid_has_no_gap_up_to_full_rank(self):
+        """The 250M (d_c=512) spectrum was once run on a grid jumping 384 -> 512."""
+        for d_c in (256, 384, 512):
+            grid = MODULE.default_rank_grid(d_c)
+            self.assertEqual(grid[-1], d_c)
+            self.assertLessEqual(max(np.diff(grid)), 32)
+        self.assertEqual(MODULE.default_rank_grid(512)[-5:], [384, 416, 448, 480, 512])
+        # Unchanged where the fixed tuple already reached full rank (30M, 122M).
+        self.assertEqual(MODULE.default_rank_grid(384), list(MODULE.DEFAULT_RANK_GRID))
+        self.assertEqual(MODULE.default_rank_grid(256), [r for r in MODULE.DEFAULT_RANK_GRID if r <= 256])
+
     def test_tail_counts_include_mean_and_max_and_are_nested(self):
         self.assertEqual(MODULE.normalize_tail_counts([8, 4], 16), [16, 8, 4, 1])
 

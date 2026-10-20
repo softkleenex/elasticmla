@@ -36,6 +36,46 @@ class PackedElasticCacheTest(unittest.TestCase):
                 self.assertEqual(torch.count_nonzero(dense[b, t, order[r:]]), 0)
 
     @torch.no_grad()
+    def test_truncated_packed_decode_matches_the_analysis_rank_mask_intervention(self):
+        """The deployed packed cache implements exactly what the analyses measure.
+
+        The rank-variance/risk-capacity scripts intervene through the dense
+        ``Block.forward(rank_mask=...)`` path with mask[b, t, order[:r]] = 1. Here
+        per-token, per-layer ranks are drawn freely (not only tiers), the packed
+        path runs a prefill plus single-token decode steps, and every step's
+        logits must equal the dense masked forward over the same prefix.
+        """
+        model = self.model.double()
+        generator = torch.Generator().manual_seed(23)
+        B, T, prefill = 2, 14, 5
+        idx = torch.randint(0, 97, (B, T), generator=generator)
+        ranks = torch.randint(1, 21, (3, B, T), generator=generator)
+        masks = torch.zeros(3, B, T, 20, dtype=torch.float64)
+        for layer in range(3):
+            for b in range(B):
+                for t in range(T):
+                    masks[layer, b, t, self.orders[layer][: int(ranks[layer, b, t])]] = 1.0
+        x = model.drop(model.tok_emb(idx))
+        for layer, block in enumerate(model.blocks):
+            x = block(x, rank_mask=masks[layer])
+        dense = model.head(model.ln_f(x))
+        unmasked, _ = model(idx)
+        self.assertGreater(float((dense - unmasked).abs().max()), 1e-2)  # truncation matters
+
+        logits, caches = model.forward_cached_packed(
+            idx[:, :prefill], ranks=[ranks[l, :, :prefill] for l in range(3)],
+            channel_orders=self.orders,
+        )
+        torch.testing.assert_close(logits, dense[:, :prefill], atol=1e-10, rtol=1e-10)
+        for t in range(prefill, T):
+            logits, caches = model.forward_cached_packed(
+                idx[:, t : t + 1], ranks=[ranks[l, :, t : t + 1] for l in range(3)],
+                channel_orders=self.orders, caches=caches,
+            )
+            torch.testing.assert_close(logits[:, 0], dense[:, t], atol=1e-10, rtol=1e-10)
+        model.float()
+
+    @torch.no_grad()
     def test_full_rank_packed_matches_full_forward(self):
         full, _ = self.model(self.idx)
         ranks = torch.full(self.idx.shape, 20, dtype=torch.long)
@@ -123,6 +163,26 @@ class PackedElasticCacheTest(unittest.TestCase):
         self.assertEqual(measured, expected)
         dense_bytes = B * S * 3 * (20 + 8) * 4
         self.assertLess(measured, dense_bytes)
+
+    @torch.no_grad()
+    def test_persistent_bytes_stay_exact_after_decode_appends(self):
+        """Proposition 1's byte count also holds after the in-place append path."""
+        prefill = 4
+        B, S = self.idx.shape
+        _, caches = self.model.forward_cached_packed(
+            self.idx[:, :prefill], ranks=[r[:, :prefill] for r in self.layer_ranks],
+            channel_orders=self.orders,
+        )
+        for t in range(prefill, S):
+            _, caches = self.model.forward_cached_packed(
+                self.idx[:, t : t + 1], ranks=[r[:, t : t + 1] for r in self.layer_ranks],
+                channel_orders=self.orders, caches=caches,
+            )
+        expected = sum(
+            int(ranks.sum()) * 4 + (B * S + 1) * 4 + B * S * 2 + 20 * 2 + B * S * 8 * 4
+            for ranks in self.layer_ranks
+        )
+        self.assertEqual(self.model.packed_cache_num_bytes(caches), expected)
 
 
 class IncrementalAppendTest(unittest.TestCase):
