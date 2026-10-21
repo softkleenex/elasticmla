@@ -18,7 +18,7 @@ has current status and the recommended next action — **read that first when re
 
 ```bash
 uv sync                                             # environment (Python 3.11)
-uv run python -m unittest discover -s tests         # full suite (113 tests, ~10s, CPU only;
+uv run python -m unittest discover -s tests         # full suite (119 tests, ~10s, CPU only;
                                                     # test_token_type_uses_only_current_id needs
                                                     # network on first run for the tiktoken vocab)
 uv run python -m unittest tests.test_tiered_router  # one module
@@ -78,11 +78,14 @@ A second group of scripts, outside the eleven-step list, tests the theory memo's
 predictions (`notes/theory_contextual_tail_rate.md`): `analyze_horizon_capacity` (prediction 3),
 `analyze_pair_interaction` (5), `analyze_basis_dependence` (7), then `analyze_kv_basis` and
 `analyze_public_kv_basis` (does the basis effect hit a plain per-head KV cache, and public GPT-2
-checkpoints). Most of them load `analyze_risk_capacity_spectrum.py` as a module via `importlib`
+checkpoints), and `analyze_public_mla_spectrum` + `combine_public_mla_runs` (the Section 5.1 spectrum
+and the basis ablation on the public DeepSeek-V2-Lite MLA latent, run on Kaggle T4 x2 via
+`code/kaggle_review_reruns/`; results in `experiments/public_mla/`). Most of them load `analyze_risk_capacity_spectrum.py` as a module via `importlib`
 (registered as `risk_v5`) and reuse its functions, so a change there changes them too. The
 basis result is a **negative result for Section 5.1's headline rates and does not transfer to
-public checkpoints** (`notes/low_rank_does_not_mean_compressible.md`); keep both halves together
-whenever it is quoted.
+public checkpoints** (`notes/low_rank_does_not_mean_compressible.md`; on DeepSeek-V2-Lite rotation
+removes ~11 pp, not ~50, while the coordinate spectrum itself replicates,
+`notes/public_mla_deepseek_v2_lite.md`); keep both halves together whenever it is quoted.
 
 Results live in one directory per configuration: `experiments/exp{0,1,2}_rank_variance*/` and
 `experiments/contextual_router_{30m,122m,250m}/`. Within a router directory, `joint_lambda_*`

@@ -57,6 +57,10 @@ doubt, trust the manuscript over any single note here.
   1.1x, not the 1.65-3.2x seen here, and no fixed linear projection compresses the cache much
   below 50 of 64 dimensions even when 95% of the key energy sits in 8 directions. Read it
   alongside the two basis notes below; it is the control that keeps them honest.
+- `public_mla_deepseek_v2_lite.md` -- **the external replication.** On the public DeepSeek-V2-Lite
+  MLA latent (`d_c`=512, WikiText-103) the Section 5.1 coordinate-basis spectrum and the cancellation
+  signature replicate (premium 0.704, 2.10x, 96.6%), and the basis effect shrinks from ~50 pp to
+  ~11 pp. Supersedes the GPT-2 notes as the main bound on the basis result.
 - `basis_dependence_prediction7.md` -- theory prediction 7 (basis dependence). **A negative result
   for Section 5.1's headline rates**: rotating the latent basis cuts the worst-offset required rate
   by 50-54 pp at all three scales.

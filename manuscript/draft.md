@@ -25,15 +25,18 @@ MLA language models (an 8x parameter range), we measure the full risk-capacity s
 mean and max): in the model's own latent coordinate basis, required rate rises monotonically from
 9.00%/8.22%/7.15% of the full latent width at the mean criterion to 74.07%/72.92%/71.78% at the
 worst-offset criterion, with an almost scale-invariant normalized tail-capacity premium
-(0.651/0.647/0.646 at 30M/122M/250M). In these three TinyStories-trained models a basis ablation shows
-this tail requirement is substantially a cost of that coordinate alignment: rotating the latent
-basis cuts it to 21-24% at every scale; the analogous coordinate-basis overstatement of a per-head
-KV cache is only 1.06-1.30x on public GPT-2 checkpoints, so we do not claim the effect transfers. Diagnostic
+(0.651/0.647/0.646 at 30M/122M/250M). Diagnostic
 decomposition shows this separation reflects **pervasive cancellation across the reuse horizon, not
 rare catastrophic tokens**: over 93% of mean-safe positions at every scale still have at least one
 future offset exceeding the loss budget, and the positive-part mean loss is roughly double the
-signed mean. This risk-capacity result is scale-consistent, robust, and does not depend on the
-router at all.
+signed mean. The same probe on the public, production-trained **DeepSeek-V2-Lite**, whose cached
+latent is 512 wide like our 250M model's, reproduces the spectrum (8.22% mean, 78.65% worst-offset,
+premium 0.704) and the cancellation signature (2.10x, 96.6%) on WikiText-103. A basis ablation
+qualifies the coordinate-basis rates differently in the two settings: in our three TinyStories-trained
+models rotating the latent basis cuts the worst-offset requirement to 21-24% of full width, but in
+DeepSeek-V2-Lite it removes only 11 points (to 67%), so the large basis effect is specific to our
+small models while the tail requirement itself is not. This risk-capacity result is
+scale-consistent, holds on a production MLA model, and does not depend on the router at all.
 
 The routing result is more intricate, and we report it in full rather than selectively. The frozen,
 pre-registered router beats a random matched-budget allocation on 24 untouched sequences at 30M
@@ -326,7 +329,9 @@ stream) and reached validation loss 1.6588 -- fewer tokens than the 122M model a
 validation loss. The three models therefore differ in training budget as well as size, and every
 cross-scale comparison in this paper confounds the two. We make no best-checkpoint claim for any model: all
 three use the final training step. 30M was trained locally (Apple Silicon MPS); 122M and 250M were
-trained on Kaggle (Tesla P100).
+trained on Kaggle (Tesla P100). The risk-capacity analysis is additionally replicated on the public
+DeepSeek-V2-Lite checkpoint ($d_c=512$, 27 layers) on WikiText-103, without training anything
+(Section 5.1).
 
 ### 4.2 Confirmation protocol
 
@@ -419,9 +424,55 @@ truncation probe in a rotated basis cuts the worst-offset requirement to 23.56%/
 30M/122M/250M, a paired fall of about 50 percentage points at every scale (49.7-50.5) with
 bootstrap intervals nowhere near zero (Section 6, `notes/basis_dependence_prediction7.md`). We
 report the coordinate-basis numbers because they are what the deployed packed cache actually uses
-and what the router was trained against, but they should be read as properties of *this basis* in
-*these models*, not as an intrinsic rate of the latent code: the same kind of measurement on public
-GPT-2 checkpoints finds a much smaller basis effect (Section 6).
+and what the router was trained against, but in these models they should be read as properties of
+*this basis*, not as an intrinsic rate of the latent code. On a production-trained MLA model the
+picture is different (next paragraph).
+
+**The spectrum replicates on a public, production-trained MLA model, and the basis effect largely
+does not.** Everything above was measured on models trained inside this project on TinyStories.
+DeepSeek-V2-Lite [2] (27 layers, 15.7B parameters with 2.4B active, trained by its authors on 5.7T
+tokens) caches exactly the object this paper is about: a 512-wide latent, the same $d_c$ as our
+250M model, plus a 64-wide decoupled RoPE key. We applied the identical probe to it
+(`experiments/analyze_public_mla_spectrum.py`): the cached latent at a source position is truncated
+at every layer at once through a forward hook on the normalization whose output the cache stores,
+the RoPE key is left intact as in our models, and $r^*$ uses the same suffix rule, $H=32$,
+$\epsilon=0.10$ nat, rank grid and four bases, calibrated on 32 training sequences. Because
+TinyStories is out of distribution for this model, text is WikiText-103: 24 test sequences of 512
+tokens after a BOS token that is never probed, 16 positions each (384 probes, half our 768). The
+weights run in float16 on two T4 GPUs; the full-rank probe of every basis reproduces the unmodified
+loss exactly (maximum deviation 0.0), and the unmodified mean token loss is 2.14 nats.
+
+| $k$ (of 32) | 250M coord | V2-Lite coord | V2-Lite pca | V2-Lite grad | V2-Lite model metric |
+|---:|---:|---:|---:|---:|---:|
+| 32 (mean) | 7.15% | 8.22% | 5.06% | 5.94% | 5.19% |
+| 16 | 22.12% | 22.92% | 12.72% | 16.58% | 13.79% |
+| 8 | 38.60% | 40.14% | 25.68% | 31.18% | 26.68% |
+| 4 | 54.16% | 56.86% | 42.36% | 49.51% | 43.47% |
+| 2 | 64.95% | 70.69% | 56.90% | 64.97% | 57.44% |
+| 1 (max) | 71.78% | 78.65% | 67.34% | 73.47% | 67.58% |
+| TCP | 0.646 | 0.704 | 0.623 | 0.675 | 0.624 |
+
+In the coordinate basis the production model's spectrum is monotone and close to ours at every tail
+count, slightly heavier at the far tail: its premium, 0.704 (95% CI [0.676, 0.731]), is above the
+0.646-0.651 of our three models and its intervals do not overlap theirs, so we claim the same
+shape and magnitude, not the same value. The cancellation signature replicates: at the mean-safe
+rank the positive-part mean loss is 2.10x the signed mean, and 96.6% of mean-safe probes still have
+an offset above $\epsilon$ (2.05-2.31x and 93.1-96.1% in our models). The basis ablation does not
+replicate in magnitude. Rotation still helps -- every rotated basis lowers the requirement at every
+tail count, with paired per-probe intervals excluding zero -- and the bases still rank as in our
+models (the model-metric frame ties principal directions at the worst offset, CI [-1.3, +1.9], and
+ordering by first-order loss effect is worse than both at every tail count),
+but the worst-offset fall is 11.3 points for principal directions (paired CI [9.1, 13.5]) and 11.1
+for the model-metric frame, against about 50 in our models; 59 of 384 probes still need the entire
+512-wide latent under principal directions (106 under coordinates). In a production-trained MLA
+model the tail requirement is therefore mostly a property of the code, and the coordinate-basis
+spectrum is a closer description of it than our own models' basis ablation suggested. Two
+qualifications: 275 of 384 coordinate-basis probes have their mean-criterion requirement at the
+grid's smallest rank (16, 3.1% of $d_c$), so the 8.22% mean is an upper bound and the premium a
+lower bound; and the four bases were measured in two runs, which share bit-identical evaluation
+tokens, probe positions and baseline losses (checked before pairing,
+`experiments/combine_public_mla_runs.py`) but each computed its own calibration statistics, whose
+float16 backward is not bit-deterministic on GPU. See `notes/public_mla_deepseek_v2_lite.md`.
 
 ### 5.2 Fresh contextual routing beats exact-byte static allocation, with a tier-granularity dependence at 250M
 
@@ -630,7 +681,10 @@ sign-flip p-values enumerate all sign assignments conditional on the observed ma
 their inferential interpretation still requires exchangeability of paired-difference signs under
 the null. The intervals and tests do not incorporate checkpoint, policy-seed, or training-run
 variability. We evaluate one checkpoint per scale, one data distribution, and one router seed, and
-the three checkpoints also differ in training tokens (Section 4.1). At 30M and 122M the per-record
+the three checkpoints also differ in training tokens (Section 4.1). The one external replication
+(DeepSeek-V2-Lite, Section 5.1) covers the risk-capacity spectrum and the basis ablation only, on
+one public checkpoint, one text distribution (WikiText-103) and 384 probes from 24 sequences; the
+router was not trained or evaluated on it. At 30M and 122M the per-record
 raw deltas underlying the risk-capacity spectrum (Section 5.1) were computed on ephemeral cloud job
 storage and could not be retrieved after job completion; only the aggregate summary statistics
 (independently checkpoint/data-hash verified) were recovered, so those two spectra are not
@@ -721,15 +775,16 @@ than a property of the latent code. A fixed change of variables folded into the 
 at identical cache bytes is a candidate remedy, but we have not trained or evaluated the router or
 the packed cache in a rotated basis.
 
-The effect does not transfer to public checkpoints. Applying the same per-head truncation
-measurement to an ordinary KV cache, the coordinate basis overstates the rank needed for a given
-loss budget by 1.65-3.22x on our three models but only 1.06-1.30x on GPT-2 and GPT-2-medium over
-the same 0.05-0.5-nat budgets (`notes/kv_cache_basis_generalization.md`,
-`notes/low_rank_does_not_mean_compressible.md`). That test is on per-head keys and values, not an
-MLA latent, so it does not contradict the measurement above, but it bounds its generality: the most
-economical explanation is that 3,000-8,000-step TinyStories models are unrepresentatively
-compressible, which is a caution about this paper's whole empirical base, not only about this
-ablation.
+The effect's magnitude does not transfer to a production-trained model. On DeepSeek-V2-Lite's
+512-wide MLA latent the same four-basis probe lowers the worst-offset requirement by only 11.3
+points, from 78.65% to 67.34% (Section 5.1). An earlier control on a different object agrees: per-head
+truncation of an ordinary KV cache shows a coordinate-basis overstatement of 1.65-3.22x on our three
+models but only 1.06-1.30x on GPT-2 and GPT-2-medium over the same 0.05-0.5-nat budgets
+(`notes/kv_cache_basis_generalization.md`, `notes/low_rank_does_not_mean_compressible.md`). The
+most economical explanation is that 3,000-8,000-step TinyStories models are unrepresentatively
+compressible in a rotated basis. That is a caution about this ablation and about what our models
+can say on their own; it is not a caution about the risk-capacity spectrum, which the production
+model reproduces.
 
 *Which* rotation matters much less than rotating at all. Ordering directions by the first-order loss
 effect is consistently 10-12 points worse than ordering them by plain reconstruction of the latent,
@@ -767,7 +822,11 @@ reuse (Proposition 2). Measured at 30M, 122M, and 250M (an 8x parameter range), 
 nearly scale-invariant in its normalized tail-capacity premium (0.646-0.651 across all three scales)
 and shows that the mean/tail separation arises from pervasive cancellation across the reuse
 horizon rather than rare catastrophic tokens -- a mechanistic finding that revises the intuitive
-"rare spike" story and is the paper's most robust contribution, independent of the router.
+"rare spike" story and is the paper's most robust contribution, independent of the router. Both the
+spectrum and the cancellation signature replicate on the public, production-trained
+DeepSeek-V2-Lite (premium 0.704; 96.6% of mean-safe probes with an offset above budget), where,
+unlike in our small models, rotating the latent basis lowers the worst-offset requirement by only
+11 points.
 
 The routing contribution requires two axes to describe honestly, both established through
 pre-registered, audited protocols rather than post-hoc adjustment. First, whether

@@ -1,5 +1,13 @@
 # Submission-readiness roadmap (updated)
 
+> **2026-10-21 update.** Content strengthened before choosing a venue: the Section 5.1 spectrum and
+> the basis ablation were rerun on the public, production-trained DeepSeek-V2-Lite MLA latent
+> (`notes/public_mla_deepseek_v2_lite.md`). The spectrum and cancellation signature replicate
+> (premium 0.704 vs 0.646-0.651 here); the basis effect is ~11 pp there vs ~50 pp here. The
+> manuscript (abstract, 4.1, 5.1 new table, 6, 7) now leads with this and demotes the GPT-2
+> control. This partially answers Package C's ">=1B checkpoint / second domain" for the spectrum
+> claim only; the router is still TinyStories-only. Next decision is still the venue.
+
 > **2026-10-20 update -- read before the rest.** A pre-submission code review
 > (`notes/code_review_2026-10_corrections.md`) found real errors that the earlier "DONE" items below
 > did not catch: the 250M rank grid jumped 384 -> 512 (250M max rate 76.03% -> 71.78%, premium

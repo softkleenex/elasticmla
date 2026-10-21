@@ -23,7 +23,11 @@ order of how robust they are:
    tried to generalize this as a correction to the wider KV-cache-compression literature's
    measurement convention; it does **not** generalize cleanly to public GPT-2 checkpoints
    (coord/pca 1.06-1.30x there vs. 1.65-3.22x on our own models), a negative result we report rather than
-   suppress (see `notes/low_rank_does_not_mean_compressible.md`).
+   suppress (see `notes/low_rank_does_not_mean_compressible.md`). **On the public, production-trained
+   MLA model DeepSeek-V2-Lite** (`d_c`=512) the coordinate-basis spectrum and cancellation signature
+   replicate (8.22% -> 78.65%, premium 0.704; 2.10x, 96.6%), but rotation removes only ~11 points,
+   not ~50: the tail requirement is real, the large basis effect is specific to our small models
+   (`notes/public_mla_deepseek_v2_lite.md`, `experiments/analyze_public_mla_spectrum.py`).
 2. **Router beats random matched-budget allocation (real, but tier-grid-dependent).** True at
    30M and 122M; fails with a coarse tier grid at 250M and succeeds again with a finer grid at
    250M -- diagnosed and reported as a tier-resolution confound, not spun as a clean scale trend.
