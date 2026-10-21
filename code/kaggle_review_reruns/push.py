@@ -22,7 +22,8 @@ BENCHMARK_INPUTS = {
     "30m": "experiments/contextual_router_30m/joint_lambda_0p4.pt",
     "122m": "experiments/contextual_router_122m/fine_lambda_0p8.pt",
 }
-JOBS = ("spectrum250", "basis250", "benchmark", "publickv")
+JOBS = ("spectrum250", "basis250", "benchmark", "publickv",
+        "publicmla_smoke", "publicmla_a", "publicmla_b")
 
 
 def kaggle(*args):
@@ -60,7 +61,7 @@ def push_kernel(work, job):
     script = template.replace('JOB = "__JOB__"', f'JOB = "{job}"')
     (folder / "runner.py").write_text(script)
     (folder / "kernel-metadata.json").write_text(json.dumps({
-        "id": f"{USER}/elasticmla-review-{job}",
+        "id": f"{USER}/elasticmla-review-{job.replace('_', '-')}",
         "title": f"ElasticMLA Review {job}",
         "code_file": "runner.py",
         "language": "python",
@@ -68,7 +69,8 @@ def push_kernel(work, job):
         "is_private": True,
         "enable_gpu": True,
         "enable_internet": True,
-        "dataset_sources": DATASETS,
+        # The public-MLA jobs download their model from the Hub and need only the code.
+        "dataset_sources": [CODE_DATASET] if job.startswith("publicmla") else DATASETS,
         "machine_shape": "NvidiaTeslaT4",
     }, indent=2))
     kaggle("kernels", "push", "-p", str(folder))

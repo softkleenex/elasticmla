@@ -8,6 +8,10 @@ One template, one kernel per JOB (push.py substitutes the JOB line):
   benchmark    benchmark_cache_memory_latency.py at 30M and 122M with the harness fix
                (every path drops its prefill logits), 3 repeats, published settings
   publickv     analyze_public_kv_basis.py on gpt2 and gpt2-medium with provenance hashes
+  publicmla_smoke / publicmla_a / publicmla_b
+               analyze_public_mla_spectrum.py on DeepSeek-V2-Lite (float16, two T4s plus
+               CPU offload): a small smoke run, then the four bases split across two
+               kernels (coord+pca, grad+model_metric) so they run concurrently
 
 Inputs are attached datasets: the review code dataset (code/, experiments/, inputs/),
 the 30M/122M inputs dataset and the 250M checkpoint dataset. Each result JSON is also
@@ -30,12 +34,16 @@ INPUT = Path("/kaggle/input")
 
 
 def sh(cmd):
+    """Run, streaming stdout line by line so progress and timings reach the kernel log."""
     print("$ " + " ".join(map(str, cmd)), flush=True)
-    result = subprocess.run([str(c) for c in cmd], capture_output=True, text=True)
-    print(result.stdout[-4000:], flush=True)
-    if result.returncode != 0:
-        print("FAILED\n" + result.stderr[-6000:], flush=True)
-    return result.returncode == 0
+    with subprocess.Popen([str(c) for c in cmd], stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE, text=True) as process:
+        for line in process.stdout:
+            print(line if len(line) < 2000 else line[:2000] + " ...[truncated]\n", end="", flush=True)
+        stderr = process.stderr.read()
+    if process.returncode != 0:
+        print("FAILED\n" + stderr[-6000:], flush=True)
+    return process.returncode == 0
 
 
 def pin_torch_for_p100():
@@ -153,9 +161,34 @@ def publickv():
             emit(f"publickv_{model}", out)
 
 
+# transformers/datasets match uv.lock; accelerate is only needed for device_map here.
+PUBLIC_MLA_PINS = ["transformers==5.17.0", "datasets==5.0.1", "accelerate"]
+PUBLIC_MLA_RUNS = {
+    "publicmla_smoke": ["--n-calib-sequences", "2", "--n-eval-sequences", "2",
+                        "--positions-per-sequence", "8", "--rank-grid", "64", "256", "512",
+                        "--bases", "coord", "pca", "--bootstrap-draws", "1000"],
+    "publicmla_a": ["--bases", "coord", "pca"],
+    "publicmla_b": ["--bases", "grad", "model_metric"],
+}
+
+
+def publicmla():
+    os.environ["HF_HOME"] = "/tmp/hf"
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+    subprocess.run(["df", "-h", "/tmp", "/kaggle/working"], check=False)
+    subprocess.run(["free", "-g"], check=False)
+    subprocess.run(["nvidia-smi"], check=False)
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", *PUBLIC_MLA_PINS], check=True)
+    out = WORK / f"{JOB}.json"
+    if sh([sys.executable, "-B", ROOT / "experiments" / "analyze_public_mla_spectrum.py",
+           "--output", out, *PUBLIC_MLA_RUNS[JOB]]):
+        emit(JOB, out)
+
+
 if __name__ == "__main__":
     pin_torch_for_p100()
     setup_repo()
     {"spectrum250": spectrum250, "basis250": basis250,
-     "benchmark": benchmark, "publickv": publickv}[JOB]()
+     "benchmark": benchmark, "publickv": publickv,
+     **{job: publicmla for job in PUBLIC_MLA_RUNS}}[JOB]()
     print("ALL DONE", flush=True)
