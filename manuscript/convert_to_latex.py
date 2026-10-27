@@ -11,7 +11,12 @@ converter for this document's specific markdown conventions (headers, GFM
 tables, $...$/$$...$$ math, `code` spans, **bold**/*italic*, bracketed
 numeric citations, and "**Figure N.** ... Source: `path`." caption
 paragraphs) rather than a general markdown-to-LaTeX tool.
+
+``--style tmlr`` writes the anonymized TMLR submission instead, to
+manuscript/latex_tmlr/main.tex, using the official TMLR style files vendored in
+that directory (Apache-2.0, https://github.com/JmlrOrg/tmlr-style-file).
 """
+import argparse
 import re
 import shutil
 from pathlib import Path
@@ -19,6 +24,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DRAFT = ROOT / "manuscript" / "draft.md"
 LATEX_DIR = ROOT / "manuscript" / "latex"
+TMLR_DIR = ROOT / "manuscript" / "latex_tmlr"
+TITLE = "ElasticMLA: Context-Aware Token-Wise Latent Capacity Allocation for Multi-Head Latent Attention"
 
 
 def strip_number_prefix(s):
@@ -230,7 +237,7 @@ PREAMBLE = r"""\documentclass[11pt]{article}
 
 \hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
 
-\title{ElasticMLA: Context-Aware Token-Wise Latent Capacity Allocation for Multi-Head Latent Attention}
+\title{@@TITLE@@}
 \author{ElasticMLA Project}
 \date{}
 
@@ -241,7 +248,20 @@ PREAMBLE = r"""\documentclass[11pt]{article}
 """
 
 
+# TMLR: the style sets fonts and margins itself, and hides \author until [accepted].
+TMLR_PREAMBLE = (
+    PREAMBLE.replace(r"\documentclass[11pt]{article}", r"\documentclass[10pt]{article}")
+    .replace("\\usepackage[margin=1in]{geometry}\n", "\\usepackage{tmlr}\n\\setcitestyle{numbers}\n")
+    .replace("\\usepackage[T1]{fontenc}\n\\usepackage{newtxtext,newtxmath}\n", "")
+).replace(r"\author{ElasticMLA Project}", r"\author{\name Anonymous authors \\ \addr Paper under double-blind review}")
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    parser.add_argument("--style", choices=("plain", "tmlr"), default="plain")
+    args = parser.parse_args()
+    out_dir = TMLR_DIR if args.style == "tmlr" else LATEX_DIR
+    preamble = (TMLR_PREAMBLE if args.style == "tmlr" else PREAMBLE).replace("@@TITLE@@", TITLE)
     mt = DRAFT.read_text()
     abs_start = mt.index("## Abstract")
     abs_end = mt.index("## 1. Introduction")
@@ -262,15 +282,15 @@ def main():
         f"\\bibitem{{ref{n}}} {e}\n\n" for n, e in bib_items
     ) + "\\end{thebibliography}\n"
 
-    full_tex = PREAMBLE + abstract_tex + "\n\\end{abstract}\n\n" + body_tex_final + "\n\n" + bib_tex + "\n\\end{document}\n"
+    full_tex = preamble + abstract_tex + "\n\\end{abstract}\n\n" + body_tex_final + "\n\n" + bib_tex + "\n\\end{document}\n"
 
-    LATEX_DIR.mkdir(parents=True, exist_ok=True)
-    (LATEX_DIR / "main.tex").write_text(full_tex)
-    figures_dir = LATEX_DIR / "figures"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "main.tex").write_text(full_tex)
+    figures_dir = out_dir / "figures"
     figures_dir.mkdir(exist_ok=True)
     for fname in ("elasticmla_main_results.pdf", "elasticmla_risk_spectrum.pdf"):
         shutil.copy(ROOT / "figures" / fname, figures_dir / fname)
-    print(f"wrote {LATEX_DIR / 'main.tex'} ({len(full_tex)} chars)")
+    print(f"wrote {out_dir / 'main.tex'} ({len(full_tex)} chars)")
 
 
 if __name__ == "__main__":

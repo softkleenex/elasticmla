@@ -15,6 +15,19 @@ tectonic main.tex   # or: latexmk -pdf main.tex / pdflatex main.tex (twice)
 `tectonic` (self-contained, fetches packages on first use) is what this package was built and
 verified with: 13 pages, no LaTeX errors, only a handful of cosmetic under/overfull-hbox warnings.
 
+## TMLR submission version
+
+The venue is TMLR (decided 2026-10-27, see `notes/submission_readiness_roadmap.md`).
+
+```bash
+uv run python manuscript/convert_to_latex.py --style tmlr
+cd manuscript/latex_tmlr && tectonic main.tex
+```
+
+writes the anonymized, TMLR-formatted `manuscript/latex_tmlr/main.tex` from the same
+`draft.md`. The official style files (`tmlr.sty`, `fancyhdr.sty`, `tmlr.bst`; Apache-2.0,
+`LICENSE.tmlr-style`) are vendored there. Authors are hidden by the style until `[accepted]`.
+
 ## Contents
 
 - `main.tex` -- generated LaTeX source (title, abstract, all sections, tables, figures,

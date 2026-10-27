@@ -1,5 +1,16 @@
 # Submission-readiness roadmap (updated)
 
+> **2026-10-27: venue decided -- TMLR** (rolling, OpenReview, double-blind, no page limit),
+> with an arXiv preprint (allowed by TMLR at any time). Why: TMLR accepts on whether claims are
+> correct and supported and of interest to some audience, not on novelty or headline wins, which
+> fits a paper whose strongest parts are a replicated measurement and honestly reported negative
+> routing results. ICLR 2027 main closed 2026-09-25; its workshops are not announced until
+> 2026-11-29 (paper deadlines ~2027-02) and are mostly non-archival, so one can still be added
+> later. Done: one-paragraph abstract (702 -> 279 words), `convert_to_latex.py --style tmlr`
+> (anonymized, 15 pages). Remaining: anonymized supplementary code/data archive; OpenReview
+> profile and the submission itself (the user's account); arXiv posting (de-anonymized,
+> `[preprint]` option) at the user's choice of timing.
+
 > **2026-10-21 update.** Content strengthened before choosing a venue: the Section 5.1 spectrum and
 > the basis ablation were rerun on the public, production-trained DeepSeek-V2-Lite MLA latent
 > (`notes/public_mla_deepseek_v2_lite.md`). The spectrum and cancellation signature replicate
