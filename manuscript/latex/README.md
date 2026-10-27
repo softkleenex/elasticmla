@@ -28,6 +28,12 @@ writes the anonymized, TMLR-formatted `manuscript/latex_tmlr/main.tex` from the 
 `draft.md`. The official style files (`tmlr.sty`, `fancyhdr.sty`, `tmlr.bst`; Apache-2.0,
 `LICENSE.tmlr-style`) are vendored there. Authors are hidden by the style until `[accepted]`.
 
+Supplementary archive (anonymized code, tests, results, notes; deterministic, from git HEAD):
+
+```bash
+uv run python manuscript/build_supplement.py   # -> dist/elasticmla_supplement.zip (gitignored)
+```
+
 ## Contents
 
 - `main.tex` -- generated LaTeX source (title, abstract, all sections, tables, figures,

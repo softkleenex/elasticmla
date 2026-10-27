@@ -772,7 +772,9 @@ mean and max endpoints and their histograms exactly at every scale (the bootstra
 slightly because the seeds do). See `notes/basis_dependence_prediction7.md` and
 `experiments/analyze_basis_dependence.py`.
 
-**Reproducibility.** Result artifacts contain checkpoint/data/policy/source hashes and exact starts.
+**Reproducibility.** Every file path cited in this paper (`experiments/...`, `notes/...`) refers to
+the supplementary archive, which holds the code, unit tests, result artifacts and dated lab notes.
+Result artifacts contain checkpoint/data/policy/source hashes and exact starts.
 A post-hoc audit reconstructs the pre-specified sampler, verifies nonoverlap, derives cache bytes
 from authenticated checkpoint dimensions, and recomputes all summary statistics. Deterministic
 training replays reproduce the frozen router tensors, histories, splits, and hyperparameters

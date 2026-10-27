@@ -7,7 +7,9 @@
 > routing results. ICLR 2027 main closed 2026-09-25; its workshops are not announced until
 > 2026-11-29 (paper deadlines ~2027-02) and are mostly non-archival, so one can still be added
 > later. Done: one-paragraph abstract (702 -> 279 words), `convert_to_latex.py --style tmlr`
-> (anonymized, 15 pages). Remaining: anonymized supplementary code/data archive; OpenReview
+> (anonymized, 15 pages), and `manuscript/build_supplement.py` (anonymized supplement zip from
+git HEAD, ~21 MiB, deterministic, refuses to build if an identifying token survives; its 119 tests
+pass from the extracted archive). Remaining: OpenReview
 > profile and the submission itself (the user's account); arXiv posting (de-anonymized,
 > `[preprint]` option) at the user's choice of timing.
 

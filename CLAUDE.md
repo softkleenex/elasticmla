@@ -27,6 +27,7 @@ uv run python -m unittest tests.test_tiered_router.TieredRouterTest.test_name   
 uv run python manuscript/convert_to_latex.py        # regenerate manuscript/latex/main.tex
 cd manuscript/latex && tectonic main.tex            # compile the PDF
 uv run python manuscript/convert_to_latex.py --style tmlr   # anonymized TMLR version -> manuscript/latex_tmlr/
+uv run python manuscript/build_supplement.py               # anonymized supplement zip -> dist/ (from git HEAD)
 ```
 
 Experiment scripts are argparse CLIs run individually; every one takes explicit
