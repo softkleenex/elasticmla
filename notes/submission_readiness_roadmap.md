@@ -1,5 +1,13 @@
 # Submission-readiness roadmap (updated)
 
+> **2026-10-28: submitted to TMLR -- Paper #13801** (OpenReview, Long submission: ~14 pages of
+> main content). Single author; competing interests and human subjects N/A; CC BY 4.0. Uploaded
+> `manuscript/latex_tmlr/main.pdf` (sha256 `de640d4071a5...`, built from commit `fce48bc`) and
+> `dist/elasticmla_supplement.zip` (sha256 `859247853cdc...`). While under review, do not submit
+> the same work elsewhere; any revision must keep the anonymized build and supplement in sync.
+> Next: watch the OpenReview author console and email for the action-editor assignment and
+> desk-reject check; arXiv preprint (de-anonymized, `[preprint]`) at the user's choice.
+
 > **2026-10-27: venue decided -- TMLR** (rolling, OpenReview, double-blind, no page limit),
 > with an arXiv preprint (allowed by TMLR at any time). Why: TMLR accepts on whether claims are
 > correct and supported and of interest to some audience, not on novelty or headline wins, which
