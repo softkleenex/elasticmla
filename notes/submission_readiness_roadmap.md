@@ -1,5 +1,10 @@
 # Submission-readiness roadmap (updated)
 
+> **2026-11-04: TMLR #13801 -- Action Editor recommendations recorded** (requested by TMLR on
+> 2026-11-03): Tianlong Chen, Binhang Yuan, Zhiqiang Shen, Yu Cheng, Ning Ding (all listed as
+> available; chosen for efficient-LLM inference / compression expertise). Next: TMLR assigns an AE,
+> then reviewers. Notifications go to the OpenReview preferred address (the university mailbox).
+
 > **2026-10-28: submitted to TMLR -- Paper #13801** (OpenReview, Long submission: ~14 pages of
 > main content). Single author; competing interests and human subjects N/A; CC BY 4.0. Uploaded
 > `manuscript/latex_tmlr/main.pdf` (sha256 `de640d4071a5...`, built from commit `fce48bc`) and
