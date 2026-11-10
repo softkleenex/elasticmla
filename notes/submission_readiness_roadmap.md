@@ -1,5 +1,16 @@
 # Submission-readiness roadmap (updated)
 
+> **2026-11-10: revision after the desk rejection (branch `revise-after-tmlr`).** The paper is
+> reframed around its most robust result: new title "Mean-Safe Is Not Tail-Safe: Token-Wise Latent
+> Capacity in Multi-Head Latent Attention"; the spectrum (with DeepSeek-V2-Lite and the basis
+> ablation) is the main result, the router a pre-registered case study. Main text cut from ~14 to
+> ~10 pages; process history (commit hashes, latency stages, superseded analyses) moved to appendices
+> A-G; related work expanded from 9 to 33 references, every arXiv entry checked against the arXiv API.
+> No number changed (checked mechanically against the submitted draft). The plain build is now the
+> public arXiv version with the real author; `dist/arxiv_source.tar.gz` is its source package.
+> Next: user review, merge, arXiv upload (user's account; a first cs.LG submission may need an
+> endorsement), then the next venue.
+
 > **2026-11-08: TMLR #13801 desk-rejected** ("rejected without further review ... unlikely to meet
 > one or both of TMLR criterion", citing submission volume; no individual feedback promised; any
 > AE comment would be at https://openreview.net/forum?id=ZhQKUhaRfZ, not yet checked). The paper is

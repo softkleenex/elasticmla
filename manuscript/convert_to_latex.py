@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DRAFT = ROOT / "manuscript" / "draft.md"
 LATEX_DIR = ROOT / "manuscript" / "latex"
 TMLR_DIR = ROOT / "manuscript" / "latex_tmlr"
-TITLE = "ElasticMLA: Context-Aware Token-Wise Latent Capacity Allocation for Multi-Head Latent Attention"
+AUTHOR = r"ShangJae Lee \\ Kyungpook National University \\ \texttt{dltkdwo31@knu.ac.kr}"
 
 
 def strip_number_prefix(s):
@@ -68,6 +68,9 @@ def protect_and_convert(text):
 
 
 def convert_table(block_lines):
+    caption = None
+    if block_lines and block_lines[0].startswith("@@CAPTION@@"):
+        caption, block_lines = block_lines[0][len("@@CAPTION@@"):], block_lines[1:]
     rows = [l for l in block_lines if l.strip().startswith("|")]
     header, align_row, body_rows = rows[0], rows[1], rows[2:]
 
@@ -92,6 +95,8 @@ def convert_table(block_lines):
     colspec = "".join(col_spec)
     wide = n >= 5
     out = [r"\begin{table}[t]", r"\centering"]
+    if caption:
+        out.append(r"\caption{" + caption + "}")
     if wide:
         out.append(r"\resizebox{\textwidth}{!}{%")
     out += [r"\small", r"\begin{tabular}{" + colspec + "}", r"\toprule"]
@@ -169,10 +174,21 @@ def convert_body(md_text):
                 r"\label{fig:" + fname + "}", r"\end{figure}",
             ]
             continue
+        if stripped.startswith("**Table"):
+            # "**Table N.** caption" paragraph: becomes the caption of the table that follows it.
+            para = [stripped]
+            i += 1
+            while i < n and lines[i].strip() != "":
+                para.append(lines[i].strip()); i += 1
+            caption = re.sub(r"^\*\*Table \d+\.\*\*\s*", "", " ".join(para))
+            out.append("@@CAPTION@@" + protect_and_convert(caption))
+            continue
         if stripped.startswith("|"):
             block = []
             while i < n and lines[i].strip().startswith("|"):
                 block.append(lines[i]); i += 1
+            if out and out[-1].startswith("@@CAPTION@@"):
+                block.insert(0, out.pop())
             out += ["@@TABLE@@", "\n".join(block), "@@ENDTABLE@@"]
             continue
         if re.match(r"^\d+\.\s+", stripped):
@@ -238,7 +254,7 @@ PREAMBLE = r"""\documentclass[11pt]{article}
 \hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
 
 \title{@@TITLE@@}
-\author{ElasticMLA Project}
+\author{@@AUTHOR@@}
 \date{}
 
 \begin{document}
@@ -253,7 +269,7 @@ TMLR_PREAMBLE = (
     PREAMBLE.replace(r"\documentclass[11pt]{article}", r"\documentclass[10pt]{article}")
     .replace("\\usepackage[margin=1in]{geometry}\n", "\\usepackage{tmlr}\n\\setcitestyle{numbers}\n")
     .replace("\\usepackage[T1]{fontenc}\n\\usepackage{newtxtext,newtxmath}\n", "")
-).replace(r"\author{ElasticMLA Project}", r"\author{\name Anonymous authors \\ \addr Paper under double-blind review}")
+).replace(r"\author{@@AUTHOR@@}", r"\author{\name Anonymous authors \\ \addr Paper under double-blind review}")
 
 
 def main():
@@ -261,8 +277,14 @@ def main():
     parser.add_argument("--style", choices=("plain", "tmlr"), default="plain")
     args = parser.parse_args()
     out_dir = TMLR_DIR if args.style == "tmlr" else LATEX_DIR
-    preamble = (TMLR_PREAMBLE if args.style == "tmlr" else PREAMBLE).replace("@@TITLE@@", TITLE)
     mt = DRAFT.read_text()
+    title = protect_and_convert(mt.splitlines()[0].removeprefix("# ").strip())
+    preamble = (TMLR_PREAMBLE if args.style == "tmlr" else PREAMBLE)
+    preamble = preamble.replace("@@TITLE@@", title).replace("@@AUTHOR@@", AUTHOR)
+    # Everything after "## Appendix" is typeset after the bibliography, under \appendix.
+    appendix_md = ""
+    if "\n## Appendix\n" in mt:
+        mt, appendix_md = mt.split("\n## Appendix\n", 1)
     abs_start = mt.index("## Abstract")
     abs_end = mt.index("## 1. Introduction")
     abstract_text = mt[abs_start + len("## Abstract"):abs_end].strip()
@@ -282,7 +304,9 @@ def main():
         f"\\bibitem{{ref{n}}} {e}\n\n" for n, e in bib_items
     ) + "\\end{thebibliography}\n"
 
-    full_tex = preamble + abstract_tex + "\n\\end{abstract}\n\n" + body_tex_final + "\n\n" + bib_tex + "\n\\end{document}\n"
+    appendix_tex = "\n\\appendix\n\n" + replace_tables(convert_body(appendix_md)) + "\n" if appendix_md else ""
+    full_tex = (preamble + abstract_tex + "\n\\end{abstract}\n\n" + body_tex_final + "\n\n" + bib_tex
+                + appendix_tex + "\n\\end{document}\n")
 
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "main.tex").write_text(full_tex)

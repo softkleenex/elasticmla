@@ -13,7 +13,16 @@ tectonic main.tex   # or: latexmk -pdf main.tex / pdflatex main.tex (twice)
 ```
 
 `tectonic` (self-contained, fetches packages on first use) is what this package was built and
-verified with: 13 pages, no LaTeX errors, only a handful of cosmetic under/overfull-hbox warnings.
+verified with. Since the 2026-11-10 revision this plain build is the public (arXiv) version: it
+carries the real author block (`AUTHOR` in the converter) and links the public repository. 16 pages:
+main text ends on page 10, references on page 11, appendices A-G after them.
+
+arXiv source package (`dist/` is gitignored):
+
+```bash
+tar -czf dist/arxiv_source.tar.gz -C manuscript/latex main.tex \
+  figures/elasticmla_main_results.pdf figures/elasticmla_risk_spectrum.pdf
+```
 
 ## TMLR submission version
 
@@ -24,7 +33,10 @@ uv run python manuscript/convert_to_latex.py --style tmlr
 cd manuscript/latex_tmlr && tectonic main.tex
 ```
 
-writes the anonymized, TMLR-formatted `manuscript/latex_tmlr/main.tex` from the same
+(TMLR desk-rejected #13801 on 2026-11-08; `latex_tmlr/` is kept as the submitted snapshot and was
+not regenerated from the revised draft, whose appendix links the non-anonymous repository -- remove
+that link before reusing this style for any double-blind venue) writes the anonymized,
+TMLR-formatted `manuscript/latex_tmlr/main.tex` from the same
 `draft.md`. The official style files (`tmlr.sty`, `fancyhdr.sty`, `tmlr.bst`; Apache-2.0,
 `LICENSE.tmlr-style`) are vendored there. Authors are hidden by the style until `[accepted]`.
 
@@ -51,7 +63,10 @@ GFM pipe tables (auto-wrapped in `\resizebox` when they have 7+ columns), `$...$
 `` `code` `` spans (rendered as escaped `\texttt{}` with breakable slashes), `**bold**`/`*italic*`,
 bracketed numeric citations (rendered as plain text, not `\cite`), and the paper's
 `**Figure N.** ... Source: \`path\`.` caption-paragraph convention (rendered as a real
-`figure` float with `\includegraphics`).
+`figure` float with `\includegraphics`), a `**Table N.** ...` paragraph directly before a table
+(becomes that table's `\caption`), and a `## Appendix` line after the references: every section
+after it is typeset after the bibliography under `\appendix` (lettered A, B, ...). The title is read
+from the draft's first `#` line.
 
 It does **not** attempt general-purpose Markdown compatibility (nested lists, blockquotes,
 footnotes, HTML, etc.) beyond what `draft.md` actually uses. If you add a new markdown construct
