@@ -1,5 +1,11 @@
 # Submission-readiness roadmap (updated)
 
+> **2026-11-08: TMLR #13801 desk-rejected** ("rejected without further review ... unlikely to meet
+> one or both of TMLR criterion", citing submission volume; no individual feedback promised; any
+> AE comment would be at https://openreview.net/forum?id=ZhQKUhaRfZ, not yet checked). The paper is
+> free to go elsewhere. Next: decide the next venue; the anonymized TMLR build and supplement builder
+> can be reused for any double-blind venue.
+
 > **2026-11-04: TMLR #13801 -- Action Editor recommendations recorded** (requested by TMLR on
 > 2026-11-03): Tianlong Chen, Binhang Yuan, Zhiqiang Shen, Yu Cheng, Ning Ding (all listed as
 > available; chosen for efficient-LLM inference / compression expertise). Next: TMLR assigns an AE,
