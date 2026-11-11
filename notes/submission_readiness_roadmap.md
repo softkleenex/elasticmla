@@ -1,5 +1,12 @@
 # Submission-readiness roadmap (updated)
 
+> **2026-11-11: desk-reject reason read; arXiv dropped.** The only EIC comment on #13801 links the
+> TMLR blog post "Increasing Emphasis on Clear Writing in Acceptance Criteria" (2026-08-28): papers
+> must communicate their findings clearly, and largely AI-written text is unlikely to pass. So the
+> reason was clarity, not soundness. The 2026-11-10 revision was merged to master. The user decided
+> not to post to arXiv and to aim for a refereed venue. Before any resubmission, the author should
+> reread and rewrite the draft in their own words. Next: choose the venue.
+
 > **2026-11-10: revision after the desk rejection (branch `revise-after-tmlr`).** The paper is
 > reframed around its most robust result: new title "Mean-Safe Is Not Tail-Safe: Token-Wise Latent
 > Capacity in Multi-Head Latent Attention"; the spectrum (with DeepSeek-V2-Lite and the basis
