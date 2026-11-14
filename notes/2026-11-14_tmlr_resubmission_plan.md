@@ -96,3 +96,47 @@ stream, which equals the pre-registered ||e_r|| only at layer 0. Fixed: the trun
   Sigma_l the layer latent covariance on the published calibration windows, seed 62521 + probe index.
   It addresses the objection that isotropic noise falls in directions the up-projections ignore.
 The partial 30M run started with the first version was stopped before finishing; its output was never read.
+
+## Second debate (2026-11-15): restructure and the remaining reviewer objections
+
+Three subagents (TMLR action editor, hostile reviewer, author advocate) read the draft. Agreed:
+Section 5 is reorganized around the objection "is the gap mechanical, or just perturbation size?"
+(Table 2 -> R1 -> R2 -> cancellation -> basis); the router becomes a short case study (Tables 4/5 kept);
+latency moves to the appendix but the abstract keeps "no peak-memory or throughput gain, 2.4x slower
+decode"; the status block goes to the resubmission form. Disagreement resolved: we do **not** write that
+quantization "dominates" without measuring it; R4 below measures it. "Scale-invariant" becomes "similar"
+(DeepSeek's CI does not overlap). Already answered from existing data: the positive-part-mean criterion
+(no cancellation of harm by gain) needs 0.103 at 250M vs 0.071 (mean) and 0.718 (max), so the gap is
+not an artifact of the signed mean (`horizon_capacity_spectrum.positive_mean`, Table 2 run).
+
+### R3. Order-statistic null (offline, 250M Table 2 records)
+
+- Question: is the gap just "max of 32 noisy values vs their mean"?
+- Construction: for each probe and rank, replace the 32 offset deltas by 32 i.i.d. draws from N(mu, sigma^2)
+  with that row's own mean and standard deviation (seed 63521 + probe index), and separately flip each
+  offset's sign of (delta - mu) at random (sign-randomized, keeps |deviations|). Recompute r* at k = H, 1.
+- Reading: if the i.i.d. Gaussian null reproduces the k = 1 mean normalized r* within 0.10, the paper says
+  the worst-offset requirement is what a dispersed, near-zero-mean loss change implies by order statistics,
+  and drops any claim that offsets are structured. If the observed k = 1 rate exceeds the null by > 0.10,
+  the worst offsets are heavier-tailed than Gaussian dispersion. Either way it is reported.
+
+### R4. Latent quantization baseline (30M local, 250M Kaggle)
+
+- Per-token symmetric absmax int8 and int4 quantization of the MLA latent at every position and every
+  layer (decoupled RoPE key left in full precision, as in the packed cache), on the 24 Table 2 evaluation
+  windows. Bytes relative to an fp16 latent: int8 = 0.5 + 2/d_c (one fp16 scale per token-layer), int4 = 0.25 + 2/d_c.
+- Report: mean per-token loss change over all positions, and the bytes. Compared, without new tuning, to the
+  router's published (bytes, loss) points. No threshold: the numbers go in Section 6 as measured.
+
+### R5. Joint application of per-token safe rates (250M Kaggle)
+
+- Question: does per-token mean safety compose when many tokens are truncated together, and what does
+  the worst-offset rule buy at sequence level?
+- For each of the 24 sequences, truncate all 32 probe positions jointly (all layers), each at its published
+  r* for k = H (mean-safe), then for k = 1 (max-safe). Measure the loss change at every position after the
+  first probe: sequence mean, fraction of positions above epsilon = 0.10, and the maximum; plus the rank sum.
+- Reading: if the joint mean-safe sequence-mean change exceeds 2 epsilon, per-token mean safety does not
+  compose and the paper says so. The comparison of the fraction above epsilon between the two allocations,
+  at their rank sums, is reported as measured.
+- Also checked (unit test, no reading needed): truncating position p in the full-attention probe equals
+  masking p's latent in incremental cached decoding.
