@@ -14,6 +14,7 @@ One template, one kernel per JOB (push.py substitutes the JOB line):
                kernels (coord+pca, grad+model_metric) so they run concurrently
   null250      analyze_perturbation_null.py at 250M (pre-registered R2), against the
                published v5 run's orders, windows and records
+  quant250     analyze_latent_quantization.py at 250M (pre-registered R4 and R5)
 
 Inputs are attached datasets: the review code dataset (code/, experiments/, inputs/),
 the 30M/122M inputs dataset and the 250M checkpoint dataset. Each result JSON is also
@@ -175,6 +176,18 @@ def null250():
         emit("null250", out)
 
 
+def quant250():
+    d = scale_dir("exp2_250m")
+    ref = next(p.parent for p in STAGE.rglob("risk_capacity_v5_records.json"))
+    out = WORK / "quant_250m.json"
+    if sh([sys.executable, "-B", ROOT / "experiments" / "analyze_latent_quantization.py",
+           "--checkpoint", d / "ckpt" / "latest.pt", "--data", d / "data" / "val.bin",
+           "--reference-summary", ref / "risk_capacity_v5_summary.json",
+           "--reference-records", ref / "risk_capacity_v5_records.json",
+           "--device", "cuda", "--output", out]):
+        emit("quant250", out)
+
+
 # transformers/datasets match uv.lock; accelerate is only needed for device_map here.
 PUBLIC_MLA_PINS = ["transformers==5.17.0", "datasets==5.0.1", "accelerate"]
 PUBLIC_MLA_RUNS = {
@@ -203,6 +216,6 @@ if __name__ == "__main__":
     pin_torch_for_p100()
     setup_repo()
     {"spectrum250": spectrum250, "basis250": basis250,
-     "benchmark": benchmark, "publickv": publickv, "null250": null250,
+     "benchmark": benchmark, "publickv": publickv, "null250": null250, "quant250": quant250,
      **{job: publicmla for job in PUBLIC_MLA_RUNS}}[JOB]()
     print("ALL DONE", flush=True)

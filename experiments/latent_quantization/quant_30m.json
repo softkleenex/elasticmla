@@ -1,0 +1,40 @@
+{
+  "status": "complete",
+  "analysis": "R4 latent quantization baseline",
+  "device": "mps",
+  "inputs_sha256": {
+    "checkpoint": "18646f1fdd2d97396e687aaf5e60900b0f825ce96a0d11ffe9b6ac600acc8dc1",
+    "data": "5e146271a0bbaf5581b9e71490b1c5b12910b6a59062307ab81206acec8615be",
+    "reference_summary": "74673a953c61530d87dee51dceb82ae18e2ad95e58b077971233e8df8332f687",
+    "analysis_source": "9176574c5fb05fd97aae207a7121a2f329fc1d5a15074c272c79da6ccf537b9d"
+  },
+  "epsilon_nats": 0.1,
+  "d_c": 256,
+  "n_sequences": 24,
+  "block_size": 256,
+  "quantization": {
+    "int8": {
+      "latent_bytes_fraction_of_fp16": 0.5078125,
+      "mean_loss_change_nats": {
+        "mean": -1.904147029563319e-05,
+        "sequence_bootstrap_95pct_ci": [
+          -0.00012819997359277596,
+          8.32280938027452e-05
+        ]
+      },
+      "fraction_of_positions_above_epsilon": 0.0
+    },
+    "int4": {
+      "latent_bytes_fraction_of_fp16": 0.2578125,
+      "mean_loss_change_nats": {
+        "mean": 0.0006748582818545401,
+        "sequence_bootstrap_95pct_ci": [
+          -0.0009780951386953042,
+          0.002165374751227015
+        ]
+      },
+      "fraction_of_positions_above_epsilon": 0.055826822916666664
+    }
+  },
+  "joint_allocation": null
+}
