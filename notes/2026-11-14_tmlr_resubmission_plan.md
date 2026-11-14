@@ -205,3 +205,26 @@ Windows identical to the Table 2 records; recomputed truncation r* agrees with t
 [-0.048, -0.033], within 0.10; k = 1 0.434 vs 0.718, -0.284 [-0.304, -0.264], null needs less. Covariance
 null (exploratory): k = 32 0.033; k = 1 0.703, -0.015 [-0.034, 0.005]; TCP 0.670 vs 0.646. Same reading as
 30M, now at both scales. Folded into Section 5.2 / Table 4 of the draft.
+
+## Phase 4 preparation (2026-11-15)
+
+- Anonymized build: `uv run python manuscript/convert_to_latex.py --style tmlr` now replaces the repository
+  sentence with a pointer to the supplement and stops if the author's handle survives. Built 16 pages; no
+  author name, handle, affiliation or e-mail in main.tex or the PDF text. Supplement
+  (`build_supplement.py`): 292 files, no identity strings found by grep.
+- Still for the author before submitting (early January): reread every sentence (TMLR: authors own the
+  text), check the 2027 quota on the TMLR checker after 1/1, fill the form, submit.
+
+### Draft change list for the resubmission form (link to #13801)
+
+This is a resubmission of #13801 (desk-rejected 2026-11-08 for clarity of writing). Changes:
+1. Reframed as a measurement paper. The main claim is the gap between mean-safe and worst-offset-safe
+   latent rates; the learned router is now a short case study.
+2. New pre-registered controls for the gap (plans committed before running, reported whatever the sign):
+   budget sensitivity (ratio 6.5-12.8 for epsilon 0.05-0.5), an equal-norm random-perturbation null at
+   30M and 250M, an order-statistic null, and a joint application of per-token safe rates (mean-safe
+   allocation keeps mean loss near the budget while 28.6% of positions exceed it).
+3. Measured latent int8/int4 quantization baseline: int8 dominates the packed cache on bytes; stated plainly.
+4. Unit test showing the full-attention truncation probe equals incremental cached decoding.
+5. Latency and router training details moved to the appendix; status/process history removed; prose
+   rewritten for clarity, with terms defined before use.
