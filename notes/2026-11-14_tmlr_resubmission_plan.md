@@ -67,3 +67,17 @@ epsilon = 0.50 the mean criterion sits at the grid floor (16/512 = 0.031), so th
 bound on the mean side, not a measured value. The absolute TCP shrinks as the budget loosens (0.73 -> 0.23
 at 250M), so "the premium is ~0.65" is specific to epsilon = 0.10 and must be stated that way.
 DeepSeek uses shard a only, the only shard with the coordinate basis.
+
+## R2 implementation details (2026-11-15, fixed before the full runs)
+
+Script `experiments/analyze_perturbation_null.py`, tests `tests/test_perturbation_null.py`.
+
+- The null direction u is drawn once per (probe, layer) and kept fixed across ranks, so only its norm
+  follows the truncation schedule ||c * (1 - m_r)||. Probe index = position in the published record order.
+- Channel orders are read from the published summary (`layer_channel_orders`), not recalibrated, so
+  truncation and null share exactly the Table 2 orders. Windows and positions are regenerated from the
+  evaluation seed and, at 250M, checked against the published records (the script stops on a mismatch).
+- epsilon = 0.10 and H = 32, as in Table 2. Truncation is recomputed in the same run, and the
+  comparison is paired per probe (sequence-cluster bootstrap of null - truncation).
+- Disclosure: a 2-sequence smoke run of the 30M model was run once on MPS to debug the script and its
+  output was seen. Nothing above was changed after it.
