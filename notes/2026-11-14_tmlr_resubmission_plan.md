@@ -197,3 +197,11 @@ Pre-registered reading: mean-safe rates compose at the sequence-mean level (0.10
 mean-loss evaluation of that allocation would report about epsilon while 29% of positions exceed the budget
 and the worst position loses 4.6 nat; the max-safe allocation cuts that to 4.4% and 0.41 nat at 10x the rate.
 This is the paper's answer to "why does mean-safe vs tail-safe matter".
+
+### R2 at 250M (`experiments/perturbation_null/null_250m.json`, Kaggle T4)
+
+Windows identical to the Table 2 records; recomputed truncation r* agrees with the published values on
+100% of probes at every k. Isotropic null (pre-registered): k = 32 0.031 (grid floor) vs 0.071, -0.040
+[-0.048, -0.033], within 0.10; k = 1 0.434 vs 0.718, -0.284 [-0.304, -0.264], null needs less. Covariance
+null (exploratory): k = 32 0.033; k = 1 0.703, -0.015 [-0.034, 0.005]; TCP 0.670 vs 0.646. Same reading as
+30M, now at both scales. Folded into Section 5.2 / Table 4 of the draft.

@@ -10,8 +10,9 @@ DeepSeek-V2-Lite, keeping a token's mean future-loss change under 0.1 nat (its m
 is 6.5-12.8 at every budget from 0.05 to 0.5 nat. The gap does not come from a few fragile tokens.
 The loss changes are dispersed around a near-zero mean, 93-97% of tokens at their mean-safe rate
 exceed the budget at some offset, and Gaussian draws matched to the mean and spread of each probe's loss changes
-reproduce the worst-offset requirement to within 0.06. Nor is the gap specific to the dropped channels: at 30M,
-random perturbations of equal norm shaped like the latent cost as much as truncation.
+reproduce the worst-offset requirement to within 0.06. Nor is the gap specific to the dropped channels: at 30M and 250M,
+random perturbations of equal norm shaped like the latent (an exploratory control) cost about as much
+as truncation, while isotropic noise of equal norm costs less at the worst offset.
 Applied jointly at 250M, mean-safe rates raise mean loss by 0.102 nat while 28.6% of positions exceed
 the budget. Mean-loss evaluations of token-wise compression thus understate worst-offset cost by about an
 order of magnitude. A learned router with a byte-exact packed cache ties a per-token lookup at equal
@@ -42,10 +43,10 @@ differ by about a factor of ten, for almost every token. Our contributions are:
 - **A mechanism, with its limits** (Sections 5.2-5.5). Per-token future-loss changes are dispersed
   around a near-zero mean, and Gaussian draws matched to the mean and spread of each probe's loss changes
   come close to the worst-offset rate (0.663 against 0.718 at 250M). The cost is not specific to the discarded channels.
-  At 30M, isotropic noise with the norm of the discarded channels is within 0.10 of truncation under
-  the mean criterion but needs 0.175 less at the worst offset; noise shaped by the latent covariance
-  (exploratory) matches truncation. Applied jointly, mean-safe rates keep mean loss near the budget
-  while 28.6% of positions exceed it. Rotating the basis removes about 50 percentage points of the
+  At 30M and 250M, isotropic noise with the norm of the discarded channels is within 0.10 of truncation
+  under the mean criterion but needs 0.175 and 0.284 less at the worst offset; noise shaped by the
+  latent covariance (exploratory) comes within 0.015. Applied jointly at 250M, mean-safe rates keep mean loss near the
+  budget while 28.6% of positions exceed it. Rotating the basis removes about 50 percentage points of the
   worst-offset requirement in our models but 11 in DeepSeek-V2-Lite.
 - **A byte-exact case study** (Section 6). A pre-registered contextual router with a variable-width
   packed cache beats exact-byte random placement in three of four configurations but only ties a
@@ -282,23 +283,24 @@ Gaussian. A sign-randomized null, which keeps each row's absolute deviations fro
 their signs, needs 0.758. On the mean side both nulls need more than observed (0.108 against 0.071),
 because the observed rows are not Gaussian around their mean.
 
-**Equal-norm perturbations.** At 30M we replaced truncation by a perturbation of the same size,
-adding to the full latent, in all layers at once, a random vector with that layer's discarded-tail
-norm. One direction is drawn per probe and layer and kept fixed while its norm follows the truncation
-schedule over the rate grid. The pre-registered isotropic null needs 0.0625 of $d_c$ under the mean
-criterion, the grid floor for every probe, against 0.090 for truncation (paired difference $-0.028$,
-95% CI [$-0.032$, $-0.023$]). By our pre-registered reading, a difference within 0.10 means the
-mean-criterion rate reflects how the loss responds to perturbations of that norm, not information
-specific to the dropped channels. At $k=1$ isotropic noise needs 0.566, 0.175 less than truncation
-([$-0.202$, $-0.148$]): at the worst offset, truncation is harsher than isotropic noise of equal norm.
-Because isotropic noise may fall partly in directions the up-projections ignore, we also drew the
-perturbation from each layer's latent covariance (exploratory). This null matches truncation at every
-tail level: 0.067 under the mean criterion and 0.737 at $k=1$ (paired difference $-0.003$,
-[$-0.027$, $+0.019$]), with a premium of 0.671 against 0.651. The spectrum is thus a property of how
-the loss responds to latent perturbations of a given size, not evidence that the discarded channels
-carry special information.
+**Equal-norm perturbations.** At 30M and 250M we replaced truncation by a perturbation of the same
+size, adding to the full latent, in all layers at once, a random vector with that layer's
+discarded-tail norm. One direction is drawn per probe and layer and kept fixed while its norm follows
+the truncation schedule over the rate grid. Under the mean criterion the pre-registered isotropic null
+sits at the grid floor (0.0625 at 30M, 0.031 at 250M), against 0.090 and 0.071 for truncation (paired
+differences $-0.028$ [$-0.032$, $-0.023$] and $-0.040$ [$-0.048$, $-0.033$]). By our pre-registered
+reading, a difference within 0.10 means the mean-criterion rate reflects how the loss responds to
+perturbations of that norm, not information specific to the dropped channels. At $k=1$ isotropic noise
+needs 0.566 and 0.434, which is 0.175 [$-0.202$, $-0.148$] and 0.284 [$-0.304$, $-0.264$] less than
+truncation: at the worst offset, truncation is harsher than isotropic noise of equal norm. Because
+isotropic noise may fall partly in directions the up-projections ignore, we also drew the perturbation
+from each layer's latent covariance (exploratory). This null comes close to truncation at every tail
+level on both models: at $k=1$ it needs 0.737 and 0.703 (paired differences $-0.003$ [$-0.027$,
+$+0.019$] and $-0.015$ [$-0.034$, $+0.005$]), with premiums of 0.671 and 0.670 against 0.651 and
+0.646. The spectrum is thus a property of how the loss responds to latent perturbations of a given
+size, not evidence that the discarded channels carry special information.
 
-**Table 4.** Null models for the spectrum endpoints: mean suffix-safe rate (fraction of $d_c$) under the mean and worst-offset criteria. Equal-norm nulls at 30M; order-statistic nulls at 250M from the stored records.
+**Table 4.** Null models for the spectrum endpoints: mean suffix-safe rate (fraction of $d_c$) under the mean and worst-offset criteria. Equal-norm nulls at 30M and 250M (768 probes each); order-statistic nulls at 250M from the stored records.
 
 | Model | Loss changes from | Status | $k=32$ (mean) | $k=1$ (max) |
 |---|---|---|---:|---:|
@@ -306,10 +308,10 @@ carry special information.
 | 30M | isotropic equal-norm perturbation | pre-registered | 0.0625 | 0.566 |
 | 30M | covariance-shaped equal-norm perturbation | exploratory | 0.067 | 0.737 |
 | 250M | truncation (observed) | | 0.071 | 0.718 |
+| 250M | isotropic equal-norm perturbation | pre-registered | 0.031 | 0.434 |
+| 250M | covariance-shaped equal-norm perturbation | exploratory | 0.033 | 0.703 |
 | 250M | Gaussian draws, each row's mean and s.d. | pre-registered | 0.108 | 0.663 |
 | 250M | sign-randomized deviations | pre-registered | 0.108 | 0.758 |
-
-TODO(250M): R2 isotropic (pre-registered) and covariance-shaped (exploratory) equal-norm nulls on the 768 Table 2 probes of the 250M model; add a 250M block to Table 4 and the paired null-minus-truncation intervals at k = 32 and k = 1.
 
 ### 5.3 The loss changes cancel; they are not rare spikes
 
@@ -320,8 +322,8 @@ increase exceeds $\epsilon$, and the positive-part mean loss is 2.05x, 2.31x and
 (Figure 1(b)). DeepSeek-V2-Lite shows the same signature: 96.6% of probes and 2.10x. Truncating a
 token's latent hurts some future predictions and helps others; the signed mean is small because the
 two cancel, not because the harm is small. The covariance-shaped null of Section 5.2 behaves the same
-way: at its own mean-safe rate, 88.5% of 30M probes have an offset above $\epsilon$ (isotropic null:
-73.4%). A mean-criterion allocation therefore under-provides for almost every token at some offset, not for
+way: at its own mean-safe rate, 88.5% of 30M and 89.7% of 250M probes have an offset above
+$\epsilon$ (isotropic null: 73.4% and 65.0%). A mean-criterion allocation therefore under-provides for almost every token at some offset, not for
 a few rare ones.
 
 ### 5.4 Joint application: what a mean-loss evaluation would report
@@ -461,7 +463,7 @@ is confounded with training budget. The one external replication, DeepSeek-V2-Li
 spectrum, the budget sweep and the basis ablation on one checkpoint, one text distribution and 384
 probes; the router, the nulls and the joint test were not run on it.
 
-**What the nulls show.** The equal-norm nulls are measured at 30M only, with one random direction per
+**What the nulls show.** The equal-norm nulls are measured at 30M and 250M, with one random direction per
 probe and layer, and the covariance-shaped null, which carries the "realistic perturbation" reading,
 is exploratory. The order-statistic null is measured at 250M only and uses each row's own mean and
 spread, so it shows that the worst-offset rate follows from the size of the dispersion, not where the
@@ -497,7 +499,7 @@ Safe on average costs 7-9% of the latent; safe at the worst of the next 32 posit
 $\epsilon=0.1$ nat, and on the two models with stored records the ratio stays between 6.5 and 12.8
 from 0.05 to 0.5 nat. Almost every token pays this cost, because its small average future effect
 hides harm at some offset, and at the worst offset the size of the cost is close to what Gaussian
-dispersion of that spread implies. Equal-norm perturbations shaped like the latent cost as
+dispersion of that spread implies. Equal-norm perturbations shaped like the latent (exploratory) cost about as
 much, so the finding concerns how the loss responds to latent perturbation, not the particular
 channels removed. In small models much of the requirement can be rotated away; in DeepSeek-V2-Lite
 most of it cannot.
