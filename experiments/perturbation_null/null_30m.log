@@ -1,0 +1,40 @@
+rank=16 complete
+rank=32 complete
+rank=48 complete
+rank=64 complete
+rank=96 complete
+rank=128 complete
+rank=160 complete
+rank=192 complete
+rank=224 complete
+rank=256 complete
+k=32: trunc=0.090 null=0.062 diff=-0.028 covariance_null=0.067 diff=-0.023
+k=16: trunc=0.215 null=0.081 diff=-0.133 covariance_null=0.150 diff=-0.065
+k=8: trunc=0.396 null=0.159 diff=-0.238 covariance_null=0.338 diff=-0.058
+k=4: trunc=0.557 null=0.305 diff=-0.252 covariance_null=0.533 diff=-0.025
+k=2: trunc=0.669 null=0.459 diff=-0.210 covariance_null=0.663 diff=-0.006
+k=1: trunc=0.741 null=0.566 diff=-0.175 covariance_null=0.737 diff=-0.003
+{
+  "null": {
+    "k=32 (mean)": "within_0.10: spectrum reflects sensitivity to perturbations of that norm",
+    "k=1 (max)": "null_requires_less_rate: reported as is"
+  },
+  "covariance_null": {
+    "k=32 (mean)": "within_0.10: spectrum reflects sensitivity to perturbations of that norm",
+    "k=1 (max)": "within_0.10: spectrum reflects sensitivity to perturbations of that norm"
+  }
+}
+{
+  "published_normalized_means": {
+    "32": 0.09000651041666667,
+    "16": 0.21468098958333334,
+    "8": 0.396484375,
+    "4": 0.5574544270833334,
+    "2": 0.6693522135416666,
+    "1": 0.74072265625
+  },
+  "per_probe_r_star_agreement_by_tail_count": {
+    "32": 1.0
+  },
+  "required_agreement": 0.99
+}
