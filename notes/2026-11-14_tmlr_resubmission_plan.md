@@ -140,3 +140,43 @@ not an artifact of the signed mean (`horizon_capacity_spectrum.positive_mean`, T
   at their rank sums, is reported as measured.
 - Also checked (unit test, no reading needed): truncating position p in the full-attention probe equals
   masking p's latent in incremental cached decoding.
+
+## Results so far (2026-11-15)
+
+### R2 at 30M (`experiments/perturbation_null/null_30m.json`, MPS, windows verified 768/768)
+
+| k | truncation | isotropic null (pre-reg.) | null - trunc [95% CI] | covariance null (exploratory) | cov - trunc [95% CI] |
+|---|---|---|---|---|---|
+| 32 (mean) | 0.090 | 0.062 | -0.028 [-0.032, -0.023] | 0.067 | -0.023 [-0.028, -0.018] |
+| 1 (max) | 0.741 | 0.566 | -0.175 [-0.202, -0.148] | 0.737 | -0.003 [-0.027, 0.019] |
+
+Pre-registered reading: at k = H the null is within 0.10, so the paper must say the mean-criterion rate
+reflects loss sensitivity to perturbations of that norm. At k = 1 isotropic noise of equal norm needs 0.175
+less rate than truncation. The exploratory covariance-shaped null reproduces truncation at every k (TCP 0.671
+vs 0.651): realistic perturbations of the same norm are as harmful as removing the low-saliency channels.
+So the spectrum is a property of how the loss responds to latent perturbations of a given size, not
+evidence that the dropped channels carry special information. 250M pending (Kaggle).
+
+### R3 (`experiments/order_statistic_null.json`, 250M, offline)
+
+Observed / Gaussian / sign-randomized mean normalized r*: k = 32: 0.071 / 0.108 / 0.108; k = 1: 0.718 / 0.663 /
+0.758. Pre-registered reading: the Gaussian null is within 0.10 at k = 1 (0.055), so the worst-offset
+requirement is what dispersed loss changes imply by order statistics; we drop any claim that the worst
+offsets are structured. (The mean-side null is higher than observed because the observed rows are not
+Gaussian around their mean; reported as is.)
+
+### R4 at 30M (`experiments/latent_quantization/quant_30m.json`)
+
+Per-token int8 latent: 0.508 of fp16 bytes, mean loss change -0.00002 nat [-0.0001, 0.0001], no position
+above epsilon. int4: 0.258 of fp16 bytes, +0.0007 nat [-0.0010, 0.0022], 5.6% of positions above epsilon.
+The router's published points (0.60-0.69 of bytes, +0.10-0.18 nat) are dominated on bytes by int8, now as
+a measurement. 250M (and R5) pending.
+
+### Consequence for the framing (to apply in Phase 2)
+
+The paper becomes a measurement paper: per-token latent truncation produces dispersed, near-zero-mean
+future-loss changes, so worst-offset safety needs ~10x the mean-safe rate at every budget (R1); this cost is
+shared by realistic equal-norm perturbations (R2) and predicted by the order statistics of the dispersion
+(R3). The lesson is about evaluation: mean-loss evaluations of token-wise compression understate the
+worst-offset cost by an order of magnitude. The router and the packed cache are a case study, dominated on
+bytes by int8 quantization (R4).
