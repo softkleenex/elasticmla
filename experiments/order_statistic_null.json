@@ -1,0 +1,183 @@
+{
+  "status": "complete",
+  "analysis": "R3 order-statistic null (pre-registered)",
+  "inputs_sha256": {
+    "kaggle_output/review_reruns/spectrum250/spectrum250_v5/risk_capacity_v5_records.json": "25429bdacc52a298e4c1aca06171b3684fa1d910f14ea5d453c37c40c11bd4b7",
+    "analysis_source": "98ff946aceab07e3d2b06c1772ab37d868eb501a6abf7ead8b538adc1c2a37fb",
+    "risk_v5_source": "8f3bb1727d93dea98a357ea1502cb8eaf0384b1bee35d3298c5b4a4dc49546cc"
+  },
+  "epsilon_nats": 0.1,
+  "tail_counts": [
+    32,
+    16,
+    8,
+    4,
+    2,
+    1
+  ],
+  "rank_grid": [
+    16,
+    32,
+    48,
+    64,
+    96,
+    128,
+    160,
+    192,
+    224,
+    256,
+    288,
+    320,
+    352,
+    384,
+    416,
+    448,
+    480,
+    512
+  ],
+  "n_probes": 768,
+  "seed_rule": "63521 + probe index",
+  "spectrum": {
+    "observed": {
+      "32": {
+        "normalized_mean_r_star": 0.07145182291666667,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.06400553385416667,
+          0.07889912923177082
+        ]
+      },
+      "16": {
+        "normalized_mean_r_star": 0.22119140625,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.2020263671875,
+          0.24198404947916666
+        ]
+      },
+      "8": {
+        "normalized_mean_r_star": 0.3860270182291667,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.36148986816406253,
+          0.4130452473958333
+        ]
+      },
+      "4": {
+        "normalized_mean_r_star": 0.5416259765625,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.5148518880208334,
+          0.5692952473958334
+        ]
+      },
+      "2": {
+        "normalized_mean_r_star": 0.6494547526041666,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.6236572265625,
+          0.6753356933593749
+        ]
+      },
+      "1": {
+        "normalized_mean_r_star": 0.7178141276041666,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.6949045817057292,
+          0.7408040364583334
+        ]
+      }
+    },
+    "gaussian": {
+      "32": {
+        "normalized_mean_r_star": 0.10807291666666667,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.09602762858072918,
+          0.12105407714843748
+        ]
+      },
+      "16": {
+        "normalized_mean_r_star": 0.351806640625,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.32600809733072916,
+          0.37780863444010415
+        ]
+      },
+      "8": {
+        "normalized_mean_r_star": 0.4897054036458333,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.46370340983072916,
+          0.5158284505208334
+        ]
+      },
+      "4": {
+        "normalized_mean_r_star": 0.572998046875,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.5464274088541666,
+          0.599609375
+        ]
+      },
+      "2": {
+        "normalized_mean_r_star": 0.6258544921875,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.6003000895182292,
+          0.6513671875
+        ]
+      },
+      "1": {
+        "normalized_mean_r_star": 0.6631266276041666,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.64013671875,
+          0.6856689453125
+        ]
+      }
+    },
+    "sign_randomized": {
+      "32": {
+        "normalized_mean_r_star": 0.10831705729166667,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.09834696451822918,
+          0.118896484375
+        ]
+      },
+      "16": {
+        "normalized_mean_r_star": 0.2695719401041667,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.24930826822916666,
+          0.2915445963541667
+        ]
+      },
+      "8": {
+        "normalized_mean_r_star": 0.4308675130208333,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.40470275878906253,
+          0.45727640787760415
+        ]
+      },
+      "4": {
+        "normalized_mean_r_star": 0.5836995442708334,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.5572102864583334,
+          0.6100687662760417
+        ]
+      },
+      "2": {
+        "normalized_mean_r_star": 0.6912841796875,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.6665028889973958,
+          0.7153727213541666
+        ]
+      },
+      "1": {
+        "normalized_mean_r_star": 0.758056640625,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.73681640625,
+          0.77783203125
+        ]
+      }
+    }
+  },
+  "observed_minus_null_at_k1": {
+    "gaussian": 0.0546875,
+    "sign_randomized": -0.04024251302083337
+  },
+  "observed_minus_null_at_kH": {
+    "gaussian": -0.03662109375,
+    "sign_randomized": -0.036865234375
+  },
+  "pre_registered_reading": "within_0.10: worst-offset requirement is what Gaussian dispersion implies"
+}
