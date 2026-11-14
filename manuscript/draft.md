@@ -1,81 +1,61 @@
 # Mean-Safe Is Not Tail-Safe: Token-Wise Latent Capacity in Multi-Head Latent Attention
 
-> **Status.** Revised after the TMLR desk rejection of 2026-11-08 (submission #13801, then titled
-> "ElasticMLA: Context-Aware Token-Wise Latent Capacity Allocation for Multi-Head Latent
-> Attention"). The revision reframes the paper around its most robust result, the risk-capacity
-> spectrum, presents the router as an honestly reported case study, and moves process history to the
-> appendices. No number was changed: every value is the one reported in the submitted version, from
-> the corrected v4 analysis and the pre-specified fresh-window confirmation protocol.
-
 ## Abstract
 
-Multi-head Latent Attention (MLA) caches one compressed latent per token, at the same width for
-every token. How much of that width does each token need? We cast token-wise latent width as a rate
-allocation problem with two exact properties: cache bytes are affine in the summed per-token rates,
-so allocations with equal rate sums cost exactly the same, and requiring a token to be safe on the
-worst $k$ of its future losses, a CVaR-type criterion, orders the safe rates monotonically from the
-average to the worst reuse offset. Measured on three MLA language models (30M-250M parameters) and on
-the public, production-trained DeepSeek-V2-Lite, this risk-capacity spectrum is wide and stable. Under
-a 0.1-nat budget the safe rate averages 7-9% of the latent width when only the mean future loss is
-constrained, but 72-79% when the worst future offset is, and the normalized gap between the two is
-nearly constant (0.646-0.651 across our three models, 0.70 in DeepSeek-V2-Lite). The gap is not
-caused by rare catastrophic tokens: 93-97% of mean-safe tokens still exceed the budget at some future
-offset, and their mean stays small because losses and gains cancel across the horizon. Rotating the
-latent basis lowers the worst-offset requirement by about 50 points in our small models but by only
-11 in DeepSeek-V2-Lite. We then ask whether a learned router can exploit the spectrum, using a
-variable-width packed cache and pre-registered exact-byte controls. At equal bytes the router beats
-random, position-based and token-type placement in three of four configurations, but only ties a
-per-token lookup table: what it learned is explained by token identity, not by context.
+How much of a cached latent does each token need? In Multi-head Latent Attention (MLA), truncating
+one token's latent changes the loss at every later position that reads it, and token-wise compression
+is usually judged by the mean of those changes. On three MLA language models (30M-250M parameters)
+and the public DeepSeek-V2-Lite, keeping a token's mean future-loss change under 0.1 nat needs 7-9%
+of the latent width; keeping each of its next 32 losses under 0.1 nat needs 72-79%. The ratio is
+6.5-12.8 at every budget from 0.05 to 0.5 nat. The changes are dispersed around a near-zero mean:
+93-97% of mean-safe tokens exceed the budget at some offset, and Gaussian order statistics of that
+dispersion come within 0.06 of the worst-offset rate. The gap is not specific to the dropped channels:
+at 30M, random perturbations of equal norm shaped like the latent cost as much as truncation.
+Applied jointly, mean-safe rates raise mean loss by 0.102 nat while 28.6% of positions exceed the
+budget. Mean-loss evaluations of token-wise compression thus understate worst-offset cost by about an
+order of magnitude. A learned router with a byte-exact packed cache ties a per-token lookup at equal
+bytes, gives no peak-memory or throughput gain, and decodes 2.4x slower.
 
 ## 1. Introduction
 
-Autoregressive transformer [1] inference stores a key and a value for every past token in every attention layer, and
-this KV cache, growing linearly with context length and batch size, increasingly limits serving
-capacity. Multi-head Latent Attention (MLA), introduced in DeepSeek-V2 [2] and retained in
-DeepSeek-V3 [3], shrinks the cache by storing one low-dimensional latent per token from which
-per-head keys and values are reconstructed. MLA nevertheless gives every token the same latent width.
-A natural next step, analogous to adaptive computation [26, 27] and to per-token budget allocation in
-cache eviction [18, 20], is to give each token only the width it needs. Before building such a
-system, one has to know what "needed" means and how much it varies.
+The KV cache of autoregressive transformers [1] increasingly limits serving capacity. Multi-head Latent Attention
+(MLA), introduced in DeepSeek-V2 [2] and retained in DeepSeek-V3 [3], shrinks the cache by storing one
+low-dimensional latent per token from which per-head keys and values are reconstructed, at the same
+width for every token. Giving each token only the width it needs, as adaptive computation [26, 27]
+and per-token budget allocation in cache eviction [18, 20] do for other resources, first requires
+knowing what "needs" means.
 
-That depends on the criterion. A cached latent is read by every later query, so truncating it
-changes the loss at many future positions at once. A token can be "safe" in the sense that its
-average effect over the next $H$ positions is small, or in the stricter sense that no single future
-position is harmed by more than a budget $\epsilon$. The usual intuition is that the two nearly
-coincide: most tokens are harmless, and a few rare tokens cause large spikes. If that were true, a
-router could compress aggressively and protect the rare spikes.
+A cached latent is read by every later query, so truncating it changes the loss at many future
+positions at once. A token can be safe in the sense that its average effect over the next $H$
+positions is small, or in the stricter sense that no single future position is harmed by more than a
+budget $\epsilon$. Compression methods are usually evaluated in the first sense, by mean loss or
+perplexity. The common intuition is that the two senses nearly coincide, with a few rare tokens
+causing large spikes. We measure both and find that they differ by about a factor of ten, for almost
+every token. Our contributions are:
 
-We test this directly and find that it is not true. Our contributions are:
+- **A measurement with controls** (Sections 5.1-5.2). On three MLA models spanning an 8x parameter
+  range and on DeepSeek-V2-Lite, the mean safe rate is 7-9% of the latent width under the mean
+  criterion and 72-79% under the worst-offset criterion at $\epsilon=0.1$ nat. On the two models with
+  stored per-offset records, the ratio between them is 6.5-12.8 at every budget from 0.05 to 0.5 nat,
+  and the gap remains under a criterion that does not let gains at some offsets cancel harm at others.
+- **A mechanism, with its limits** (Sections 5.2-5.5). Per-token future-loss changes are dispersed
+  around a near-zero mean, and a Gaussian with each row's own mean and spread reproduces the
+  worst-offset rate (0.663 against 0.718 at 250M). The cost is not specific to the discarded channels:
+  at 30M an isotropic equal-norm perturbation is within 0.10 of truncation under the mean criterion
+  but needs 0.175 less at the worst offset, and an exploratory covariance-shaped one matches
+  truncation. Applied jointly, mean-safe rates keep mean loss near the budget while 28.6% of positions
+  exceed it. Rotating the basis removes about 50 points of the worst-offset requirement in our models
+  but 11 in DeepSeek-V2-Lite.
+- **A byte-exact case study** (Section 6). A pre-registered contextual router with a variable-width
+  packed cache beats exact-byte random placement in three of four configurations but only ties a
+  per-token lookup table. Per-token int8 quantization of the latent halves its bytes with no
+  measurable loss change at 30M and 250M, so the router is dominated on bytes.
 
-- **A rate-allocation formulation with two exact properties** (Section 3). The persistent bytes of a
-  variable-width packed MLA cache are an affine function of the summed per-token rates, so any two
-  allocations with the same rate sum cost exactly the same bytes; this is what makes byte-exact
-  comparisons between allocation policies possible. And the safe rate under a "worst $k$ of $H$
-  future losses" criterion, the empirical conditional value-at-risk [33] of a token's future-loss
-  vector, is monotone in $k$ for every token and every realized loss curve, without any smoothness
-  or monotonicity assumption.
-- **The risk-capacity spectrum** (Section 5). On three MLA models spanning an 8x parameter range and
-  on DeepSeek-V2-Lite, the mean safe rate rises from 7-9% of the latent width under the mean
-  criterion to 72-79% under the worst-offset criterion, through every intermediate tail level, and
-  the normalized tail-capacity premium is nearly scale-invariant (0.646-0.651; 0.704 for
-  DeepSeek-V2-Lite).
-- **A mechanism.** The gap comes from pervasive cancellation, not rare spikes: at the rate that is
-  safe on average, 93-97% of tokens still exceed the budget at some future offset, and the
-  positive-part mean loss is 2.05-2.31x the signed mean.
-- **A basis-dependence result with a negative half.** In our models a learned rotation of the latent
-  basis removes about 50 points of the worst-offset requirement, but in DeepSeek-V2-Lite only 11:
-  the tail requirement is real, while the large rotation gain is specific to small models trained on
-  TinyStories.
-- **A pre-registered case study of learned allocation** (Section 6). A contextual router with a
-  variable-width packed cache beats exact-byte random allocation in three of four frozen
-  configurations and beats position and token-type placement at exactly the router's bytes, but it
-  only ties a per-token lookup table fitted to its own decisions.
-
-The spectrum is the paper's main result and does not depend on the router. The router result is
-narrower, and we report it as it is: a learned allocator can beat naive placements, but we find no
-evidence that context beyond the current token helps it. We also do not claim serving gains. In our
-prototype the packed cache stores 60-67% of the bytes of a full MLA cache, with essentially unchanged
-peak memory and a 2.4x decode-latency cost (Section 7).
+The lesson concerns evaluation: a mean-loss evaluation of token-wise compression understates its
+worst-offset cost by about an order of magnitude, because the loss changes are dispersed, not because
+a few tokens are fragile. We do not claim serving gains. The packed cache stores 60-69% of the bytes
+of a full MLA cache, with no peak-memory or throughput gain and a 2.4x decode-latency cost
+(Appendix F).
 
 ## 2. Background and Related Work
 
@@ -97,7 +77,7 @@ layer sharing and quantization [5]. Analyses of trained MLA models find that lat
 separate content from positional information in a way that depends on the basis used to read them
 [9]. All of these keep one latent width per layer for every token.
 
-### 2.2 KV-cache compression
+### 2.2 KV-cache compression and adaptive allocation
 
 KV-cache compression methods differ in which axis they compress. Eviction keeps a subset of tokens,
 selected by accumulated attention (H2O [10], Scissorhands [19]), attention sinks and a recent window
@@ -107,22 +87,16 @@ or heads. Quantization lowers the precision of every cached element (KIVI [14], 
 Low-rank methods project keys and values into a smaller space, uniformly or with layer-wise ranks
 (Palu [16], LoRC [17], Eigen Attention [21]), and MiniCache [24] merges states across adjacent
 layers. Dynamic Memory Compression [25] learns per token whether to append or merge into the cache.
-
-Our object is different from each of these. We keep every token and every head, and vary the *width*
-of each token's latent through a nested prefix, the same nesting idea as Matryoshka representations
-[30]. This makes per-token rate the only thing that varies, which is what lets us measure how much
-each token needs and compare allocation policies at byte-identical budgets.
-
-### 2.3 Adaptive allocation and its evaluation
-
 Learning where to spend a discrete budget is a general pattern: adaptive computation time [26],
 mixture-of-depths [27] and mixture-of-experts routing all learn an importance signal and spend
-compute nonuniformly. Our router is trained with a straight-through estimator [28] through the hard
-tiers it uses at deployment. Two evaluation points from this setting carry over. First, an
-allocation policy should be compared with alternatives at exactly its own budget, or the comparison
-measures budget rather than placement. Second, the alternatives should include simple causal rules,
-not only random placement: a router can beat random placement while learning nothing that a lookup
-table could not. Section 6 applies both.
+compute nonuniformly.
+
+Our object differs from each of these. We keep every token and every head, and vary the *width* of
+each token's latent through a nested prefix, the same nesting idea as Matryoshka representations
+[30]. This makes per-token rate the only thing that varies, which lets us measure how much each token
+needs and compare allocation policies at byte-identical budgets. Two evaluation points from adaptive
+allocation carry over to Section 6: compare a policy with alternatives at exactly its own budget,
+and include simple causal rules among them.
 
 ## 3. Token-Wise Latent Rate Allocation
 
@@ -143,15 +117,14 @@ b\left[Td_c+(L-1)T\bar r+TLd_R\right]
 
 where $\bar r=T^{-1}\sum_t r_t$ and the last three terms count offsets, ranks and permutations; we
 use $b=4$. This counts the persistent tensors only, not allocator rounding, router weights or the
-dense temporary latent that the prototype reconstructs during attention (Section 7 measures those).
+dense temporary latent that the prototype reconstructs during attention (Appendix F measures those).
 
-### 3.2 Two propositions
+### 3.2 Safe rates and budget affinity
 
-We do not call $r_t$ an intrinsic rank. MLA's latent can be rotated while compensating the
-up-projections ($c\mapsto Qc$, $W_U\mapsto W_UQ^{-1}$), and a nested coordinate prefix is not
-invariant under this change: the full model is, its truncations are not. $r_t$ is therefore an
+$r_t$ is not an intrinsic rank: rotating the latent while compensating the up-projections
+($c\mapsto Qc$, $W_U\mapsto W_UQ^{-1}$) leaves the full model unchanged but not its truncations. $r_t$ is therefore an
 operational rate in a chosen nested codebook $P_{\ell,r_1}\preceq\cdots\preceq P_{\ell,d_c}=I$, and
-Section 5.4 measures how much the choice of codebook matters.
+Section 5.5 measures how much the choice of codebook matters.
 
 **Proposition 1 (exact budget affinity).** For any two per-sequence allocations $\mathbf r,\mathbf
 s$, $M_{\text{packed}}(\mathbf r)-M_{\text{packed}}(\mathbf s)=b(L-1)\sum_t(r_t-s_t)$. In particular,
@@ -171,19 +144,11 @@ $$r^*_{t,k}(\epsilon)=\min\{r\in\mathcal R: A_{t,k}(r')\le\epsilon\ \text{for ev
 
 the smallest rate from which every larger rate on the grid $\mathcal R$ is also safe.
 
-**Proposition 2 (risk-capacity ordering).** If $k_1\ge k_2$, then $r^*_{t,k_1}(\epsilon)\le
-r^*_{t,k_2}(\epsilon)$ for every token, budget and grid. *Proof.* The mean of the $k$ largest
-elements of a fixed vector cannot decrease as $k$ shrinks, so $A_{t,k_1}(r)\le A_{t,k_2}(r)$ at every
-$r$. Every rate that is suffix-safe for $k_2$ is therefore suffix-safe for $k_1$, and the minima are
-ordered.
-
-The ordering holds for every realized loss vector, including the nonmonotone rank-loss curves we
-observe (Appendix G), and needs no assumption about the sign or shape of $\Delta_{t,j}$. It is why
-the result in Section 5 is a whole spectrum of tail levels rather than two endpoints. Under a
-bounded-Lipschitz assumption on the future logit map, truncation also satisfies
-$|\Delta_{t,j}(r)|\le\sqrt2K_{t,j}\|e_t(r)\|_2$, where $e_t(r)$ is the discarded latent tail and
-$K_{t,j}$ a local Lipschitz constant: a monotone safety bound consistent with, but weaker than, the
-realized ordering.
+*Remark (ordering).* The mean of the $k$ largest elements of a fixed vector cannot decrease as $k$
+shrinks, so $r^*_{t,k}(\epsilon)$ is nondecreasing as $k$ falls from $H$ to 1, for every token,
+budget and grid, including the nonmonotone rank-loss curves we observe (Appendix G). The spectra of
+Section 5 are therefore monotone by construction. Their width is the finding, and Section 5.2 asks
+how much of it any signed vector would produce.
 
 ### 3.3 Measuring safe rates
 
@@ -191,12 +156,14 @@ For each probed source position $p$ and each rate $r$ on the grid, we zero the c
 layer's nested prefix at position $p$ in every layer simultaneously, keep every other position at
 full width, and record $\Delta_{p,j}(r)$ for $j=0,\ldots,H-1$, starting with the prediction made at
 position $p$ itself, the first one the truncated latent can affect. We use $H=32$ and $\epsilon=0.10$
-nat. Calibration data, calibration windows and evaluation windows do not overlap. The rate grid runs
-from 16 to $d_c$ in steps of 16 up to 64 and steps of 32 thereafter, so every requirement is resolved
-up to full width. We report, for each tail count $k\in\{32,16,8,4,2,1\}$, the mean of $r^*_{p,k}$
-over probes divided by $d_c$, and the tail-capacity premium
-$\mathrm{TCP}=\mathbb E[r^*_{p,1}-r^*_{p,32}]/d_c$, the average extra width a token needs to be safe
-at its worst offset rather than on average.
+nat unless stated otherwise. Calibration data, calibration windows and evaluation windows do not
+overlap. The rate grid runs from 16 to $d_c$ in steps of 16 up to 64 and steps of 32 thereafter, so
+every requirement is resolved up to full width. We report, for each tail count
+$k\in\{32,16,8,4,2,1\}$, the mean of $r^*_{p,k}$ over probes divided by $d_c$, and the tail-capacity
+premium $\mathrm{TCP}=\mathbb E[r^*_{p,1}-r^*_{p,32}]/d_c$, the average extra width a token needs to
+be safe at its worst offset rather than on average. A positive-part criterion replaces $A_{p,H}$ by
+the mean of $\max(\Delta_{p,j},0)$ over the horizon, so that gains at some offsets cannot offset harm
+at others.
 
 ## 4. Experimental Setup
 
@@ -225,22 +192,25 @@ Because TinyStories is out of distribution for this model, its text is WikiText-
 sequences of 512 tokens after a BOS token that is never probed, 16 positions each (384 probes), with
 32 training sequences for calibration. The latent is truncated through a forward hook on the
 normalization whose output the cache stores, at every layer at once; the RoPE key is left intact, as
-in our models. The model runs in float16 on two T4 GPUs; every basis reproduces the unmodified loss
-exactly at full width (maximum deviation 0.0), and the unmodified mean token loss is 2.14 nats.
+in our models. In float16 on two T4 GPUs every basis reproduces the unmodified loss exactly at full
+width, and the unmodified mean token loss is 2.14 nats.
 
 ### 4.2 Statistical protocol
 
 The unit of inference is a sequence. Intervals are 95% sequence-cluster bootstrap intervals, and
-comparisons between methods measured on the same probes or sequences use paired differences. For the
-router (Section 6), each configuration's policy, sampling seed, 24 fresh evaluation sequences,
-control repeats, primary endpoint and success rule were frozen in a committed protocol before its
-confirmation run, and an independent audit script recomputes every reported statistic from the
-stored per-sequence rows. Appendix B gives the protocol and its two documented departures from a
-clean pre-registration.
+comparisons between methods measured on the same probes or sequences use paired differences. The
+budget sweep, the two nulls and the joint-allocation test of Section 5, and the quantization
+comparison of Section 6, were specified with their decision rules in a committed plan before they
+were run (`notes/2026-11-14_tmlr_resubmission_plan.md`). One covariance-shaped null was added after
+that plan but before any of its results were seen, and is labeled exploratory. For the router, each
+configuration's policy, sampling seed, 24 fresh evaluation sequences, control repeats, primary
+endpoint and success rule were frozen in a committed protocol before its confirmation run, and an
+independent audit script recomputes every reported statistic from the stored per-sequence rows.
+Appendix B gives the protocol and its two documented departures from a clean pre-registration.
 
-## 5. Mean-Safe Is Not Tail-Safe: The Risk-Capacity Spectrum
+## 5. Mean-Safe Is Not Tail-Safe
 
-### 5.1 The spectrum is wide, monotone and nearly scale-invariant
+### 5.1 The risk-capacity spectrum
 
 **Table 2.** Mean suffix-safe rate as a fraction of $d_c$ at each tail level ($\epsilon=0.10$ nat, $H=32$), in the saliency-ordered coordinate basis. TCP is the tail-capacity premium.
 
@@ -254,47 +224,126 @@ clean pre-registration.
 | 1 (max) | 0.969 | 74.07% | 72.92% | 71.78% | 78.65% |
 | TCP | | 0.651 | 0.647 | 0.646 | 0.704 |
 
-Table 2 gives the mean suffix-safe rate at each tail level, in the saliency-ordered coordinate basis
-that the packed cache uses. A token whose average future-loss
-increase must stay under 0.1 nat needs on average 7-9% of the latent; the same token, required to
-stay under 0.1 nat at every one of its next 32 positions, needs 72-79%. Every intermediate level lies
-between them, and every step is monotone at every scale, as Proposition 2 guarantees.
+A token whose average future-loss increase must stay under 0.1 nat needs
+on average 7-9% of the latent; the same token, required to stay under 0.1 nat at every one of its
+next 32 positions, needs 72-79%. At $\epsilon=0.10$ the tail-capacity premium is 0.6507 (95% CI
+[0.6326, 0.6669]) at 30M, 0.6470 ([0.6283, 0.6652]) at 122M and 0.6464 ([0.6257, 0.6665]) at 250M:
+three overlapping intervals across an 8x parameter range and two training budgets (Figure 1(a)).
 
-The normalized gap is the most scale-consistent quantity we measured. The tail-capacity premium is
-0.6507 (95% CI [0.6326, 0.6669]) at 30M, 0.6470 ([0.6283, 0.6652]) at 122M and 0.6464 ([0.6257,
-0.6665]) at 250M: three overlapping intervals across an 8x parameter range and two different
-training budgets. Figure 1(a) shows the three spectra with their bands.
+DeepSeek-V2-Lite gives a similar spectrum, somewhat heavier at the far tail. Its premium, 0.704
+(95% CI [0.676, 0.731]), is above the 0.646-0.651 of our three models and the intervals do not
+overlap, so we claim a similar shape and magnitude, not the same value. 275 of its 384
+coordinate-basis probes reach the mean criterion at the grid's smallest rate (16, 3.1% of $d_c$), so
+its 8.22% mean is an upper bound and its premium a lower bound.
 
 **Figure 1.** (a) Normalized suffix-safe rate against upper-tail level $\alpha=1-k/H$ for the three
-trained models, with paired sequence-bootstrap 95% bands; monotonicity is guaranteed by Proposition
-2. (b) Signed mean, positive-part mean and maximum loss change at the rate that is safe under the
-signed-mean criterion, annotated with the fraction of probes having at least one future offset above
-$\epsilon$; the gap between the signed and positive-part means is cancellation, not rare spikes.
-Source: `figures/elasticmla_risk_spectrum.pdf`.
+trained models, with paired sequence-bootstrap 95% bands; monotonicity holds by construction
+(Section 3.2). (b) Signed mean, positive-part mean and maximum loss change at the rate that is safe
+under the signed-mean criterion, annotated with the fraction of probes having at least one future
+offset above $\epsilon$; the gap between the signed and positive-part means is cancellation, not rare
+spikes. Source: `figures/elasticmla_risk_spectrum.pdf`.
 
-### 5.2 The gap comes from cancellation, not rare spikes
+### 5.2 Is the gap mechanical, or just perturbation size?
+
+The mean of the $k$ largest of 32 signed values grows as $k$ shrinks for any vector, and per-token
+cross-entropy moves by more than 0.1 nat under many small perturbations. The gap might therefore be
+mechanical, or reflect perturbation size rather than truncation. Four controls address this.
+
+**Budget.** Table 3 recomputes the endpoints from the stored per-offset records of the 250M model and
+DeepSeek-V2-Lite at four budgets; at $\epsilon=0.10$ it reproduces Table 2 exactly. The pre-registered
+criterion for a large gap, a worst-offset rate at least 3 times the mean-safe rate, holds at every
+budget on both models, with ratios of 6.5-12.8. At $\epsilon=0.50$ the mean criterion sits at the
+grid floor (16/512 = 0.031 of $d_c$), so the ratio there is a lower bound. The absolute premium is
+budget-specific: at 250M it falls from 0.733 at $\epsilon=0.05$ to 0.231 at $\epsilon=0.50$, so the
+premium near 0.65 in Table 2 is a value at $\epsilon=0.10$, not a constant.
+
+**Table 3.** Mean suffix-safe rate (fraction of $d_c$) under the mean ($k=32$) and worst-offset ($k=1$) criteria at four budgets, recomputed from stored per-offset records. Ratio is max over mean. At $\epsilon=0.50$ the mean criterion is at the grid floor (0.031), so that ratio is a lower bound.
+
+| $\epsilon$ (nat) | 250M mean | 250M max | Ratio | TCP | DSV2-Lite mean | DSV2-Lite max | Ratio | TCP |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0.05 | 0.133 | 0.866 | 6.5 | 0.733 | 0.139 | 0.935 | 6.8 | 0.796 |
+| 0.10 | 0.071 | 0.718 | 10.0 | 0.646 | 0.082 | 0.787 | 9.6 | 0.704 |
+| 0.20 | 0.040 | 0.514 | 12.8 | 0.474 | 0.048 | 0.549 | 11.5 | 0.501 |
+| 0.50 | 0.031 | 0.263 | 8.4 | 0.231 | 0.032 | 0.276 | 8.7 | 0.244 |
+
+**Cancellation criterion.** If the gap came only from letting gains at some offsets cancel harm at
+others, a criterion that counts only harm would close it. At 250M the positive-part criterion of
+Section 3.3 needs 0.103 of $d_c$, against 0.071 for the signed mean and 0.718 for the worst offset.
+
+**Order statistics.** To ask whether the worst-offset requirement is more than what a dispersed loss
+vector implies, we replaced, for each 250M probe and rate, the 32 deltas by 32 independent Gaussian
+draws with that row's own mean and standard deviation, and recomputed $r^*$. At $k=1$ the Gaussian
+null needs 0.663 of $d_c$ against the observed 0.718 (Table 4), within the pre-registered 0.10. The
+worst-offset requirement is therefore what Gaussian dispersion of that size implies by order
+statistics, and we make no claim that the worst offsets are structured or heavier-tailed than
+Gaussian. A sign-randomized null, which keeps each row's absolute deviations from its mean and flips
+their signs, needs 0.758. On the mean side both nulls need more than observed (0.108 against 0.071),
+because the observed rows are not Gaussian around their mean.
+
+**Equal-norm perturbations.** At 30M we replaced truncation by adding to the
+full latent a random vector with, at every layer, the norm of the discarded tail, in all layers at
+once; one direction is drawn per probe and layer and kept fixed while its norm follows the truncation
+schedule over the rate grid. The pre-registered isotropic null needs 0.0625 of $d_c$ under the mean
+criterion, the grid floor for every probe, against 0.090 for truncation (paired difference $-0.028$,
+95% CI [$-0.032$, $-0.023$]). By our pre-registered reading, a difference within 0.10 means the
+mean-criterion rate reflects how the loss responds to perturbations of that norm, not information
+specific to the dropped channels. At $k=1$ isotropic noise needs 0.566, 0.175 less than truncation
+([$-0.202$, $-0.148$]): at the worst offset, truncation is harsher than isotropic noise of equal norm.
+Because isotropic noise may fall partly in directions the up-projections ignore, we also drew the
+perturbation from each layer's latent covariance (exploratory). This null matches truncation at every
+tail level: 0.067 under the mean criterion and 0.737 at $k=1$ (paired difference $-0.003$,
+[$-0.027$, $+0.019$]), with a premium of 0.671 against 0.651. The spectrum is thus a property of how
+the loss responds to latent perturbations of a given size, not evidence that the discarded channels
+carry special information.
+
+**Table 4.** Null models for the spectrum endpoints: mean suffix-safe rate (fraction of $d_c$) under the mean and worst-offset criteria. Equal-norm nulls at 30M; order-statistic nulls at 250M from the stored records.
+
+| Model | Loss changes from | Status | $k=32$ (mean) | $k=1$ (max) |
+|---|---|---|---:|---:|
+| 30M | truncation (observed) | | 0.090 | 0.741 |
+| 30M | isotropic equal-norm perturbation | pre-registered | 0.0625 | 0.566 |
+| 30M | covariance-shaped equal-norm perturbation | exploratory | 0.067 | 0.737 |
+| 250M | truncation (observed) | | 0.071 | 0.718 |
+| 250M | Gaussian draws, each row's mean and s.d. | pre-registered | 0.108 | 0.663 |
+| 250M | sign-randomized deviations | pre-registered | 0.108 | 0.758 |
+
+TODO(250M): R2 isotropic (pre-registered) and covariance-shaped (exploratory) equal-norm nulls on the 768 Table 2 probes of the 250M model; add a 250M block to Table 4 and the paired null-minus-truncation intervals at k = 32 and k = 1.
+
+### 5.3 The loss changes cancel; they are not rare spikes
 
 If the gap were caused by a few catastrophic tokens, most tokens that are safe on average would also
 be safe at every offset. They are not. At the rate that is safe under the mean criterion, 93.1%
 (30M), 94.1% (122M) and 96.1% (250M) of probes still have at least one future offset whose loss
-increase exceeds $\epsilon$, and the positive-part mean loss, the mean of $\max(\Delta,0)$ over the
-horizon, is 2.05x, 2.31x and 2.15x the signed mean (Figure 1(b)). Truncating a token's latent hurts
-some future predictions and helps others; the signed mean is small because the two cancel, not
-because the harm is small. A mean-criterion router therefore does not under-provide for a few rare
-tokens. It under-provides for almost every token, at some offset.
+increase exceeds $\epsilon$, and the positive-part mean loss is 2.05x, 2.31x and 2.15x the signed mean
+(Figure 1(b)). DeepSeek-V2-Lite shows the same signature: 96.6% of probes and 2.10x. Truncating a
+token's latent hurts some future predictions and helps others; the signed mean is small because the
+two cancel, not because the harm is small. The covariance-shaped null of Section 5.2 behaves the same
+way: at its own mean-safe rate, 88.5% of 30M probes have an offset above $\epsilon$ (isotropic null:
+73.4%). A mean-criterion allocation therefore does not under-provide for a few rare tokens. It
+under-provides for almost every token, at some offset.
 
-### 5.3 The spectrum replicates on DeepSeek-V2-Lite
+### 5.4 Joint application: what a mean-loss evaluation would report
 
-On DeepSeek-V2-Lite (last column of Table 2) the spectrum is monotone and close to ours at every
-tail level, somewhat heavier at the far tail: its premium, 0.704 (95% CI [0.676, 0.731]), is above
-the 0.646-0.651 of our three models and the intervals do not overlap, so we claim the same shape and
-magnitude, not the same value. The cancellation signature also replicates: at the mean-safe rate the
-positive-part mean loss is 2.10x the signed mean, and 96.6% of probes still have an offset above
-$\epsilon$. One qualification: 275 of the 384 coordinate-basis probes reach the mean criterion at the
-grid's smallest rate (16, 3.1% of $d_c$), so the 8.22% mean is an upper bound and the premium a lower
-bound.
+Every rate above is measured by truncating one token at a time. To see what the difference means for
+an allocation, a pre-registered test at 250M truncates all 32 probe positions of each of the 24
+evaluation sequences jointly, in every layer, each at its own mean-safe rate and then at its own
+worst-offset-safe rate, and measures the loss change at every position after the first probe
+(Table 5).
 
-### 5.4 How much of the tail requirement is the basis?
+**Table 5.** Joint truncation of all 32 probe positions per sequence at their own safe rates (250M, 24 sequences, $\epsilon=0.10$ nat). The maximum is the largest single-position loss change per sequence, averaged over sequences. Brackets: 95% sequence-bootstrap intervals.
+
+| Allocation | Mean probe rate | Sequence-mean loss change | Positions above $\epsilon$ | Maximum position change |
+|---|---:|---:|---:|---:|
+| Mean-safe ($k=32$) | 0.071 $d_c$ | +0.102 [0.093, 0.111] | 28.6% [27.6, 29.7] | +4.64 [3.90, 5.62] |
+| Worst-offset-safe ($k=1$) | 0.718 $d_c$ | $-0.005$ [$-0.007$, $-0.004$] | 4.4% [3.8, 5.0] | +0.41 [0.32, 0.52] |
+
+Per-token mean safety composes at the level it controls: the joint sequence-mean change, +0.102 nat,
+is within the pre-registered limit of $2\epsilon$. A mean-loss evaluation of this allocation would
+therefore report a change close to the budget. Yet 28.6% of positions exceed the budget, and the worst
+position in a sequence loses 4.64 nat on average. The worst-offset-safe allocation reduces these to
+4.4% and 0.41 nat, at ten times the rate.
+
+### 5.5 How much of the tail requirement is the basis?
 
 Every rate above is measured in the model's own latent coordinates, ordered by saliency: a
 permutation, the most restricted nested codebook. We reran the identical probe in rotated orthonormal
@@ -304,7 +353,7 @@ principal directions in the metric the up-projections apply to the latent ("mode
 rotation is folded into the weights, so it leaves the full-width model unchanged and makes a prefix
 mask a projection onto the leading directions (Appendix D).
 
-**Table 3.** Worst-offset safe rate in the coordinate basis and after rotating the latent to principal directions, with the paired per-probe fall (95% CI shown for DeepSeek-V2-Lite).
+**Table 6.** Worst-offset safe rate in the coordinate basis and after rotating the latent to principal directions, with the paired per-probe fall (95% CI shown for DeepSeek-V2-Lite).
 
 | Model | Coordinate basis, max | Principal directions, max | Paired fall (points) |
 |---|---:|---:|---:|
@@ -313,61 +362,38 @@ mask a projection onto the leading directions (Appendix D).
 | 250M | 71.78% | 21.89% | 49.9 |
 | DeepSeek-V2-Lite | 78.65% | 67.34% | 11.3 [9.1, 13.5] |
 
-In our three models (Table 3) rotation removes about 50 points of the worst-offset requirement at every
-scale, with paired intervals far from zero; at 250M the coordinate basis needs the entire latent for
-77 of 768 probes and principal directions for none. In DeepSeek-V2-Lite it removes 11.3 points (principal
-directions; 11.1 for the model-metric frame, which ties principal directions with a paired interval
-of [-1.3, +1.9]), and 59 of 384 probes still need the entire latent (106 in coordinates). Rotation helps at every tail level in every model, and the bases rank the same way
-everywhere, with ordering by first-order loss effect worse than ordering by reconstruction. But the
-size of the effect does not transfer. An independent control on an ordinary per-head KV cache agrees:
-a coordinate-basis overstatement of 1.65-3.22x on our three models but only 1.06-1.30x on public
-GPT-2 checkpoints (Appendix D).
+In our three models (Table 6) rotation removes about 50 points of the worst-offset requirement at
+every scale, with paired intervals far from zero; at 250M the coordinate basis needs the entire latent
+for 77 of 768 probes and principal directions for none. In DeepSeek-V2-Lite it removes 11.3 points
+(principal directions; 11.1 for the model-metric frame, which ties principal directions with a paired
+interval of [-1.3, +1.9]), and 59 of 384 probes still need the entire latent (106 in coordinates).
+Rotation helps at every tail level in every model and the bases rank the same way everywhere, but
+the size of the effect does not transfer. An independent control on an ordinary per-head KV cache agrees: a
+coordinate-basis overstatement of 1.65-3.22x on our three models but only 1.06-1.30x on public GPT-2
+checkpoints (Appendix D).
 
 The economical reading is that 3,000-8,000-step TinyStories models are unrepresentatively
 compressible in a rotated basis, and that in a production-trained MLA model the tail requirement is
-mostly a property of the latent code itself. This is a caution about what our small models can say
-on their own, not about the spectrum, which the production model reproduces. Because the deployed
-packed cache and the router of Section 6 both use the coordinate basis, the coordinate-basis spectrum
-is also the one that bounds them.
+mostly a property of the latent code itself. Because the deployed packed cache and the router of
+Section 6 both use the coordinate basis, the coordinate-basis spectrum is the one that bounds them.
 
-## 6. Can a Learned Router Exploit the Spectrum?
+## 6. Case Study: A Learned Router at Exact Bytes
 
-The spectrum says that average-case truncation is cheap and worst-case truncation is expensive, and
-that the requirement varies widely across tokens. A per-token allocator should be able to exploit
-that variation. We test whether a learned one does, and against what.
+### 6.1 Method
 
-### 6.1 Router and training
+Layer 0 runs at full width. A two-layer MLP reads
+the state entering layer 1, already updated by full-width layer-0 attention over the context, and
+picks one tier for the token, shared by all later layers. It is trained with the base model frozen,
+through the hard deployed tiers with a straight-through estimator [28], on language-model loss plus
+$\lambda$ times the expected rate (Appendix A). The 30M and 250M-coarse policies use four tiers; the
+122M and 250M-fine policies use 14 and 18 tiers on the grid of Section 3.3. The primary control spends
+the router's exact per-sequence rate sum $R=qT+m$ by giving rate $q+1$ to $m$ random positions and $q$
+to the rest, averaged over 20 draws: the same bytes by Proposition 1. A configuration passes when the
+95% interval of the paired router-minus-control loss lies below zero.
 
-Layer 0 runs at full width. A two-layer MLP reads the normalized state entering layer 1, which has
-already been updated by full-width layer-0 attention over the context, and selects one tier for the
-token; all downstream layers use that tier. Keeping layer 0 full avoids the circularity of
-compressing the state that decides the compression. The 30M and 250M-coarse policies use four tiers
-(6.25%, 25%, 62.5% and 100% of $d_c$); the 122M and 250M-fine policies use 14 and 18 tiers on the
-grid of Section 3.3.
+### 6.2 Results
 
-Deployment uses the hard choice $y_t=\text{onehot}(\arg\max a_t)$. Training passes gradients through
-it with a straight-through estimator [28], $\hat y_t = y_t + p_t-\operatorname{stopgrad}(p_t)$ with
-$p_t=\operatorname{softmax}(a_t/\tau)$, so that the forward pass is exactly the deployed hard
-rollout, and minimizes
-
-$$\mathcal J(\theta)=\mathcal L_{LM}(\hat y)+\lambda\frac{1}{Td_c}\sum_t\sum_{k}p_{t,k}\mathcal T_k$$
-
-with the base model frozen. Isolated-token capacity labels, the obvious supervised target, are not
-joint-rollout labels: an early router trained on them collapsed toward the smallest tier when every
-token was compressed at once, and second-order interaction measurements confirm that isolated labels
-are misaligned with joint truncation, although only locally (Appendix E). $\lambda$ was chosen on four
-validation sequences as the cheapest candidate within +0.15 nat of full MLA that also beat an
-exact-byte static control. Appendix A gives the grids, the chosen $\lambda$ values and the
-initialization.
-
-### 6.2 Against random and shuffled placement at equal bytes
-
-The primary control spends the router's exact per-sequence rate sum $R=qT+m$ by giving rate $q+1$ to
-$m$ random positions and $q$ to the rest, averaged over 20 draws: the same bytes as the router
-(Proposition 1), placed independently of content. A configuration passes when the 95% interval of the
-paired per-sequence router-minus-control loss lies below zero (Table 4).
-
-**Table 4.** Pre-registered fresh-window confirmations of the router against exact-byte random placement, 24 sequences per configuration. Wins count sequences on which the router has the lower loss.
+**Table 7.** Pre-registered fresh-window confirmations of the router against exact-byte random placement, 24 sequences per configuration. Wins count sequences on which the router has the lower loss.
 
 | Configuration | Mean rate | Bytes vs full MLA | $\Delta$loss vs full | Router $-$ random | 95% CI | Wins | Result |
 |---|---:|---:|---:|---:|---:|---:|---|
@@ -378,20 +404,12 @@ paired per-sequence router-minus-control loss lies below zero (Table 4).
 
 The router passes at 30M and 122M (exact one-sided sign-flip $p$ = 0.00066 and 0.000049). At 250M
 with the same four coarse tiers as 30M it fails, with the point estimate in the wrong direction.
-Because 30M used coarse tiers and 122M fine ones, that failure confounds scale with tier resolution,
-so we froze a second 250M protocol with 18 fine tiers mirroring 122M's scheme. It passes
-($-0.01165$ nat, $p$ = 0.0044): at $d_c=512$, four tiers are too coarse for the router to beat random
-placement, and the initial 250M failure is at least partly a tier-resolution artifact of our design,
-not a scale limit. This second protocol was designed after the coarse result was known and reused
-its 24 fresh windows, so it is weaker evidence than a confirmation on new windows (Appendix B). We
-report both protocols, and we do not combine the four into one multi-scale claim, which no protocol
-pre-specified.
-
-A secondary control permutes the router's own tier multiset across positions, keeping bytes and the
-tier histogram. The router beats it everywhere, by -0.07989 nat (30M), -0.13907 (122M), -0.01765
-(250M, 4 tiers) and -0.03551 (250M, 18 tiers), all with intervals excluding zero. Where the router
-puts its tiers matters even in the one configuration whose overall allocation does not beat random.
-Figure 2 shows the per-sequence differences and the loss-bytes operating points at 30M and 122M.
+Because that failure confounds scale with tier resolution, we froze a second 250M protocol with 18
+fine tiers, which passes ($p$ = 0.0044). This second protocol was designed after the coarse result was
+known and reused its 24 fresh windows, so it is weaker evidence than a confirmation on new windows
+(Appendix B), and we do not combine the four into one multi-scale claim. Permuting the router's own
+tiers across positions is worse in every configuration, by 0.01765 to 0.13907 nat with intervals
+excluding zero (Figure 2), so placement matters.
 
 **Figure 2.** (a) Mean required rate under the mean and maximum criteria, averaged over 768 probes
 per scale. (b) Per-sequence router-minus-control loss differences at 30M and 122M; dots are
@@ -400,17 +418,16 @@ loss increase over full MLA against cache bytes; both controls have exactly the 
 per-sequence bytes. Points are evaluated configurations, not an interpolated curve. Source:
 `figures/elasticmla_main_results.pdf`.
 
-### 6.3 Against simple causal rules at equal bytes
+Random placement is a weak baseline. Table 8 gives four cheap causal rules exactly the router's
+per-sequence rate sum; these comparisons ran after the confirmations, on the already-opened windows,
+and are exploratory. The router beats position and token type except at 250M with four tiers, but
+never beats token identity, a frequency-smoothed per-token lookup table fitted to its own decisions on
+16 sequences, which ties it in three configurations and beats it in the fourth (Appendix C). We have no
+evidence that context beyond the current token helps. The quality budget did not transfer reliably:
+the 122M and 250M-fine policies exceed their +0.15-nat selection budget on fresh sequences (+0.1823
+and +0.1659 nat).
 
-Random and shuffled placement are weak baselines. A cheap causal rule, depending only on the current
-token or its absolute position, might place the same bytes as well. We fit four such rules as
-predictors of the router's own tier on the 16 training sequences: absolute position, token identity
-(a frequency-smoothed per-token lookup table), inverse token frequency, and coarse token type. Each
-rule receives only the router's per-sequence rate sum and distributes it by its own score, unrestricted
-to the router's tiers, so every comparison is at exactly the router's bytes. These comparisons were
-run after the confirmations, on the same already-opened windows, and are exploratory.
-
-**Table 5.** Router minus rule loss (nat) at exactly the router's bytes. Bold: the router wins (95% interval below zero); "loses": the interval is above zero; all other entries are ties.
+**Table 8.** Router minus rule loss (nat) at exactly the router's bytes. Bold: the router wins (95% interval below zero); "loses": the interval is above zero; all other entries are ties.
 
 | Rule | 30M, 4 tiers | 122M, 14 tiers | 250M, 4 tiers | 250M, 18 tiers |
 |---|---:|---:|---:|---:|
@@ -419,88 +436,78 @@ run after the confirmations, on the same already-opened windows, and are explora
 | Token frequency | -0.0084 | -0.0045 | +0.0071 (loses) | -0.0001 |
 | Token identity | +0.0024 | -0.0033 | +0.0045 (loses) | +0.0022 |
 
-The router beats position and token type in every
-configuration except 250M with four tiers, where it also fails the random-placement test. It never
-beats token identity, which ties it in three configurations and beats it in the fourth. Appendix C
-gives the intervals and a second, tier-restricted variant of this comparison.
+### 6.3 Against latent quantization and in latency
 
-The supported reading is narrower than "contextual routing works". At equal bytes the router places
-capacity better than position- and type-based rules, but no better than a per-token table fitted to
-its own decisions on 16 sequences. What it learned is largely expressible as token identity, and we
-have not shown that context beyond the current token improves placement. Given Section 5.2 this is
-perhaps unsurprising: the requirement that matters is set by a token's worst future offset, which a
-router reading only the past cannot observe.
+We measured per-token symmetric absmax quantization of the latent (RoPE key in full precision, one
+fp16 scale per token and layer) without tuning on the 24 Table 2 windows. At 30M, int8 stores the latent in 0.508 of its fp16 bytes with a mean loss change of
+$-0.00002$ nat (95% CI [$-0.0001$, $+0.0001$]) and no position above $\epsilon$; int4 uses 0.258 with
++0.0007 nat ([$-0.0010$, $+0.0022$]) and 5.6% of positions above $\epsilon$. At 250M, int8 uses 0.504
+with +0.00005 nat ([$-0.00001$, $+0.00011$]) and no position above $\epsilon$; int4 uses 0.254 with
++0.0018 nat ([0.0001, 0.0035]) and 5.5% of positions above $\epsilon$. The router's packed cache
+stores 60-69% of full-MLA bytes at +0.10 to +0.18 nat (Table 7). The two byte fractions are not of the
+same reference, latent only for quantization and the whole cache including the RoPE key for the
+router, but at these loss levels int8 quantization dominates the router on bytes. We did not test
+quantizing the packed cache itself.
 
-### 6.4 The quality budget does not transfer reliably
+The packed cache brings no peak-memory or throughput gain: peak allocated memory is 99.3-99.7% of
+full MLA and decode is 2.4x slower per step (Appendix F).
 
-The 30M and 250M-coarse policies stay within the +0.15-nat selection budget on fresh sequences
-(+0.1001 and +0.1158 nat); the 122M and 250M-fine policies do not (+0.1823 and +0.1659, against
-+0.1408 and +0.1483 on validation). Budget calibration and allocation quality are separate axes:
-122M misses its budget but keeps its advantage over random placement, while 250M-coarse meets its
-budget and loses that advantage. A deployed system would need a larger calibration set, a risk
-margin, or fallback to a higher tier.
-
-## 7. What the Packed Cache Costs
-
-We benchmarked prefill followed by 128 incremental decode steps on a Tesla T4, comparing full-width
-dense MLA, a uniform packed cache at the router's realized mean rate, and the router's packed cache.
-
-**Table 6.** Prefill followed by 128 decode steps on a Tesla T4, router packed cache against full-width MLA.
-
-| Model | Cache bytes, router / full | Peak allocated, router / full | Decode step, router (vs full) |
-|---|---:|---:|---:|
-| 30M | 67.4% | 99.7% | 18.83 ms (2.42x) |
-| 122M | 59.6% | 99.3% | 42.11 ms (2.37x) |
-
-Measured cache bytes track Proposition 1's formula. Peak allocated memory is essentially unchanged,
-because at these model sizes and context lengths it is dominated by weights and the prefill's
-vocabulary-sized logits, not by the cache. Decode is 2.4x slower per step. Most of the remaining cost
-is the dense reconstruction of the latent before each attention call, which is inherent to a
-persistent representation that is packed: removing it requires computing the per-head projections
-directly on the ragged buffer, a kernel we have not written. Appendix F documents how the latency
-was brought down from an initial 168-201x and verifies that no step changed the computation. We
-therefore claim byte-exact persistent-cache savings, not peak-memory or throughput gains.
-
-## 8. Limitations
+## 7. Limitations
 
 **Scale and data.** Our three models are small and trained on TinyStories, with one checkpoint, one
 training run and one router seed each; intervals do not include training variability, and model size
 is confounded with training budget. The one external replication, DeepSeek-V2-Lite, covers the
-spectrum and the basis ablation on one checkpoint, one text distribution and 384 probes; the router
-was not trained or evaluated on it.
+spectrum, the budget sweep and the basis ablation on one checkpoint, one text distribution and 384
+probes; the router, the nulls and the joint test were not run on it.
+
+**What the nulls show.** The equal-norm nulls are measured at 30M only, with one random direction per
+probe and layer, and the covariance-shaped null, which carries the "realistic perturbation" reading,
+is exploratory. The order-statistic null is measured at 250M only and uses each row's own mean and
+spread, so it shows that the worst-offset rate follows from the size of the dispersion, not where the
+dispersion comes from. Neither shows that the dropped channels are uninformative in general.
 
 **What $r^*$ is.** Rank-loss curves are frequently nonmonotone (Appendix G), so $r^*$ is a
 conservative suffix rule on a discrete grid, not a smooth or uniquely identified intrinsic rank. It
-measures isolated single-token truncation; joint truncation interacts locally (Appendix E).
+measures isolated single-token truncation; joint truncation interacts locally (Appendix E), and the
+joint test of Section 5.4 covers one model and one placement of 32 probes per sequence. The
+worst-offset criterion is defined over $H=32$ future positions. At 250M, on probes eligible for $H=128$, extending the
+horizon from 32 to 128 moves the worst-offset rate from 0.716 to 0.743 and the mean-safe rate from
+0.065 to 0.032, which is the grid floor for 764 of 768 probes
+(`experiments/contextual_router_250m/horizon_capacity_A_extended.json`), so a longer horizon widens
+the gap. The probe truncates a position inside a full-attention forward pass rather than during
+decoding; a unit test (`tests/test_latent_quantization.py`) shows that this equals incremental cached
+decoding with that token's latent masked.
 
 **Router evaluation.** The 250M-fine confirmation reused windows whose coarse-grid outcomes had been
 seen, and the heuristic comparisons are exploratory. We have not compared against separately
-optimized global-budget policies, eviction or quantization baselines, or a router and packed cache
-operating in a rotated basis. Every compressed policy increases loss over full MLA, and task-level
-generation quality is not evaluated.
+optimized global-budget policies or eviction baselines, combined the packed cache with quantization,
+or run a router and packed cache in a rotated basis. Every compressed policy increases loss over full
+MLA, and task-level generation quality is not evaluated.
 
 **Auditability.** For 30M and 122M the per-probe raw deltas behind the spectrum were computed on
 ephemeral cloud storage; only hash-verified aggregate summaries were recovered, so those two spectra
-cannot be re-audited per probe. The 250M and DeepSeek-V2-Lite raw records are kept and authenticated
-by hash.
+cannot be re-audited per probe, and the budget sweep and order-statistic null use the 250M and
+DeepSeek-V2-Lite records only. The 250M and DeepSeek-V2-Lite raw records are kept and authenticated by
+hash.
 
-## 9. Conclusion
+## 8. Conclusion
 
-Asking how much of an MLA latent each token needs has no single answer: it depends on how much of
-the token's future one insists on protecting. We showed that this dependence is exact and monotone
-(Proposition 2), and measured it. Safe on average costs 7-9% of the latent; safe at the worst of the
-next 32 positions costs 72-79%, with a nearly constant normalized premium across an 8x range of model
-size and in a production-trained model. The premium is not paid for rare tokens but for almost every
-token, whose small average future effect hides harm at some offset. In small models much of that
-requirement can be rotated away; in DeepSeek-V2-Lite most of it cannot.
+How much of an MLA latent a token needs depends on how much of its future one insists on protecting.
+Safe on average costs 7-9% of the latent; safe at the worst of the next 32 positions costs 72-79% at
+$\epsilon=0.1$ nat, and on the two models with stored records the ratio stays between 6.5 and 12.8
+from 0.05 to 0.5 nat. The cost is paid
+for almost every token, whose small average future effect hides harm at some offset, and it is what
+Gaussian dispersion of that size implies. Equal-norm perturbations shaped like the latent cost as
+much, so the finding concerns how the loss responds to latent perturbation, not the particular
+channels removed. In small models much of the requirement can be rotated away; in DeepSeek-V2-Lite
+most of it cannot.
 
-For allocation the implication is a warning. A learned per-token router with a genuinely packed cache
-does beat random and position- or type-based placement at exactly equal bytes, but it does no better
-than a per-token lookup table, and a router that sees only the past cannot observe the worst future
-offset that sets the requirement. Two directions follow: allocation criteria and training signals
-that target the tail directly, and basis choices that reduce the requirement itself, tested on
-production-trained MLA models where, by our measurements, the room for the latter is smaller than
-small models suggest.
+For evaluation the implication is direct. Applied jointly, mean-safe rates hold the mean loss change
+near the budget while more than a quarter of positions exceed it, so a mean-loss or perplexity
+evaluation of token-wise compression can look acceptable while understating worst-offset cost by
+about an order of magnitude. For allocation, our learned router beats random and position- or type-based placement at exactly
+equal bytes but does no better than a per-token lookup table, and per-token int8 quantization of the
+latent dominates it on bytes.
 
 ## References
 
@@ -596,19 +603,41 @@ Unsupervised Multitask Learners," OpenAI technical report, 2019.
 
 ## Appendix
 
-## Router and selection details
+## Router training and selection details
 
-The 4-tier grid is $\{16,64,160,256\}$ at 30M and $\{32,128,320,512\}$ at 250M. The fine grid runs
-from 16 in steps of 16 up to 64 and in steps of 32 thereafter, giving 14 tiers at 122M ($d_c=384$)
-and 18 at 250M ($d_c=512$). Candidate $\lambda$ values were trained on 16 sequences and selected on
-four validation sequences by the rule of Section 6.1. The selected values are $\lambda=0.4$ (30M),
-$0.8$ (122M), $0.4$ (250M, 4 tiers) and $0.8$ (250M, 18 tiers); the two 250M policies were trained
-and frozen independently. The 122M and 250M-fine routers start from a random initialization; the
-other two start from the isolated-position supervised router. At 122M the 4-tier grid produced no
-candidate within the validation budget, and the 14-tier grid was adopted before any fresh-window run;
-this is consistent with the tier-resolution explanation of Section 6.2, but means the 30M-coarse /
-122M-fine contrast was not designed in advance. Four older development sequences were observed
-repeatedly during method development; they are exploratory and enter no confirmatory claim.
+Layer 0 is kept at full width to avoid the circularity of compressing the state that decides the
+compression. Deployment uses the hard choice $y_t=\text{onehot}(\arg\max a_t)$. Training passes
+gradients through it with a straight-through estimator [28], $\hat y_t = y_t +
+p_t-\operatorname{stopgrad}(p_t)$ with $p_t=\operatorname{softmax}(a_t/\tau)$, so that the forward
+pass is exactly the deployed hard rollout, and minimizes
+
+$$\mathcal J(\theta)=\mathcal L_{LM}(\hat y)+\lambda\frac{1}{Td_c}\sum_t\sum_{k}p_{t,k}\mathcal T_k$$
+
+with the base model frozen. Isolated-token capacity labels, the obvious supervised target, are not
+joint-rollout labels: an early router trained on them collapsed toward the smallest tier when every
+token was compressed at once, and second-order interaction measurements confirm that isolated labels
+are misaligned with joint truncation, although only locally (Appendix E).
+
+The 4-tier grid is $\{16,64,160,256\}$ at 30M and $\{32,128,320,512\}$ at 250M (6.25%, 25%, 62.5% and
+100% of $d_c$). The fine grid runs from 16 in steps of 16 up to 64 and in steps of 32 thereafter,
+giving 14 tiers at 122M ($d_c=384$) and 18 at 250M ($d_c=512$). Candidate $\lambda$ values were
+trained on 16 sequences, and $\lambda$ was chosen on four validation sequences as the cheapest
+candidate within +0.15 nat of full MLA that also beat an exact-byte static control. The selected
+values are $\lambda=0.4$ (30M), $0.8$ (122M), $0.4$ (250M, 4 tiers) and $0.8$ (250M, 18 tiers); the
+two 250M policies were trained and frozen independently. The 122M and 250M-fine routers start from a
+random initialization; the other two start from the isolated-position supervised router. At 122M the
+4-tier grid produced no candidate within the validation budget, and the 14-tier grid was adopted
+before any fresh-window run; this is consistent with the tier-resolution explanation of Section 6.2,
+but means the 30M-coarse / 122M-fine contrast was not designed in advance. Four older development
+sequences were observed repeatedly during method development; they are exploratory and enter no
+confirmatory claim.
+
+On fresh sequences the 30M and 250M-coarse policies stay within the +0.15-nat selection budget
+(+0.1001 and +0.1158 nat); the 122M and 250M-fine policies do not (+0.1823 and +0.1659, against
++0.1408 and +0.1483 on validation). Budget calibration and allocation quality are separate axes: 122M
+misses its budget but keeps its advantage over random placement, while 250M-coarse meets its budget
+and loses that advantage. A deployed system would need a larger calibration set, a risk margin, or
+fallback to a higher tier.
 
 ## Confirmation protocol and provenance
 
@@ -640,15 +669,17 @@ sign assignments, which assumes exchangeable signs under the null.
 
 ## Heuristic comparison details
 
-Each rule scores tokens; in the main comparison (Section 6.3) a token gets $r_t=\lfloor
-s_t+b\rfloor$ clipped to $[1,d_c]$, with $b$ solved per sequence and the integer remainder given to the
-largest fractional parts, so that the rule spends exactly the router's rate sum without being
-restricted to the router's tiers. In the second variant the rule receives the router's realized tier
-multiset and only decides which positions get which tier (highest score, highest tier; ties broken at
-random and averaged over five draws), the frame of the shuffle control. Every evaluation asserts byte
-equality with the router.
+The four rules are absolute position, token identity (a frequency-smoothed per-token lookup table),
+inverse token frequency, and coarse token type, each fitted as a predictor of the router's own tier on
+the 16 training sequences. Each rule scores tokens; in the main comparison (Section 6.2) a token gets
+$r_t=\lfloor s_t+b\rfloor$ clipped to $[1,d_c]$, with $b$ solved per sequence and the integer
+remainder given to the largest fractional parts, so that the rule spends exactly the router's rate sum
+without being restricted to the router's tiers. In the second variant the rule receives the router's
+realized tier multiset and only decides which positions get which tier (highest score, highest tier;
+ties broken at random and averaged over five draws), the frame of the shuffle control. Every
+evaluation asserts byte equality with the router.
 
-**Table 7.** Router minus rule loss (nat) for every configuration and rule, with the rule choosing its own histogram (with 95% CI) or restricted to the router's tier multiset.
+**Table 9.** Router minus rule loss (nat) for every configuration and rule, with the rule choosing its own histogram (with 95% CI) or restricted to the router's tier multiset.
 
 | Configuration | Rule | Router $-$ rule, own histogram | 95% CI | Router $-$ rule, router's histogram |
 |---|---|---:|---|---:|
@@ -678,6 +709,10 @@ each rule run at its own validation-selected bytes, which differed from the rout
 +13.0% and decided almost every outcome by budget rather than placement; it is superseded by the
 byte-matched results here (`notes/code_review_2026-10_corrections.md`).
 
+The shuffle control of Section 6.2, which permutes the router's own tier multiset across positions,
+loses to the router by 0.07989 nat (30M), 0.13907 (122M), 0.01765 (250M, 4 tiers) and 0.03551 (250M,
+18 tiers), all with intervals excluding zero.
+
 ## Basis ablation details
 
 With $W_{DKV}$, $W_{UK}$ and $W_{UV}$ bias-free, substituting $U^\top W_{DKV}$, $W_{UK}U$ and
@@ -700,10 +735,10 @@ of the width, far from where a linearization taken at full width applies. The mo
 by under a point at 30M and 250M and ties principal directions at 122M, with about half of all
 probes tied. Under rotated bases more probes have a nonmonotone rank curve (59% to 82% at 30M, 78% to
 98% at 250M), and rotated-basis mean-criterion values sit on the grid's smallest entry and are upper
-bounds. The coordinate arm reproduces the main-text endpoints and histograms exactly. Table 8 gives
+bounds. The coordinate arm reproduces the main-text endpoints and histograms exactly. Table 10 gives
 all four bases for DeepSeek-V2-Lite.
 
-**Table 8.** DeepSeek-V2-Lite: mean suffix-safe rate as a fraction of $d_c$ in the four bases.
+**Table 10.** DeepSeek-V2-Lite: mean suffix-safe rate as a fraction of $d_c$ in the four bases.
 
 | $k$ (of 32) | coord | pca | grad | model metric |
 |---:|---:|---:|---:|---:|
@@ -738,20 +773,35 @@ trend: the tested rates are fixed absolute values and so different fractions of 
 and with 144 pairs per cell from eight sequences and no interval, the data neither establish nor
 exclude growth with scale (`notes/pair_interaction_prediction5.md`).
 
-## Latency engineering
+## Packed-cache memory and latency
+
+We benchmarked prefill followed by 128 incremental decode steps on a Tesla T4, comparing full-width
+dense MLA, a uniform packed cache at the router's realized mean rate, and the router's packed cache.
+
+**Table 11.** Prefill followed by 128 decode steps on a Tesla T4, router packed cache against full-width MLA.
+
+| Model | Cache bytes, router / full | Peak allocated, router / full | Decode step, router (vs full) |
+|---|---:|---:|---:|
+| 30M | 67.4% | 99.7% | 18.83 ms (2.42x) |
+| 122M | 59.6% | 99.3% | 42.11 ms (2.37x) |
+
+Measured cache bytes track Proposition 1's formula. Peak allocated memory is essentially unchanged,
+because at these model sizes and context lengths it is dominated by weights and the prefill's
+vocabulary-sized logits, not by the cache. Decode is 2.4x slower per step. Most of the remaining cost
+is the dense reconstruction of the latent before each attention call, which is inherent to a
+persistent representation that is packed: removing it requires computing the per-head projections
+directly on the ragged buffer, a kernel we have not written. We therefore claim byte-exact
+persistent-cache savings, not peak-memory or throughput gains.
 
 As first written, the packed decode step was 167.9x (30M) and 201.1x (122M) slower than full MLA.
 Three unvectorized Python loops were responsible: `pack_latents`, `unpack_latents` and
 `append_packed_latents` rebuilt the whole cached history token by token on every decode step, and
 `forward_cached_packed` built its rank mask with a nested Python loop. Rewriting all three as
-vectorized operations (`repeat_interleave` with one gather; a broadcast comparison for the mask) cut
-the regression to 3.00x and 2.96x, verified by 500 random-trial cross-checks against the original
-implementations with zero mismatches. The append still repacked the whole history each step because
-the flat buffer was ordered (batch, sequence); reordering it (sequence, batch) makes every new token
-sort after every stored one, so appending becomes a concatenation. Profiling then showed that the
-dominant cost had been per-step defensive validation, about 200x the cost of the data movement; every
-check was kept but moved to where its guarantee is established. This gives the 2.42x and 2.37x of
-Section 7, measured as a paired benchmark against the previous version inside one T4 job (dense
+vectorized operations cut the regression to 3.00x and 2.96x, verified by 500 random-trial
+cross-checks against the original implementations with zero mismatches. Reordering the flat buffer
+(sequence, batch) made appending a concatenation, and moving per-step defensive validation to where
+its guarantee is established removed the dominant remaining cost. This gives the 2.42x and 2.37x of
+Table 11, measured as a paired benchmark against the previous version inside one T4 job (dense
 control moved by 1% or less), and verified by bit-identical end-to-end decode logits, ranks and cache
 bytes. An earlier version of the benchmark reported a 3.5-4.2% peak-memory reduction; it was a
 harness artifact (only the router path released its prefill logits before decoding) and disappears
