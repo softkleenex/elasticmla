@@ -180,3 +180,20 @@ shared by realistic equal-norm perturbations (R2) and predicted by the order sta
 (R3). The lesson is about evaluation: mean-loss evaluations of token-wise compression understate the
 worst-offset cost by an order of magnitude. The router and the packed cache are a case study, dominated on
 bytes by int8 quantization (R4).
+
+### R4 and R5 at 250M (`experiments/latent_quantization/quant_250m.json`, Kaggle T4, windows identical to records)
+
+R4: int8 latent 0.504 of fp16 bytes, +0.00005 nat [-0.00001, 0.00011], no position above epsilon; int4 0.254,
++0.0018 nat [0.0001, 0.0035], 5.5% of positions above epsilon.
+
+R5 (all 32 probes per sequence truncated jointly, 24 sequences):
+
+| allocation | mean probe rate | sequence-mean loss change | positions > epsilon | max position change |
+|---|---|---|---|---|
+| mean-safe (k = 32) | 0.071 d_c | +0.102 [0.093, 0.111] | 28.6% [27.6, 29.7] | +4.64 [3.90, 5.62] |
+| max-safe (k = 1) | 0.718 d_c | -0.005 [-0.007, -0.004] | 4.4% [3.8, 5.0] | +0.41 [0.32, 0.52] |
+
+Pre-registered reading: mean-safe rates compose at the sequence-mean level (0.102 <= 2 epsilon). But a
+mean-loss evaluation of that allocation would report about epsilon while 29% of positions exceed the budget
+and the worst position loses 4.6 nat; the max-safe allocation cuts that to 4.4% and 0.41 nat at 10x the rate.
+This is the paper's answer to "why does mean-safe vs tail-safe matter".
