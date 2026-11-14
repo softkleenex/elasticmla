@@ -32,29 +32,48 @@ class EqualNormNullTests(unittest.TestCase):
         dirs = np.stack([MODULE.null_directions(i, 2, self.d_c) for i in range(3)])
         self.dirs = torch.as_tensor(dirs.transpose(1, 0, 2).copy(), dtype=torch.float32)
 
-    def test_full_rank_null_is_the_unperturbed_model(self):
-        masks = MODULE.risk.make_channel_masks(self.orders, self.d_c, 3, torch.device("cpu"))
-        with torch.no_grad():
-            logits, norms = MODULE.forward_with_equal_norm_noise(
-                self.model, self.idx, channel_masks=masks, directions=self.dirs,
-                probe_positions=self.positions)
-            reference = MODULE.risk.forward_with_layer_masks(self.model, self.idx)
-        torch.testing.assert_close(logits, reference)
-        self.assertTrue(torch.all(norms == 0))
-
-    def test_noise_norm_equals_the_truncated_residual_norm(self):
-        rank = 5
+    def run_both(self, rank):
         masks = MODULE.risk.make_channel_masks(self.orders, rank, 3, torch.device("cpu"))
         with torch.no_grad():
-            _, latents = MODULE.risk.forward_with_all_latents(self.model, self.idx)
-            _, norms = MODULE.forward_with_equal_norm_noise(
-                self.model, self.idx, channel_masks=masks, directions=self.dirs,
+            trunc, norms = MODULE.forward_truncation_with_norms(
+                self.model, self.idx, channel_masks=masks, probe_positions=self.positions)
+            plain = MODULE.risk.forward_with_layer_masks(
+                self.model, self.idx, channel_masks=masks, probe_positions=self.positions)
+            null = MODULE.forward_with_added_noise(
+                self.model, self.idx, norms=norms, directions=self.dirs,
                 probe_positions=self.positions)
-        # Layer 0's latent is upstream of any intervention, so its residual is exact.
-        rows = latents[0][torch.arange(3), self.positions]
-        expected = (rows * (1 - masks[0])).norm(dim=-1)
-        torch.testing.assert_close(norms[0], expected)
-        self.assertTrue(torch.all(norms[1] > 0))
+        return masks, trunc, plain, norms, null
+
+    def test_full_rank_null_is_the_unperturbed_model(self):
+        _, _, _, norms, null = self.run_both(self.d_c)
+        with torch.no_grad():
+            reference = MODULE.risk.forward_with_layer_masks(self.model, self.idx)
+        torch.testing.assert_close(null, reference)
+        self.assertTrue(torch.all(norms == 0))
+
+    def test_recording_norms_does_not_change_truncation(self):
+        _, trunc, plain, _, _ = self.run_both(5)
+        torch.testing.assert_close(trunc, plain)
+
+    def test_norms_are_the_truncation_streams_residuals(self):
+        masks, _, _, norms, _ = self.run_both(5)
+        captured = []
+        hooks = [b.attn.W_DKV.register_forward_hook(lambda m, i, o: captured.append(o.clone()))
+                 for b in self.model.blocks]
+        with torch.no_grad():
+            MODULE.risk.forward_with_layer_masks(
+                self.model, self.idx, channel_masks=masks, probe_positions=self.positions)
+        for h in hooks:
+            h.remove()
+        for layer in range(2):
+            rows = captured[layer][torch.arange(3), self.positions]
+            torch.testing.assert_close(norms[layer], (rows * (1 - masks[layer])).norm(dim=-1))
+
+    def test_covariance_directions_are_unit(self):
+        roots = np.stack([np.diag(np.arange(1, 33, dtype=float))] * 4)
+        a = MODULE.null_directions(3, 4, 32, roots)
+        np.testing.assert_allclose(np.linalg.norm(a, axis=1), 1.0, rtol=1e-12)
+        self.assertFalse(np.allclose(a, MODULE.null_directions(3, 4, 32)))
 
     def test_directions_are_unit_and_seeded_per_probe(self):
         a = MODULE.null_directions(3, 4, 32)

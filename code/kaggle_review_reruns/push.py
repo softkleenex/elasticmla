@@ -23,7 +23,9 @@ BENCHMARK_INPUTS = {
     "122m": "experiments/contextual_router_122m/fine_lambda_0p8.pt",
 }
 JOBS = ("spectrum250", "basis250", "benchmark", "publickv",
-        "publicmla_smoke", "publicmla_a", "publicmla_b")
+        "publicmla_smoke", "publicmla_a", "publicmla_b", "null250")
+# The published 250M v5 run: channel orders, windows and per-probe r* for the R2 null.
+REFERENCE_250M = "kaggle_output/review_reruns/spectrum250/spectrum250_v5"
 
 
 def kaggle(*args):
@@ -47,6 +49,10 @@ def build_dataset(work):
         shutil.copy(ROOT / policy, target / Path(policy).name)
         shutil.copy(ROOT / f"experiments/contextual_router_{scale}/contextual_oracle_v1/"
                     "contextual_oracle_v1_summary.json", target)
+    target = stage / "inputs" / "250m_reference"
+    target.mkdir(parents=True)
+    for name in ("risk_capacity_v5_summary.json", "risk_capacity_v5_records.json"):
+        shutil.copy(ROOT / REFERENCE_250M / name, target / name)
     (stage / "dataset-metadata.json").write_text(json.dumps({
         "title": "ElasticMLA Review Reruns Code", "id": CODE_DATASET,
         "licenses": [{"name": "CC0-1.0"}],

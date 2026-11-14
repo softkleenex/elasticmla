@@ -81,3 +81,18 @@ Script `experiments/analyze_perturbation_null.py`, tests `tests/test_perturbatio
   comparison is paired per probe (sequence-cluster bootstrap of null - truncation).
 - Disclosure: a 2-sequence smoke run of the 30M model was run once on MPS to debug the script and its
   output was seen. Nothing above was changed after it.
+
+### Corrections after an adversarial code review (2026-11-15, before any full-run result was seen)
+
+A reviewer subagent found that the first version matched norms on the null's own (already perturbed)
+stream, which equals the pre-registered ||e_r|| only at layer 0. Fixed: the truncation forward records
+||e_r|| per layer with a read-only hook, and the null adds exactly those norms. Also fixed:
+- Window check is mandatory: exact match to the published records (250M); for 30M, whose summary
+  predates stored records, per-probe agreement of the mean-safe rank with `mean_safe_rate_diagnostics_by_record`.
+- Stopping rule: the run fails if recomputed truncation r* agrees with the published per-probe r* on
+  fewer than 99% of probes. Baselines are batched exactly as in the reference script.
+- Integer r* tables are kept, not reconstructed from floats.
+- Added, explicitly **exploratory** (not pre-registered): a covariance-shaped null, u ~ N(0, Sigma_l) with
+  Sigma_l the layer latent covariance on the published calibration windows, seed 62521 + probe index.
+  It addresses the objection that isotropic noise falls in directions the up-projections ignore.
+The partial 30M run started with the first version was stopped before finishing; its output was never read.
