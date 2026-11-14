@@ -171,7 +171,7 @@ def null250():
            "--checkpoint", d / "ckpt" / "latest.pt", "--data", d / "data" / "val.bin",
            "--reference-summary", ref / "risk_capacity_v5_summary.json",
            "--reference-records", ref / "risk_capacity_v5_records.json",
-           "--device", "cuda", "--bootstrap-draws", "10000", "--output", out]):
+           "--device", "cuda", "--bootstrap-draws", "10000", "--covariance-null", "--output", out]):
         emit("null250", out)
 
 
