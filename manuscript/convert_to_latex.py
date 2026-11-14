@@ -278,7 +278,15 @@ def main():
     args = parser.parse_args()
     out_dir = TMLR_DIR if args.style == "tmlr" else LATEX_DIR
     mt = DRAFT.read_text()
-    title = protect_and_convert(mt.splitlines()[0].removeprefix("# ").strip())
+    if args.style == "tmlr":
+        # Double-blind: point to the anonymized supplement instead of the public repository.
+        repo = "available at\nhttps://github.com/softkleenex/elasticmla; file paths in this paper refer to that repository."
+        if repo not in mt:
+            raise SystemExit("repository sentence not found; update the anonymization rule")
+        mt = mt.replace(repo, "provided in the\nanonymized supplementary material; file paths in this paper refer to it.")
+        if "softkleenex" in mt or "github.com/softkleenex" in mt:
+            raise SystemExit("draft still names the author after anonymization")
+    title =protect_and_convert(mt.splitlines()[0].removeprefix("# ").strip())
     preamble = (TMLR_PREAMBLE if args.style == "tmlr" else PREAMBLE)
     preamble = preamble.replace("@@TITLE@@", title).replace("@@AUTHOR@@", AUTHOR)
     # Everything after "## Appendix" is typeset after the bibliography, under \appendix.
