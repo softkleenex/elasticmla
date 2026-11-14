@@ -49,3 +49,21 @@ Nothing below may be retuned after its result is seen. Results are reported what
   - If the null's mean normalized r* is within 0.10 (absolute) of truncation's, the paper must state that the spectrum reflects loss sensitivity to perturbations of that norm, not the information in the dropped channels.
   - If the null requires more rate (larger r*), truncation is gentler than random noise of equal norm. That supports the saliency order carrying information.
   - If the null requires less, report it as is.
+
+## R1 result (2026-11-14, `experiments/budget_sensitivity.json`)
+
+Sanity checks passed: all 250M stored r* values were reproduced at epsilon = 0.10 (0 mismatches), and the
+published DeepSeek coordinate means were reproduced to 1e-9. Mean normalized r*, H = 32:
+
+| epsilon | 250M mean (k=32) | 250M max (k=1) | ratio | DSV2 mean | DSV2 max | ratio |
+|---|---|---|---|---|---|---|
+| 0.05 | 0.133 | 0.866 | 6.5 | 0.139 | 0.935 | 6.8 |
+| 0.10 | 0.071 | 0.718 | 10.1 | 0.082 | 0.787 | 9.6 |
+| 0.20 | 0.040 | 0.514 | 12.8 | 0.048 | 0.549 | 11.5 |
+| 0.50 | 0.031 | 0.263 | 8.4 | 0.032 | 0.276 | 8.7 |
+
+The pre-registered large-gap criterion (ratio >= 3) holds at every epsilon on both models. Caveat: at
+epsilon = 0.50 the mean criterion sits at the grid floor (16/512 = 0.031), so the ratio there is a lower
+bound on the mean side, not a measured value. The absolute TCP shrinks as the budget loosens (0.73 -> 0.23
+at 250M), so "the premium is ~0.65" is specific to epsilon = 0.10 and must be stated that way.
+DeepSeek uses shard a only, the only shard with the coordinate basis.
