@@ -1,0 +1,60 @@
+[{"stream_name":"stdout","time":13.272850714,"data":"gpu probe: Tesla T4 (7, 5) \n"}
+,{"stream_name":"stdout","time":21.92516901,"data":"$ /usr/bin/python3 -B /kaggle/working/repo/experiments/analyze_metric_and_bitwidth.py --checkpoint /kaggle/input/datasets/softkleenex/elasticmla-250m-checkpoint/ckpt/latest.pt --data /kaggle/input/datasets/softkleenex/elasticmla-250m-checkpoint/data/val.bin --reference-summary /kaggle/working/inputs/inputs/250m_reference/risk_capacity_v5_summary.json --reference-records /kaggle/working/inputs/inputs/250m_reference/risk_capacity_v5_records.json --device cuda --output /kaggle/working/metric_bitwidth_250m.json\n"}
+,{"stream_name":"stdout","time":100.023094027,"data":"sequence 1/24 complete\n"}
+,{"stream_name":"stdout","time":158.341287021,"data":"sequence 2/24 complete\n"}
+,{"stream_name":"stdout","time":215.811260043,"data":"sequence 3/24 complete\n"}
+,{"stream_name":"stdout","time":273.94190118,"data":"sequence 4/24 complete\n"}
+,{"stream_name":"stdout","time":331.785986914,"data":"sequence 5/24 complete\n"}
+,{"stream_name":"stdout","time":389.616983868,"data":"sequence 6/24 complete\n"}
+,{"stream_name":"stdout","time":447.618380823,"data":"sequence 7/24 complete\n"}
+,{"stream_name":"stdout","time":505.481550982,"data":"sequence 8/24 complete\n"}
+,{"stream_name":"stdout","time":563.443110504,"data":"sequence 9/24 complete\n"}
+,{"stream_name":"stdout","time":621.604452823,"data":"sequence 10/24 complete\n"}
+,{"stream_name":"stdout","time":679.527444037,"data":"sequence 11/24 complete\n"}
+,{"stream_name":"stdout","time":737.326058236,"data":"sequence 12/24 complete\n"}
+,{"stream_name":"stdout","time":795.133686838,"data":"sequence 13/24 complete\n"}
+,{"stream_name":"stdout","time":852.813538447,"data":"sequence 14/24 complete\n"}
+,{"stream_name":"stdout","time":910.475494635,"data":"sequence 15/24 complete\n"}
+,{"stream_name":"stdout","time":968.206323889,"data":"sequence 16/24 complete\n"}
+,{"stream_name":"stdout","time":1026.421534649,"data":"sequence 17/24 complete\n"}
+,{"stream_name":"stdout","time":1084.592443297,"data":"sequence 18/24 complete\n"}
+,{"stream_name":"stdout","time":1142.466375856,"data":"sequence 19/24 complete\n"}
+,{"stream_name":"stdout","time":1200.335383915,"data":"sequence 20/24 complete\n"}
+,{"stream_name":"stdout","time":1258.433370065,"data":"sequence 21/24 complete\n"}
+,{"stream_name":"stdout","time":1316.622957526,"data":"sequence 22/24 complete\n"}
+,{"stream_name":"stdout","time":1374.846509455,"data":"sequence 23/24 complete\n"}
+,{"stream_name":"stdout","time":1432.717350202,"data":"sequence 24/24 complete\n"}
+,{"stream_name":"stdout","time":1451.672643908,"data":"{\n"}
+,{"stream_name":"stdout","time":1451.672678141,"data":"  \"status\": \"complete\",\n"}
+,{"stream_name":"stdout","time":1451.672682085,"data":"  \"sanity_checks\": {\n"}
+,{"stream_name":"stdout","time":1451.672685312,"data":"    \"loss_r_star_agreement_by_tail_count\": {\n"}
+,{"stream_name":"stdout","time":1451.672688506,"data":"      \"32\": 1.0,\n"}
+,{"stream_name":"stdout","time":1451.672691563,"data":"      \"16\": 1.0,\n"}
+,{"stream_name":"stdout","time":1451.672694571,"data":"      \"8\": 1.0,\n"}
+,{"stream_name":"stdout","time":1451.67269748,"data":"      \"4\": 1.0,\n"}
+,{"stream_name":"stdout","time":1451.672700409,"data":"      \"2\": 1.0,\n"}
+,{"stream_name":"stdout","time":1451.672703262,"data":"      \"1\": 1.0\n"}
+,{"stream_name":"stdout","time":1451.672706219,"data":"    },\n"}
+,{"stream_name":"stdout","time":1451.672709065,"data":"    \"max_full_rank_kl\": 5.537679044209654e-07,\n"}
+,{"stream_name":"stdout","time":1451.672712111,"data":"    \"full_rank_kl_limit\": 0.0001\n"}
+,{"stream_name":"stdout","time":1451.672726045,"data":"  },\n"}
+,{"stream_name":"stdout","time":1451.67272869,"data":"  \"R6_pre_registered_reading\": \"gap holds under KL (ratio \u003e= 3 at delta = 0.05)\",\n"}
+,{"stream_name":"stdout","time":1451.672731606,"data":"  \"R7_mean_bit_gap_k1_minus_kH\": 1.7656249999999998,\n"}
+,{"stream_name":"stdout","time":1451.672734026,"data":"  \"R7_pre_registered_reading\": \"inconclusive (between 1 and 2 bits)\"\n"}
+,{"stream_name":"stdout","time":1451.672736463,"data":"}\n"}
+,{"stream_name":"stdout","time":1451.672738773,"data":"KL delta=0.01: k32=0.294 k16=0.415 k8=0.526 k4=0.617 k2=0.682 k1=0.718 ratio=2.44\n"}
+,{"stream_name":"stdout","time":1451.672741178,"data":"KL delta=0.05: k32=0.099 k16=0.164 k8=0.245 k4=0.327 k2=0.400 k1=0.451 ratio=4.58\n"}
+,{"stream_name":"stdout","time":1451.672743574,"data":"KL delta=0.10: k32=0.057 k16=0.098 k8=0.157 k4=0.223 k2=0.287 k1=0.335 ratio=5.84\n"}
+,{"stream_name":"stdout","time":1451.672746396,"data":"bits: k32=1.01 k16=1.23 k8=1.68 k4=2.15 k2=2.50 k1=2.78\n"}
+,{"stream_name":"stdout","time":1451.672749655,"data":"flips: {\"mean_safe\": {\"mean_rate_fraction_of_d_c\": 0.07145182291666667, \"flip_rate_over_offsets\": {\"mean\": 0.053181966145833336, \"sequence_cluster_bootstrap_95pct_ci\": [0.049112955729166664, 0.057454427083333336]}, \"fraction_of_probes_with_any_flip\": 0.7734375}, \"worst_offset_safe\": {\"mean_rate_fraction_of_d_c\": 0.7178141276041666, \"flip_rate_over_offsets\": {\"mean\": 0.009724934895833334, \"sequence_cluster_bootstrap_95pct_ci\": [0.008138020833333334, 0.011311848958333334]}, \"fraction_of_probes_with_any_flip\": 0.25}}\n"}
+,{"stream_name":"stdout","time":1452.303022514,"data":"RESULT_metric250_BEGIN\n"}
+,{"stream_name":"stdout","time":1452.30361394,"data":"{\"status\": \"complete\", \"analysis\": \"R6 KL/greedy-flip spectrum and R7 bit-width spectrum (pre-registered)\", \"device\": \"cuda\", \"inputs_sha256\": {\"checkpoint\": \"8a8774502016bb98a97eeb6f90de7af23f70f82283f933c6bd70fd2a315d275b\", \"data\": \"03246b576bb789ac6bf15996fd642167008620f2ee96d8a45496d69c13f073ce\", \"reference_summary\": \"5ef56fa59607438900bc1ac4110b38acbeaebd6ee2901a2d4bffe0def2f97acc\", \"reference_records\": \"25429bdacc52a298e4c1aca06171b3684fa1d910f14ea5d453c37c40c11bd4b7\", \"analysis_source\": \"481707c09db8ae1608a2359de139bacff693f2e10af74c829786a9cbb1860647\", \"perturbation_null_source\": \"a58e4d35c178030529895a9ba835c2352b8ee4c7de12aa14182ecec6c1e45dd7\", \"risk_v5_source\": \"8f3bb1727d93dea98a357ea1502cb8eaf0384b1bee35d3298c5b4a4dc49546cc\"}, \"raw_npz_sha256\": \"a29d0d147c9bc75b02dc7000bda776a3801903293c27191905de4b1dbf0b9e5e\", \"n_probes\": 768, \"rank_grid\": [16, 32, 48, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 480, 512], \"tail_counts\": [32, 16, 8, 4, 2, 1], \"epsilon_nats\": 0.1, \"sanity_checks\": {\"loss_r_star_agreement_by_tail_count\": {\"32\": 1.0, \"16\": 1.0, \"8\": 1.0, \"4\": 1.0, \"2\": 1.0, \"1\": 1.0}, \"max_full_rank_kl\": 5.537679044209654e-07, \"full_rank_kl_limit\": 0.0001}, \"R6_kl_spectrum_by_budget\": {\"0.01\": {\"by_tail_count\": {\"32\": {\"mean\": 0.2940673828125, \"sequence_cluster_bootstrap_95pct_ci\": [0.2757568359375, 0.31372172037760415]}, \"16\": {\"mean\": 0.4146728515625, \"sequence_cluster_bootstrap_95pct_ci\": [0.3928629557291667, 0.4375]}, \"8\": {\"mean\": 0.5264485677083334, \"sequence_cluster_bootstrap_95pct_ci\": [0.503173828125, 0.5508219401041666]}, \"4\": {\"mean\": 0.61669921875, \"sequence_cluster_bootstrap_95pct_ci\": [0.5961496988932292, 0.6380208333333334]}, \"2\": {\"mean\": 0.6818440755208334, \"sequence_cluster_bootstrap_95pct_ci\": [0.6620676676432292, 0.7023529052734375]}, \"1\": {\"mean\": 0.7183430989583334, \"sequence_cluster_bootstrap_95pct_ci\": [0.6990549723307292, 0.737548828125]}}, \"max_over_mean_ratio\": 2.4427840044278404, \"tail_capacity_premium\": 0.42427571614583337, \"large_gap_claim_holds\": false}, \"0.05\": {\"by_tail_count\": {\"32\": {\"mean\": 0.09859212239583333, \"sequence_cluster_bootstrap_95pct_ci\": [0.0899658203125, 0.107177734375]}, \"16\": {\"mean\": 0.16398111979166666, \"sequence_cluster_bootstrap_95pct_ci\": [0.15291341145833334, 0.1753346761067708]}, \"8\": {\"mean\": 0.2447509765625, \"sequence_cluster_bootstrap_95pct_ci\": [0.22957356770833334, 0.26131286621093747]}, \"4\": {\"mean\": 0.3268229166666667, \"sequence_cluster_bootstrap_95pct_ci\": [0.3079833984375, 0.3468831380208333]}, \"2\": {\"mean\": 0.3998616536458333, \"sequence_cluster_bootstrap_95pct_ci\": [0.3797200520833333, 0.4219156901041667]}, \"1\": {\"mean\": 0.451171875, \"sequence_cluster_bootstrap_95pct_ci\": [0.4305419921875, 0.47338968912760415]}}, \"max_over_mean_ratio\": 4.576145274453157, \"tail_capacity_premium\": 0.3525797526041667, \"large_gap_claim_holds\": true}, \"0.10\": {\"by_tail_count\": {\"32\": {\"mean\": 0.057413736979166664, \"sequence_cluster_bootstrap_95pct_ci\": [0.052205403645833336, 0.06270345052083333]}, \"16\": {\"mean\": 0.09773763020833333, \"sequence_cluster_bootstrap_95pct_ci\": [0.08906962076822918, 0.10701497395833333]}, \"8\": {\"mean\": 0.15669759114583334, \"sequence_cluster_bootstrap_95pct_ci\": [0.14546712239583334, 0.1676025390625]}, \"4\": {\"mean\": 0.22334798177083334, \"sequence_cluster_bootstrap_95pct_ci\": [0.20947163899739585, 0.2382415771484375]}, \"2\": {\"mean\": 0.28662109375, \"sequence_cluster_bootstrap_95pct_ci\": [0.26863505045572916, 0.3057454427083333]}, \"1\": {\"mean\": 0.3353678385416667, \"sequence_cluster_bootstrap_95pct_ci\": [0.3165283203125, 0.35563252766927084]}}, \"max_over_mean_ratio\": 5.841247342310418, \"tail_capacity_premium\": 0.2779541015625, \"large_gap_claim_holds\": true}}, \"R6_greedy_flip_at_loss_safe_rates\": {\"mean_safe\": {\"mean_rate_fraction_of_d_c\": 0.07145182291666667, \"flip_rate_over_offsets\": {\"mean\": 0.053181966145833336, \"sequence_cluster_bootstrap_95pct_ci\": [0.049112955729166664, 0.057454427083333336]}, \"fraction_of_probes_with_any_flip\": 0.7734375}, \"worst_offset_safe\": {\"mean_rate_fraction_of_d_c\": 0.7178141276041666, \"flip_rate_over_offsets\": {\"mean\": 0.009724934895833334, \"sequence_cluster_bootstrap_95pct_ci\": [0.008138020833333334, 0.011311848958333334]}, \"fraction_of_probes_with_any_flip\": 0.25}}, \"R6_pre_registered_reading\": \"gap holds under KL (ratio \u003e= 3 at delta = 0.05)\", \"R7_bit_axis\": [1, 2, 3, 4, 5, 6, 8, 16], \"R7_bit_star_by_tail_count\": {\"32\": {\"mean\": 1.0104166666666667, \"sequence_cluster_bootstrap_95pct_ci\": [1.00390625, 1.0182291666666667]}, \"16\": {\"mean\": 1.23046875, \"sequence_cluster_bootstrap_95pct_ci\": [1.1809895833333333, 1.2825520833333333]}, \"8\": {\"mean\": 1.6783854166666667, \"sequence_cluster_bootstrap_95pct_ci\": [1.6002604166666667, 1.7591145833333333]}, \"4\": {\"mean\": 2.1549479166666665, \"sequence_cluster_bootstrap_95pct_ci\": [2.06640625, 2.2421875]}, \"2\": {\"mean\": 2.5026041666666665, \"sequence_cluster_bootstrap_95pct_ci\": [2.4296875, 2.57421875]}, \"1\": {\"mean\": 2.7760416666666665, \"sequence_cluster_bootstrap_95pct_ci\": [2.7005208333333335, 2.8489583333333335]}}, \"R7_mean_bit_gap_k1_minus_kH\": 1.7656249999999998, \"R7_pre_registered_reading\": \"inconclusive (between 1 and 2 bits)\"}\n"}
+,{"stream_name":"stdout","time":1452.303688424,"data":"RESULT_metric250_END\n"}
+,{"stream_name":"stdout","time":1452.303693407,"data":"ALL DONE\n"}
+,{"stream_name":"stderr","time":1454.69508436,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":1454.695117826,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":1455.046312322,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":1455.04634229,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":1455.972287954,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":1457.116911692,"data":"[NbConvertApp] Writing 320763 bytes to __results__.html\n"}
+]

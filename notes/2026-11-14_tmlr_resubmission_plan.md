@@ -298,3 +298,12 @@ Per-token per-head PCA truncation of GPT-2's cached K and V, 768 probes, WikiTex
 epsilon = 0.10, rates / d_head = 64: k = 32 0.114 [0.105, 0.125], 16 0.243, 8 0.386, 4 0.520, 2 0.632,
 k = 1 0.705 [0.687, 0.723]. Ratio 6.17, premium 0.591; full-rank delta exactly 0. Reading: gap present
 (>= 3). The mean-vs-worst gap is not specific to MLA's latent or to our TinyStories models.
+
+### R6 and R7 at 250M (`experiments/metric_bitwidth/metric_bitwidth_250m.json`, Kaggle T4)
+
+Sanity: loss r* reproduced on 768/768 probes at every k; max full-rank KL 5.5e-7.
+R6 KL, k = 32 / k = 1 / ratio: delta 0.01: 0.294 / 0.718 / 2.44; **delta 0.05: 0.099 [0.090, 0.107] / 0.451
+[0.431, 0.473] / 4.58**; delta 0.10: 0.057 / 0.335 / 5.84. Reading: gap holds under KL at both scales, but
+smaller than under the signed loss (4.6 vs 10.0 at 250M). Greedy flips at the loss-based mean-safe rate: 5.3%
+of offsets [4.9, 5.8], 77.3% of probes flip at least once; at the worst-offset-safe rate 0.97% and 25.0%.
+R7 bit-width b*: k = 32 1.01 ... k = 1 2.78; gap 1.77 bits -> "inconclusive", floor-bounded as at 30M.
