@@ -228,3 +228,41 @@ This is a resubmission of #13801 (desk-rejected 2026-11-08 for clarity of writin
 4. Unit test showing the full-attention truncation probe equals incremental cached decoding.
 5. Latency and router training details moved to the appendix; status/process history removed; prose
    rewritten for clarity, with terms defined before use.
+
+## Third round (2026-11-16): pre-registered analyses R6-R9 (committed before running)
+
+Proposed by a reviewer subagent after the author's full read of the restructured draft. Order: R6 and R7 at
+30M locally, then 250M (Kaggle), then R8, then R9. Same rules: nothing retuned after its result is seen.
+
+### R6. The spectrum under a nonnegative metric (KL and greedy flips)
+- Question: does the ~10x gap survive a metric that cannot cancel? Signed target-token cross-entropy can be
+  negative at some offsets; KL(full || truncated) of the next-token distribution cannot.
+- Construction: truncation only, same probes, windows, channel orders and stopping rule as R2 (>= 99% of
+  loss-based r* reproduced in the same pass). At each probe, rank and offset record the KL and whether the
+  greedy (argmax) token differs from the full model's. r*_k(delta) uses the same top-k mean and suffix rule
+  on the KL vectors. Full-rank KL must be < 1e-4 nat at every offset or the run stops.
+- Reading: primary budget delta = 0.05 nat (also reported: 0.01, 0.10). The gap claim holds under KL if the
+  mean normalized r* at k = 1 is at least 3x that at k = H; if not, the abstract must say the
+  order-of-magnitude gap is a property of the signed target loss. Greedy flip rates at the loss-based
+  mean-safe and worst-offset-safe rates are reported as measured.
+
+### R7. Quantization bit-width as the rate axis
+- Question: is the mean-vs-worst gap specific to truncation, or does it also hit per-token quantization?
+- Construction: quantize only the probe token's latent, in all layers at once (R4's symmetric absmax
+  quantizer, fp16 scale), at b in {1, 2, 3, 4, 5, 6, 8} bits (b = 1 means sign times scale); full precision
+  is the top of the axis. b*_k is the smallest width that is safe under the same suffix rule (epsilon = 0.10,
+  loss deltas, k = H and k = 1); a probe unsafe even at 8 bits gets b* = 16.
+- Reading: gap present if mean b*(k = 1) - mean b*(k = H) >= 2 bits; absent if <= 1 bit; in between, reported
+  as inconclusive.
+
+### R8. R2 and R5 on DeepSeek-V2-Lite (Kaggle T4 x2, compute permitting)
+- Coordinate basis, the 384 shard-a probes, seeds 60521 / 62521 + probe index; covariance from the script's
+  calibration sequences; R5 from the shard-a r*. Sanity: truncation r* matches shard-a raw deltas on >= 99%
+  of probes. R2 and R5 readings unchanged, except that k = H is reported but not read for R2 because 275 of
+  384 probes sit at the grid floor there.
+
+### R9. Per-token low-rank truncation of GPT-2's per-head KV cache
+- Question: is the gap specific to MLA or to our training data?
+- Construction: per-head principal directions as in `analyze_public_kv_basis.py`; project K and V at the probe
+  position only, in all layers; 24 sequences x 32 probes, wikitext-2, block 512, H = 32, epsilon = 0.10.
+- Reading: the R1 criterion (ratio >= 3) for gap present.
