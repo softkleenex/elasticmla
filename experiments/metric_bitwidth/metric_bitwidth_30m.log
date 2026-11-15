@@ -1,0 +1,42 @@
+sequence 1/24 complete
+sequence 2/24 complete
+sequence 3/24 complete
+sequence 4/24 complete
+sequence 5/24 complete
+sequence 6/24 complete
+sequence 7/24 complete
+sequence 8/24 complete
+sequence 9/24 complete
+sequence 10/24 complete
+sequence 11/24 complete
+sequence 12/24 complete
+sequence 13/24 complete
+sequence 14/24 complete
+sequence 15/24 complete
+sequence 16/24 complete
+sequence 17/24 complete
+sequence 18/24 complete
+sequence 19/24 complete
+sequence 20/24 complete
+sequence 21/24 complete
+sequence 22/24 complete
+sequence 23/24 complete
+sequence 24/24 complete
+{
+  "status": "complete",
+  "sanity_checks": {
+    "loss_r_star_agreement_by_tail_count": {
+      "32": 1.0
+    },
+    "max_full_rank_kl": 4.7216121856763493e-07,
+    "full_rank_kl_limit": 0.0001
+  },
+  "R6_pre_registered_reading": "gap holds under KL (ratio >= 3 at delta = 0.05)",
+  "R7_mean_bit_gap_k1_minus_kH": 1.8398437500000002,
+  "R7_pre_registered_reading": "inconclusive (between 1 and 2 bits)"
+}
+KL delta=0.01: k32=0.296 k16=0.426 k8=0.557 k4=0.657 k2=0.723 k1=0.763 ratio=2.58
+KL delta=0.05: k32=0.109 k16=0.162 k8=0.246 k4=0.344 k2=0.429 k1=0.490 ratio=4.50
+KL delta=0.10: k32=0.079 k16=0.108 k8=0.157 k4=0.229 k2=0.303 k1=0.360 ratio=4.53
+bits: k32=1.01 k16=1.18 k8=1.61 k4=2.12 k2=2.54 k1=2.85
+flips: {"mean_safe": {"mean_rate_fraction_of_d_c": 0.09000651041666667, "flip_rate_over_offsets": {"mean": 0.044270833333333336, "sequence_cluster_bootstrap_95pct_ci": [0.040323893229166664, 0.048177083333333336]}, "fraction_of_probes_with_any_flip": 0.74609375}, "worst_offset_safe": {"mean_rate_fraction_of_d_c": 0.74072265625, "flip_rate_over_offsets": {"mean": 0.007242838541666667, "sequence_cluster_bootstrap_95pct_ci": [0.006306966145833333, 0.008097330729166666]}, "fraction_of_probes_with_any_flip": 0.19140625}}

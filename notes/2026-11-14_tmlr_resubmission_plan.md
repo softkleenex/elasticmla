@@ -269,3 +269,16 @@ Proposed by a reviewer subagent after the author's full read of the restructured
 
 R7 implementation detail fixed before running: b = 1 is sign(x) * mean|x| per row (L1-optimal binary scale,
 fp16); b >= 2 use R4's absmax quantizer with qmax = 2^(b-1) - 1. Script `experiments/analyze_metric_and_bitwidth.py`.
+
+### R6 and R7 at 30M (`experiments/metric_bitwidth/metric_bitwidth_30m.json`, MPS)
+
+Sanity: mean-safe r* reproduced on 768/768 probes; max full-rank KL 4.7e-7.
+R6, mean normalized r* under KL(full || truncated), k = 32 / k = 1 / ratio: delta 0.01: 0.296 / 0.763 / 2.58;
+**delta 0.05 (primary): 0.109 [0.103, 0.115] / 0.490 [0.469, 0.511] / 4.50**; delta 0.10: 0.079 / 0.360 / 4.53.
+Reading: the gap holds under a metric that cannot cancel, but it is about half as large as under the signed
+target loss (ratio ~4.5 vs ~8). Greedy flips: at the loss-based mean-safe rate, 4.4% of offsets
+[4.0, 4.8] flip and 74.6% of probes flip at least once within 32 offsets; at the worst-offset-safe rate,
+0.72% and 19.1%.
+R7 bit-width: mean b* k = 32: 1.01, k = 16: 1.18, k = 8: 1.61, k = 4: 2.12, k = 2: 2.54, k = 1: 2.85.
+Gap 1.84 bits: pre-registered reading "inconclusive". The k = 32 value sits at the axis floor (1 bit), so the
+gap is a lower bound. Reported as is.

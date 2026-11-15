@@ -1,0 +1,273 @@
+{
+  "status": "complete",
+  "analysis": "R6 KL/greedy-flip spectrum and R7 bit-width spectrum (pre-registered)",
+  "device": "mps",
+  "inputs_sha256": {
+    "checkpoint": "18646f1fdd2d97396e687aaf5e60900b0f825ce96a0d11ffe9b6ac600acc8dc1",
+    "data": "5e146271a0bbaf5581b9e71490b1c5b12910b6a59062307ab81206acec8615be",
+    "reference_summary": "74673a953c61530d87dee51dceb82ae18e2ad95e58b077971233e8df8332f687",
+    "analysis_source": "481707c09db8ae1608a2359de139bacff693f2e10af74c829786a9cbb1860647",
+    "perturbation_null_source": "a58e4d35c178030529895a9ba835c2352b8ee4c7de12aa14182ecec6c1e45dd7",
+    "risk_v5_source": "8f3bb1727d93dea98a357ea1502cb8eaf0384b1bee35d3298c5b4a4dc49546cc"
+  },
+  "raw_npz_sha256": "e6f97cc7e5406e78fbc81607ef35417f50d9d076b28e9542c8165aa85638af43",
+  "n_probes": 768,
+  "rank_grid": [
+    16,
+    32,
+    48,
+    64,
+    96,
+    128,
+    160,
+    192,
+    224,
+    256
+  ],
+  "tail_counts": [
+    32,
+    16,
+    8,
+    4,
+    2,
+    1
+  ],
+  "epsilon_nats": 0.1,
+  "sanity_checks": {
+    "loss_r_star_agreement_by_tail_count": {
+      "32": 1.0
+    },
+    "max_full_rank_kl": 4.7216121856763493e-07,
+    "full_rank_kl_limit": 0.0001
+  },
+  "R6_kl_spectrum_by_budget": {
+    "0.01": {
+      "by_tail_count": {
+        "32": {
+          "mean": 0.2962239583333333,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.2797037760416667,
+            0.3125
+          ]
+        },
+        "16": {
+          "mean": 0.4264322916666667,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.4066548665364584,
+            0.4458821614583333
+          ]
+        },
+        "8": {
+          "mean": 0.5565592447916666,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.535888671875,
+            0.5763366699218749
+          ]
+        },
+        "4": {
+          "mean": 0.656982421875,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.6373697916666666,
+            0.6752115885416666
+          ]
+        },
+        "2": {
+          "mean": 0.72265625,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.705078125,
+            0.7400716145833334
+          ]
+        },
+        "1": {
+          "mean": 0.763427734375,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.7467447916666666,
+            0.7798665364583334
+          ]
+        }
+      },
+      "max_over_mean_ratio": 2.5771978021978024,
+      "tail_capacity_premium": 0.4672037760416667,
+      "large_gap_claim_holds": false
+    },
+    "0.05": {
+      "by_tail_count": {
+        "32": {
+          "mean": 0.10888671875,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.10270182291666667,
+            0.115234375
+          ]
+        },
+        "16": {
+          "mean": 0.16194661458333334,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.15266927083333334,
+            0.17147013346354165
+          ]
+        },
+        "8": {
+          "mean": 0.24617513020833334,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.23274739583333334,
+            0.2596842447916667
+          ]
+        },
+        "4": {
+          "mean": 0.3436686197916667,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.325518798828125,
+            0.3612467447916667
+          ]
+        },
+        "2": {
+          "mean": 0.4288736979166667,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.4078776041666667,
+            0.4491373697916667
+          ]
+        },
+        "1": {
+          "mean": 0.490234375,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.4686665852864584,
+            0.51123046875
+          ]
+        }
+      },
+      "max_over_mean_ratio": 4.502242152466367,
+      "tail_capacity_premium": 0.38134765625,
+      "large_gap_claim_holds": true
+    },
+    "0.10": {
+      "by_tail_count": {
+        "32": {
+          "mean": 0.079345703125,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.07527669270833333,
+            0.08382161458333333
+          ]
+        },
+        "16": {
+          "mean": 0.1083984375,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.10245768229166667,
+            0.11458333333333333
+          ]
+        },
+        "8": {
+          "mean": 0.15738932291666666,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.1484375,
+            0.166748046875
+          ]
+        },
+        "4": {
+          "mean": 0.2294921875,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.21663411458333334,
+            0.24251302083333334
+          ]
+        },
+        "2": {
+          "mean": 0.3028157552083333,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.286376953125,
+            0.3191731770833333
+          ]
+        },
+        "1": {
+          "mean": 0.3597819010416667,
+          "sequence_cluster_bootstrap_95pct_ci": [
+            0.34130859375,
+            0.378173828125
+          ]
+        }
+      },
+      "max_over_mean_ratio": 4.534358974358975,
+      "tail_capacity_premium": 0.2804361979166667,
+      "large_gap_claim_holds": true
+    }
+  },
+  "R6_greedy_flip_at_loss_safe_rates": {
+    "mean_safe": {
+      "mean_rate_fraction_of_d_c": 0.09000651041666667,
+      "flip_rate_over_offsets": {
+        "mean": 0.044270833333333336,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.040323893229166664,
+          0.048177083333333336
+        ]
+      },
+      "fraction_of_probes_with_any_flip": 0.74609375
+    },
+    "worst_offset_safe": {
+      "mean_rate_fraction_of_d_c": 0.74072265625,
+      "flip_rate_over_offsets": {
+        "mean": 0.007242838541666667,
+        "sequence_cluster_bootstrap_95pct_ci": [
+          0.006306966145833333,
+          0.008097330729166666
+        ]
+      },
+      "fraction_of_probes_with_any_flip": 0.19140625
+    }
+  },
+  "R6_pre_registered_reading": "gap holds under KL (ratio >= 3 at delta = 0.05)",
+  "R7_bit_axis": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8,
+    16
+  ],
+  "R7_bit_star_by_tail_count": {
+    "32": {
+      "mean": 1.0130208333333333,
+      "sequence_cluster_bootstrap_95pct_ci": [
+        1.00390625,
+        1.0234375
+      ]
+    },
+    "16": {
+      "mean": 1.18359375,
+      "sequence_cluster_bootstrap_95pct_ci": [
+        1.1471354166666667,
+        1.2200520833333333
+      ]
+    },
+    "8": {
+      "mean": 1.6080729166666667,
+      "sequence_cluster_bootstrap_95pct_ci": [
+        1.5559895833333333,
+        1.6627604166666667
+      ]
+    },
+    "4": {
+      "mean": 2.12109375,
+      "sequence_cluster_bootstrap_95pct_ci": [
+        2.0598958333333335,
+        2.1875
+      ]
+    },
+    "2": {
+      "mean": 2.5377604166666665,
+      "sequence_cluster_bootstrap_95pct_ci": [
+        2.4752604166666665,
+        2.5989583333333335
+      ]
+    },
+    "1": {
+      "mean": 2.8528645833333335,
+      "sequence_cluster_bootstrap_95pct_ci": [
+        2.7877604166666665,
+        2.91796875
+      ]
+    }
+  },
+  "R7_mean_bit_gap_k1_minus_kH": 1.8398437500000002,
+  "R7_pre_registered_reading": "inconclusive (between 1 and 2 bits)"
+}
