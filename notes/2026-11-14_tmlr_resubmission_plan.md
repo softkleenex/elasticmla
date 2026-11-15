@@ -307,3 +307,16 @@ R6 KL, k = 32 / k = 1 / ratio: delta 0.01: 0.294 / 0.718 / 2.44; **delta 0.05: 0
 smaller than under the signed loss (4.6 vs 10.0 at 250M). Greedy flips at the loss-based mean-safe rate: 5.3%
 of offsets [4.9, 5.8], 77.3% of probes flip at least once; at the worst-offset-safe rate 0.97% and 25.0%.
 R7 bit-width b*: k = 32 1.01 ... k = 1 2.78; gap 1.77 bits -> "inconclusive", floor-bounded as at 30M.
+
+### R8 (`experiments/public_mla/public_mla_null.json`, Kaggle T4 x2): failed its pre-registered reproduction check
+
+Windows, positions and baselines are identical to shard a. But the recalibrated saliency differs from the
+published one: fp16 gradients with CPU offload are not deterministic (the saliency hash does not match). So the
+coordinate order differs slightly. Per-probe truncation r* agreement with shard a is 99.7% at k = H but
+93.0% at k = 1, below the pre-registered 99%. The status is therefore `failed_truncation_reproduction`.
+Spectrum means are close (k = 32: 0.083 vs 0.082 published). Per the rules, the results are reported only as
+exploratory. They are still valid paired comparisons within the run, because the nulls share this run's order.
+- R2 isotropic null, k = 1: 0.682 vs truncation 0.784, -0.103 [-0.142, -0.066]. Covariance null, k = 1: 0.755,
+  -0.030 [-0.056, -0.005]. TCP: truncation 0.701, isotropic 0.647, covariance 0.718. Same direction as 30M and 250M.
+- R5, joint mean-safe at the published r*: sequence mean +0.051 [0.045, 0.058], 22.1% of positions > epsilon,
+  max position +4.22. Max-safe: -0.001, 2.2%, +0.44.

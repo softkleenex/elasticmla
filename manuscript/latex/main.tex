@@ -229,7 +229,7 @@ Model & Changes from & Status & $k=32$ (mean) & $k=1$ (max) \\
 }
 \end{table}
 
-TODO(R8): equal-norm nulls (R2) on DeepSeek-V2-Lite go here.
+On DeepSeek-V2-Lite the same nulls are exploratory only. Our pre-registered check required the rerun to reproduce the published per-probe rates on 99\% of probes, and it reached 93.0\% at $k=1$ because the float16 saliency calibration with CPU offload is not deterministic, which changed the channel order slightly (\texttt{experiments/\allowbreak public\_mla/\allowbreak public\_mla\_null.json}). Within that run the comparison points the same way: at $k=1$ isotropic noise needs 0.103 less than truncation ([$-0.142$, $-0.066$]) and covariance-shaped noise 0.030 less ([$-0.056$, $-0.005$]).
 
 \subsection{The loss changes cancel; they are not rare spikes}
 
@@ -257,7 +257,7 @@ Worst-offset-safe ($k=1$) & 0.718 $d_c$ & $-0.005$ [$-0.007$, $-0.004$] & 4.4\% 
 
 Mean safety carries over to the quantity it controls: the joint sequence-mean change, +0.102 nat, is within the pre-registered limit of $2\epsilon$, so a mean-loss evaluation of this allocation would report a change close to the budget. Yet 28.6\% of positions exceed the budget, and the worst position in a sequence loses 4.64 nat on average. The worst-offset-safe allocation reduces these to 4.4\% and 0.41 nat, at ten times the rate.
 
-TODO(R8): joint application (R5) on DeepSeek-V2-Lite goes here.
+The joint test on DeepSeek-V2-Lite, at its published per-probe rates, is exploratory for the same reason. It shows the same pattern: the mean-safe allocation changes mean loss by 0.051 nat while 22.1\% of positions exceed $\epsilon$ and the worst position loses 4.22 nat; the worst-offset-safe allocation cuts this to 2.2\% and 0.44 nat.
 
 \subsection{How much of the tail requirement is the basis?}
 
@@ -353,7 +353,7 @@ The packed cache brings no peak-memory or throughput gain: peak allocated memory
 
 \section{Limitations}
 
-\textbf{Scale and data.} Our three models are small and trained on TinyStories, with one checkpoint, one training run and one router seed each; intervals do not include training variability, and model size is confounded with training budget. The external replication on DeepSeek-V2-Lite covers the spectrum, the budget sweep and the basis ablation on one checkpoint, one text distribution and 384 probes; the router, the nulls and the joint test were not run on it. The GPT-2 check covers only the spectrum endpoints, in principal directions of a per-head KV cache.
+\textbf{Scale and data.} Our three models are small and trained on TinyStories, with one checkpoint, one training run and one router seed each; intervals do not include training variability, and model size is confounded with training budget. The external replication on DeepSeek-V2-Lite covers the spectrum, the budget sweep and the basis ablation on one checkpoint, one text distribution and 384 probes; the router was not run on it, and its nulls and joint test are exploratory because the rerun missed the pre-registered reproduction check (Section 5.2). The GPT-2 check covers only the spectrum endpoints, in principal directions of a per-head KV cache.
 
 \textbf{Metric.} The gap is measured on next-token cross-entropy and, at 30M and 250M, on KL divergence and greedy flips. Under KL it is about half as large as under the signed loss, and at $\delta=0.01$ nat it falls below our criterion. KL is itself an imperfect proxy: it measures how far the output distribution moves, not whether it gets worse, and loses predictive power among near-baseline models [61]. None of these is a task-level evaluation.
 
