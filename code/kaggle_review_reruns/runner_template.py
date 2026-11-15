@@ -225,10 +225,23 @@ def publicmla():
         emit(JOB, out)
 
 
+def publicmla_null():
+    os.environ["HF_HOME"] = "/tmp/hf"
+    os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", *PUBLIC_MLA_PINS], check=True)
+    ref = next(p.parent for p in STAGE.rglob("publicmla_a.raw.npz"))
+    out = WORK / "public_mla_null.json"
+    if sh([sys.executable, "-B", ROOT / "experiments" / "analyze_public_mla_null.py",
+           "--reference-npz", ref / "publicmla_a.raw.npz", "--reference-summary", ref / "publicmla_a.json",
+           "--model-revision", "604d5664dddd88a0433dbae533b7fe9472482de0",
+           "--device", "cuda", "--bootstrap-draws", "10000", "--output", out]):
+        emit("publicmla_null", out)
+
+
 if __name__ == "__main__":
     pin_torch_for_p100()
     setup_repo()
     {"spectrum250": spectrum250, "basis250": basis250,
-     "benchmark": benchmark, "publickv": publickv, "null250": null250, "quant250": quant250, "metric250": metric250,
+     "benchmark": benchmark, "publickv": publickv, "null250": null250, "quant250": quant250, "metric250": metric250, "publicmla_null": publicmla_null,
      **{job: publicmla for job in PUBLIC_MLA_RUNS}}[JOB]()
     print("ALL DONE", flush=True)

@@ -282,3 +282,12 @@ target loss (ratio ~4.5 vs ~8). Greedy flips: at the loss-based mean-safe rate, 
 R7 bit-width: mean b* k = 32: 1.01, k = 16: 1.18, k = 8: 1.61, k = 4: 2.12, k = 2: 2.54, k = 1: 2.85.
 Gap 1.84 bits: pre-registered reading "inconclusive". The k = 32 value sits at the axis floor (1 bit), so the
 gap is a lower bound. Reported as is.
+
+### R8 implementation details (fixed before running; `experiments/analyze_public_mla_null.py`)
+
+- Channel order: shard a stored no order, so calibration is rerun with the published settings. The stop
+  rule is r* agreement >= 99% at k = H and k = 1 against the shard-a raw deltas; window, position and grid
+  must match exactly. The saliency hash match is recorded as a diagnostic.
+- Covariance null uses the centered Sigma = E[cc^T] - mu mu^T (mu collected read-only during calibration).
+- R5 baseline is an unmodified forward with the same batch shape; metrics run from the first probe on.
+- R2 at k = H is reported, not read (275 of 384 probes at the grid floor).
