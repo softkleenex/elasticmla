@@ -291,3 +291,10 @@ gap is a lower bound. Reported as is.
 - Covariance null uses the centered Sigma = E[cc^T] - mu mu^T (mu collected read-only during calibration).
 - R5 baseline is an unmodified forward with the same batch shape; metrics run from the first probe on.
 - R2 at k = H is reported, not read (275 of 384 probes at the grid floor).
+
+### R9 (`experiments/gpt2_kv_spectrum/gpt2_kv_spectrum.json`, GPT-2 commit 607a30d, MPS)
+
+Per-token per-head PCA truncation of GPT-2's cached K and V, 768 probes, WikiText-2 test, H = 32,
+epsilon = 0.10, rates / d_head = 64: k = 32 0.114 [0.105, 0.125], 16 0.243, 8 0.386, 4 0.520, 2 0.632,
+k = 1 0.705 [0.687, 0.723]. Ratio 6.17, premium 0.591; full-rank delta exactly 0. Reading: gap present
+(>= 3). The mean-vs-worst gap is not specific to MLA's latent or to our TinyStories models.

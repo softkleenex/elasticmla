@@ -1,0 +1,43 @@
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 11133.66it/s]
+[transformers] Token indices sequence length is longer than the specified maximum sequence length for this model (2415650 > 1024). Running this sequence through the model will result in indexing errors
+  calibration batch 1/16
+  calibration batch 2/16
+  calibration batch 3/16
+  calibration batch 4/16
+  calibration batch 5/16
+  calibration batch 6/16
+  calibration batch 7/16
+  calibration batch 8/16
+  calibration batch 9/16
+  calibration batch 10/16
+  calibration batch 11/16
+  calibration batch 12/16
+  calibration batch 13/16
+  calibration batch 14/16
+  calibration batch 15/16
+  calibration batch 16/16
+sequence 1/24 complete
+sequence 2/24 complete
+sequence 3/24 complete
+sequence 4/24 complete
+sequence 5/24 complete
+sequence 6/24 complete
+sequence 7/24 complete
+sequence 8/24 complete
+sequence 9/24 complete
+sequence 10/24 complete
+sequence 11/24 complete
+sequence 12/24 complete
+sequence 13/24 complete
+sequence 14/24 complete
+sequence 15/24 complete
+sequence 16/24 complete
+sequence 17/24 complete
+sequence 18/24 complete
+sequence 19/24 complete
+sequence 20/24 complete
+sequence 21/24 complete
+sequence 22/24 complete
+sequence 23/24 complete
+sequence 24/24 complete
+k32=0.114 k16=0.243 k8=0.386 k4=0.520 k2=0.632 k1=0.705 ratio=6.17 gap present (ratio >= 3) full-rank max |delta|=0.00e+00

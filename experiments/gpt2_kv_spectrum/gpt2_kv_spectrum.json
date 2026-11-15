@@ -1,0 +1,77 @@
+{
+  "status": "complete",
+  "analysis": "R9 GPT-2 per-token KV truncation spectrum (pre-registered)",
+  "model": "gpt2",
+  "model_commit": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+  "weights_sha256": "53fef6b87dff34a2ee28708231ec25885746de5990d84169325d419d73346c1c",
+  "dataset": "Salesforce/wikitext/wikitext-2-raw-v1",
+  "test_tokens_sha256": "112f648d44306a702529dd6a1c819308e61415aac31274d5c7856e156e3694b2",
+  "analysis_source_sha256": "58f52b0fe641518f5a60ff6a3e70d562ff8643a8eff00c98f22c4372179b371c",
+  "raw_npz_sha256": "062f5774db892b50bbf991a8519a920a33a57e40099462582200bbb89725bc5a",
+  "device": "mps",
+  "d_head": 64,
+  "rank_grid": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    40,
+    48,
+    56,
+    64
+  ],
+  "epsilon_nats": 0.1,
+  "future_horizon_exact": 32,
+  "n_probes": 768,
+  "probe_seed": 23452,
+  "max_abs_full_rank_delta": 0.0,
+  "spectrum": {
+    "32": {
+      "normalized_mean_r_star": 0.1142578125,
+      "sequence_cluster_bootstrap_95pct_ci": [
+        0.10481770833333333,
+        0.12459309895833333
+      ]
+    },
+    "16": {
+      "normalized_mean_r_star": 0.24251302083333334,
+      "sequence_cluster_bootstrap_95pct_ci": [
+        0.22509765625,
+        0.25927734375
+      ]
+    },
+    "8": {
+      "normalized_mean_r_star": 0.385986328125,
+      "sequence_cluster_bootstrap_95pct_ci": [
+        0.362628173828125,
+        0.4087727864583333
+      ]
+    },
+    "4": {
+      "normalized_mean_r_star": 0.5201822916666666,
+      "sequence_cluster_bootstrap_95pct_ci": [
+        0.4918619791666667,
+        0.5476888020833334
+      ]
+    },
+    "2": {
+      "normalized_mean_r_star": 0.6319986979166666,
+      "sequence_cluster_bootstrap_95pct_ci": [
+        0.6092936197916666,
+        0.6529947916666666
+      ]
+    },
+    "1": {
+      "normalized_mean_r_star": 0.7049967447916666,
+      "sequence_cluster_bootstrap_95pct_ci": [
+        0.6865234375,
+        0.7228210449218749
+      ]
+    }
+  },
+  "max_over_mean_ratio": 6.17022792022792,
+  "tail_capacity_premium": 0.5907389322916666,
+  "pre_registered_reading": "gap present (ratio >= 3)"
+}
