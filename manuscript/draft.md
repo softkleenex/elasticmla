@@ -33,7 +33,14 @@ positions is small, or in the stricter sense that no single future position is h
 budget $\epsilon$. We call the first mean-safe and the second worst-offset-safe. Compression methods
 are usually evaluated in the first sense, by mean loss or perplexity. The common intuition is that
 the two senses nearly coincide, with a few rare tokens causing large spikes. We measure both: they
-differ by about a factor of ten, for almost every token. Our contributions are:
+differ by about a factor of ten, for almost every token.
+
+That averages can hide damage is not new: there is prior evidence from answer flips at matched
+accuracy [34], position-averaged perplexity [35, 36], instruction following under KV-cache
+compression [37], and eviction scoring and risk analysis that look past the mean [38, 39]. Per-token
+truncation of a nested prefix is not new either: DynaKV [40] learns it outside MLA, and MatryoshkaKV
+[41] trains nested projections. What we add is the size of the gap inside MLA's latent, controls for where it comes
+from, and a joint test of what a mean-loss evaluation misses. Our contributions are:
 
 - **A measurement with controls** (Sections 5.1-5.2). On three MLA models spanning an 8x parameter
   range and on DeepSeek-V2-Lite, the average safe rate at $\epsilon=0.1$ nat is 7-9% of the latent
@@ -72,7 +79,7 @@ $k_t^R \in \mathbb{R}^{d_R}$ carries positional information. A fixed-width MLA c
 $(c_t,k_t^R)$ instead of per-head keys and values; for sequence length $T$, $L$ layers and element
 size $b$ its leading storage term is $bTL(d_c+d_R)$. MLA continues a line of work that shares or
 compresses key-value heads, including multi-query [22] and grouped-query attention [23]. MHA2MLA [4],
-TransMLA [6] and CARE [8] convert pretrained multi-head or grouped-query models to MLA, the last
+TransMLA [6], X-EcoMLA [42], MLAfication [43] and CARE [8] convert pretrained multi-head or grouped-query models to MLA, the last
 allocating rank across layers with a covariance-aware decomposition; EG-MLA [7] gates latent content
 with a token-embedding signal; and Cross-Layer Latent Attention combines latent compression with
 layer sharing and quantization [5]. Analyses of trained MLA models find that latent coordinates
@@ -84,18 +91,35 @@ separate content from positional information in a way that depends on the basis 
 KV-cache compression methods differ in which axis they compress. Eviction keeps a subset of tokens,
 selected by accumulated attention (H2O [10], Scissorhands [19]), attention sinks and a recent window
 (StreamingLLM [11]), or attention patterns observed during prefill (SnapKV [12]); FastGen [20] picks
-a policy per head, and PyramidKV [13] and Ada-KV [18] allocate different budgets to different layers
-or heads. Quantization lowers the precision of every cached element (KIVI [14], KVQuant [15]).
+a policy per head, and PyramidKV [13], Ada-KV [18] and HeadKV [44] allocate different budgets to different layers
+or heads. Quantization lowers the precision of every cached element (KIVI [14], KVQuant [15]) or
+keeps important tokens at higher precision (MiKV [45]).
 Low-rank methods project keys and values into a smaller space, uniformly or with layer-wise ranks
-(Palu [16], LoRC [17], Eigen Attention [21]), and MiniCache [24] merges states across adjacent
+(Palu [16], LoRC [17], Eigen Attention [21], ThinK [46], xKV [47]); KVTC [48] combines
+decorrelation with quantization; and MiniCache [24] merges states across adjacent
 layers. Dynamic Memory Compression [25] learns per token whether to append or merge into the cache.
 Learning where to spend a discrete budget is a general pattern: adaptive computation time [26],
 mixture-of-depths [27] and mixture-of-experts routing all learn an importance signal and spend
 compute nonuniformly.
 
-Unlike these, we keep every token and every head, and vary the *width* of
+**Evaluation beyond the mean.** Average metrics can understate compression damage. Dutta et al.
+[34] find answer flips at matched accuracy and propose KL divergence and flips as metrics; perplexity
+misses losses on knowledge-intensive tasks [49] and, averaged over positions, at key tokens [35, 36];
+and KV-cache compression benchmarks report strongly task- and instruction-dependent losses [50, 37,
+51]. For allocation, DefensiveKV [38] scores tokens for eviction by the worst rather than the mean
+future query, CriticalKV [52] by output perturbation, and Haverbeck et al. [39] analyze compression
+risk in minimax terms. We do not claim the observation. We quantify it in MLA's latent (about 10x
+between mean-safe and worst-offset-safe rates), test it against budget, equal-norm and
+order-statistic nulls, and show in a joint test that a mean check passes while 28.6% of positions
+exceed the budget.
+
+Unlike the compression methods above, we keep every token and every head, and vary the *width* of
 each token's latent through a nested prefix, the same nesting idea as Matryoshka representations
-[30]. This makes per-token rate the only thing that varies, which lets us measure how much each token
+[30] and of MatryoshkaKV [41]. The closest prior method is DynaKV [40], which
+learns a per-token truncation of a PCA-ordered prefix outside MLA. DynaKV fine-tunes on 128M tokens,
+reports mean and benchmark scores without a tail measure, and finds large gains over a fixed rank.
+Our router, without fine-tuning and on small models, only ties a per-token lookup (Section 6); the
+settings differ, so the two results do not conflict. Our design makes per-token rate the only thing that varies, which lets us measure how much each token
 needs and compare allocation policies at byte-identical budgets. Two evaluation points from adaptive
 allocation carry over to Section 6: compare a policy with alternatives at exactly its own budget,
 and include simple causal rules among them.
@@ -140,13 +164,15 @@ Let $\Delta_{t,j}(r)=\ell_{t+j}(P_rc_t)-\ell_{t+j}(c_t)$ be the signed change in
 cross-entropy at future offset $j\in\{0,\ldots,H-1\}$ when only source token $t$ is truncated to
 rate $r$. For a tail count $k$, let $A_{t,k}(r)$ be the mean of the $k$ largest of the $H$ values
 $\Delta_{t,j}(r)$. This is the empirical conditional value-at-risk [33] of the future-loss vector at
-level $\alpha=1-k/H$: $k=H$ gives the signed mean and $k=1$ the maximum. Define the suffix-safe rate
+level $\alpha=1-k/H$: $k=H$ gives the signed mean and $k=1$ the maximum. Tilted empirical risk [53] interpolates between
+the same two ends. Define the suffix-safe rate
 
 $$r^*_{t,k}(\epsilon)=\min\{r\in\mathcal R: A_{t,k}(r')\le\epsilon\ \text{for every}\ r'\in\mathcal R,\ r'\ge r\},$$
 
 the smallest rate from which every larger rate on the grid $\mathcal R$ is also safe. We call this
 requirement the suffix rule. With the signed mean we call $r^*$ the mean-safe rate;
-with the maximum, the worst-offset-safe rate.
+with the maximum, the worst-offset-safe rate. RateQuant [54] allocates KV-cache bit-widths by
+rate-distortion theory; our criterion is instead a tail functional of the future-loss vector.
 
 *Remark (ordering).* The mean of the $k$ largest elements of a fixed vector cannot decrease as $k$
 shrinks, so $r^*_{t,k}(\epsilon)$ is nondecreasing as $k$ falls from $H$ to 1, for every token,
@@ -449,8 +475,11 @@ with +0.00005 nat ([$-0.00001$, $+0.00011$]) and no position above $\epsilon$; i
 +0.0018 nat ([0.0001, 0.0035]) and 5.5% of positions above $\epsilon$. The router's packed cache
 stores 60-69% of full-MLA bytes at +0.10 to +0.18 nat (Table 7). The two byte fractions use different
 references (the latent alone for quantization; the whole cache, including the RoPE key, for the
-router), but at these loss levels int8 quantization dominates the router on bytes. We did not test
-quantizing the packed cache itself.
+router), but at these loss levels int8 quantization dominates the router on bytes. This is consistent with
+work on MLA latent quantization: SnapMLA [55] and DeepSeek-V3.2 [56] store the latent in FP8 (for the
+latter, the cache layout is documented in the FlashMLA repository, `github.com/deepseek-ai/FlashMLA`),
+and QuantMLA [57], RoLaQ [58] and RAQ-MLA [59] go to lower bit-widths. We did not test
+quantizing the packed cache itself, nor allocating rank and bit-width jointly as JoLT [60] does.
 
 The packed cache brings no peak-memory or throughput gain: peak allocated memory is 99.3-99.7% of
 full MLA and decode is 2.4x slower per step (Appendix F).
@@ -602,6 +631,84 @@ Unsupervised Multitask Learners," OpenAI technical report, 2019.
 
 [33] R. T. Rockafellar and S. Uryasev, "Optimization of Conditional Value-at-Risk," Journal of Risk,
 2(3):21-42, 2000.
+
+[34] A. Dutta, S. Krishnan, N. Kwatra and R. Ramjee, "Accuracy is Not All You Need," NeurIPS, 2024.
+
+[35] L. Fang et al., "What is Wrong with Perplexity for Long-context Language Modeling?,"
+arXiv:2410.23771, 2024.
+
+[36] S. M. M. Murshed, H. Bright, R. Karim and A. S. Sichani, "EdgeLLM-Nano: Auditing Polar-Guided
+Key-Cache Compression and Consistency-Anchored Pruning on a 33.6 MB On-Device Language Model,"
+arXiv:2610.14475, 2026.
+
+[37] A. Chen, R. Geh, A. Grover, G. Van den Broeck and D. Israel, "The Pitfalls of KV Cache
+Compression," ACL, 2026.
+
+[38] Y. Feng, H. Guo, J. Lv, S. K. Zhou and X. Xie, "Taming the Fragility of KV Cache Eviction in LLM
+Inference," arXiv:2510.13334, 2025.
+
+[39] L. Haverbeck, C. Amo Alonso, A. F. Posada-Moreno, S. Trimpe and M. Pavone, "The risk of KV cache
+compression," NeurIPS, 2026.
+
+[40] L. Lu et al., "One Size Does Not Fit All: Token-Wise Adaptive Compression for KV Cache,"
+arXiv:2603.04411, 2026.
+
+[41] B. Lin et al., "MatryoshkaKV: Adaptive KV Compression via Trainable Orthogonal Projection,"
+arXiv:2410.14731, 2024.
+
+[42] G. Li, M. Rezagholizadeh, M. Yang, V. Appia and E. Barsoum, "X-EcoMLA: Upcycling Pre-Trained
+Attention into MLA for Efficient and Extreme KV Compression," arXiv:2503.11132, 2025.
+
+[43] Z. Wang, Z. Xie and T. Ji, "MLAfication: Efficiently Enabling High-Fidelity MLA for Modern
+LLMs," arXiv:2610.17202, 2026.
+
+[44] Y. Fu et al., "Not All Heads Matter: A Head-Level KV Cache Compression Method with Integrated
+Retrieval and Reasoning," ICLR, 2025.
+
+[45] J. Y. Yang et al., "No Token Left Behind: Reliable KV Cache Compression via Importance-Aware
+Mixed Precision Quantization," arXiv:2402.18096, 2024.
+
+[46] Y. Xu et al., "ThinK: Thinner Key Cache by Query-Driven Pruning," ICLR, 2025.
+
+[47] C.-C. Chang et al., "xKV: Cross-Layer KV-Cache Compression via Aligned Singular Vector
+Extraction," ICML, 2026.
+
+[48] K. Staniszewski and A. Łańcucki, "KV Cache Transform Coding for Compact Storage in LLM
+Inference," ICLR, 2026.
+
+[49] A. Jaiswal et al., "Compressing LLMs: The Truth is Rarely Pure and Never Simple," ICLR, 2024.
+
+[50] J. Yuan et al., "KV Cache Compression, But What Must We Give in Return? A Comprehensive
+Benchmark of Long Context Capable Approaches," arXiv:2407.01527, 2024.
+
+[51] C.-P. Hsieh et al., "RULER: What's the Real Context Size of Your Long-Context Language
+Models?," COLM, 2024.
+
+[52] Y. Feng et al., "CriticalKV: Optimizing KV Cache Eviction from an Output Perturbation
+Perspective," ICML, 2026.
+
+[53] T. Li, A. Beirami, M. Sanjabi and V. Smith, "Tilted Empirical Risk Minimization," ICLR, 2021.
+
+[54] F. Zuo, Z. Zhou, H. Cong, X. Xi and H. F. Leung, "RateQuant: Optimal Mixed-Precision KV Cache
+Quantization via Rate-Distortion Theory," arXiv:2605.06675, 2026.
+
+[55] Y. Zhang et al., "SnapMLA: Efficient Long-Context MLA Decoding via Hardware-Aware FP8 Quantized
+Pipelining," arXiv:2602.10718, 2026.
+
+[56] DeepSeek-AI, "DeepSeek-V3.2: Pushing the Frontier of Open Large Language Models,"
+arXiv:2512.02556, 2025.
+
+[57] Z. Su et al., "QuantMLA: Function-Aligned Dual-Path Quantization for Low-Bit MLA KV Caching,"
+arXiv:2609.36760, 2026.
+
+[58] S. Ji et al., "RoLaQ: Joint Rotation and Range Calibration for 2-Bit KV Caches in Multi-Head
+Latent Attention," arXiv:2610.20686, 2026.
+
+[59] T. Chen et al., "RAQ-MLA: Role-Aware Quantization for Multi-Head Latent Attention Caches,"
+arXiv:2610.33625, 2026.
+
+[60] R. Krishnan and V. Schulz, "A JoLT for the KV cache: Near-Lossless KV Cache Compression via
+Joint Rank-bit Allocation," arXiv:2607.12550, 2026.
 
 ## Appendix
 
