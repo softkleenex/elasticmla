@@ -266,3 +266,6 @@ Proposed by a reviewer subagent after the author's full read of the restructured
 - Construction: per-head principal directions as in `analyze_public_kv_basis.py`; project K and V at the probe
   position only, in all layers; 24 sequences x 32 probes, wikitext-2, block 512, H = 32, epsilon = 0.10.
 - Reading: the R1 criterion (ratio >= 3) for gap present.
+
+R7 implementation detail fixed before running: b = 1 is sign(x) * mean|x| per row (L1-optimal binary scale,
+fp16); b >= 2 use R4's absmax quantizer with qmax = 2^(b-1) - 1. Script `experiments/analyze_metric_and_bitwidth.py`.
