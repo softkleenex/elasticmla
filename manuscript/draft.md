@@ -57,12 +57,12 @@ per-position test of what a mean-loss evaluation misses. Our contributions are:
   mean-safe at rate 0, and puts the ratio at 15-20. On the published grid the ratio is at least 6.5 at
   every budget from 0.05 to 0.5 nat; it is about 4.5 under KL divergence at 0.05 nat (2.4-2.6 at 0.01)
   and 6.2 in GPT-2's per-head KV cache. The ratio grows with
-  the horizon $H$; the worst-offset rate barely does.
+  the horizon $H$; the worst-offset rate rises far less (0.55-0.74 from 4 to 128 offsets).
 - **What the gap does and does not reflect** (Sections 5.2-5.3). It is not a few fragile tokens: at the
   mean-safe rate 93-96% of tokens exceed the budget at some offset, because gains and losses cancel in
   the mean. Gaussian draws matched to each probe's mean and spread account for most of the worst-offset
   rate (0.62-0.66 against 0.72 at 250M); keeping each probe's absolute deviations while randomizing
-  their signs, with one draw per probe (post hoc), comes within 0.03 of it, so the magnitudes of the
+  their signs, with one draw per probe (post hoc), comes within 0.035 of it, so the magnitudes of the
   changes, not their signs, carry the requirement. Equal-norm noise shaped like the latent (exploratory) costs about
   as much as truncation on average, isotropic noise less, and neither predicts which tokens need most.
 - **The consequence** (Section 5.4). Applied jointly to 32 of the 384 positions in each 250M sequence,
@@ -183,7 +183,7 @@ For each probed source position $t$ and each rate $r$ on the grid, we zero the c
 layer's prefix at position $t$ in every layer simultaneously, keep every other position at full
 width, and record $\Delta_{t,j}(r)$ for $j=0,\ldots,H-1$. We use $H=32$ and $\epsilon=0.10$ nat unless
 stated otherwise. $H$ is a convention fixed before the first run, not a property of the model: the
-mean-safe rate falls as $H$ grows while the worst-offset rate barely moves, so we report how the
+mean-safe rate falls as $H$ grows while the worst-offset rate rises far less, so we report how the
 ratio depends on $H$ (Section 5.2). Probe positions are drawn uniformly without replacement, 32 per
 sequence, from the positions whose full horizon fits in the context. Calibration data, calibration
 windows and evaluation windows do not overlap. The rate grid runs from 16 to $d_c$ in steps of 16 up
@@ -328,7 +328,7 @@ so the ratio grows from 2.3 to 23. Every ratio we quote is a value at $H=32$. Wh
 horizons is the worst-offset requirement itself: on average a token must keep more than half of its latent
 to be safe at each of even its next four predictions. The binding offsets come early. At the grid rate just
 below each probe's worst-offset-safe rate, where that criterion binds, the largest loss change falls at
-offset $j=1$ for 20% of probes and within the first four offsets for 49%, against 3% and 13% if the
+offset $j=1$ for 20% of the 746 probes that have such a step and within the first four offsets for 49%, against 3% and 13% if the
 worst offset were uniform; excluding $j=0$ leaves the worst-offset rate almost unchanged (0.700).
 
 **Table 4.** Effect of the horizon at 250M (post hoc): mean suffix-safe rate under the mean ($k=H'$) and worst-offset ($k=1$) criteria using the first $H'$ offsets, with the share of probes whose mean criterion is met at the grid floor. Rows marked * come from the separate $H=128$ run, whose probe positions differ.
@@ -450,7 +450,7 @@ pre-registered run gives every probe position the sequence's mean rate, rounded 
 up to rounding), or permutes the sequence's own rates across its probe positions (shuffled; exactly
 equal bytes). All three use the published-grid rates (Table 6).
 
-**Table 6.** Joint truncation of all 32 probe positions per sequence (250M, 24 sequences, $\epsilon=0.10$ nat). "Own" uses each position's own safe rate; "uniform" and "shuffled" spend the same rate sum. The maximum is the largest single-position loss change per sequence, averaged over sequences. Brackets: 95% sequence-bootstrap intervals.
+**Table 6.** Joint truncation of all 32 probe positions per sequence (250M, 24 sequences, $\epsilon=0.10$ nat). "Own" uses each position's own safe rate; "uniform" and "shuffled" spend the same rate sum (uniform up to rounding). The maximum is the largest single-position loss change per sequence, averaged over sequences. Brackets: 95% sequence-bootstrap intervals.
 
 | Allocation | Mean probe rate | Sequence-mean loss change | Positions above $\epsilon$ | Maximum position change |
 |---|---:|---:|---:|---:|
@@ -570,7 +570,8 @@ fresh sequences (Appendix A).
 **Against quantization.** On the 24 windows of Table 2, per-token symmetric absmax quantization of
 the latent, without tuning (RoPE key in full precision, one fp16 scale per token and layer), costs
 almost nothing. int8 stores the latent in 0.504 (30M) and 0.502 (250M) of its fp16 bytes, with mean
-loss changes within $\pm0.0001$ nat of zero and no position above $\epsilon$; int4 uses 0.254 and 0.252,
+loss changes of at most 0.0001 nat in magnitude (95% intervals within $\pm0.00013$) and no position
+above $\epsilon$; int4 uses 0.254 and 0.252,
 with +0.0007 nat ([$-0.0010$, $+0.0022$]) and +0.0018 nat ([0.0001, 0.0035]) and 5.6% and 5.5% of
 positions above $\epsilon$. The router's packed cache stores 60-69% of full-MLA bytes (whole cache,
 including the RoPE key) at +0.10 to +0.18 nat, so int8 quantization dominates it on bytes, in line with
@@ -589,9 +590,9 @@ missed the pre-registered reproduction check (Appendix H). The GPT-2 check cover
 spectrum endpoints, in principal directions of a per-head KV cache. The extended low-rank grid was run
 at 30M and 250M only.
 
-**Horizon and grid.** Every ratio is a value at $H=32$ (Table 4); the stable quantity is the
-worst-offset rate. Most mean-safe rates sit at the smallest rate of whichever grid is used, so they are
-upper bounds and the ratios lower bounds.
+**Horizon and grid.** Every ratio is a value at $H=32$ (Table 4); the worst-offset rate is far
+more stable. Most mean-safe rates on the published grid sit at its smallest rate, so they are upper
+bounds and its ratios lower bounds; on the extended grid most are exactly zero.
 
 **Metric.** The gap is measured on next-token cross-entropy and, at 30M and 250M, on KL divergence
 and greedy flips. Under KL it is about half as large as under the signed loss, and at $\delta=0.01$
@@ -623,9 +624,9 @@ the 250M and DeepSeek-V2-Lite raw records are kept and authenticated by hash.
 
 At $\epsilon=0.1$ nat and a 32-token horizon, keeping each of a token's next 32 losses within budget
 costs 72-79% of the MLA latent in its own coordinates, while keeping their mean within budget costs
-almost nothing. The gap holds at every loss budget we tested, under KL divergence at 0.05-0.1 nat,
-with greedy flips and in GPT-2's per-head KV cache, for almost every token. Its size grows with the
-horizon; the worst-offset requirement does not. It is carried by the magnitudes of the per-offset loss
+almost nothing. Almost every token in our MLA models shows the gap, and it holds at every loss budget we
+tested, under KL divergence at 0.05-0.1 nat, with greedy flips and in GPT-2's per-head KV cache. Its
+size grows with the horizon; the worst-offset requirement rises far less. It is carried by the magnitudes of the per-offset loss
 changes, not their signs. A rotated basis removes much of it in our small models but little in
 DeepSeek-V2-Lite.
 
