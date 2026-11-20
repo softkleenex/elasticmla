@@ -392,7 +392,7 @@ orders as the published v5 run, and checks them against the records (250M) or th
 
 - **Shared-draw R3 (one noise vector per probe, reused at every rank).**
   - Gaussian null: k = 1 0.621, observed minus null 0.097 [0.086, 0.109], at the 0.10 threshold; k = 16 -0.099; k = 8 -0.071.
-  - Sign-randomized null: within 0.03 of observed at every k (k = 1 +0.027).
+  - Sign-randomized null: within 0.035 of observed at every k (largest gap 0.032 at k = 4; k = 1 +0.027 [0.013, 0.042]; observed slightly higher at k <= 8).
   - Observed rows: standardized max 3.28 (Gaussian 2.12), kurtosis 11.3.
 - **R2 per-probe agreement at k = 1.**
   - Pearson r with truncation:
@@ -443,3 +443,19 @@ orders as the published v5 run, and checks them against the records (250M) or th
 - The joint test should no longer be read as "a mean-safe allocation misleads specifically". Read it as "a
   mean-loss check accepts an allocation that leaves 29% of positions over budget, as many as uniform
   truncation at the same bytes". Only the worst-offset criterion buys position-level safety per byte.
+
+### Review rounds 2-3 (2026-11-20)
+
+- Round 2 (claims, methods, numbers) on 82d9fa5. Recommendation: minor revision / accept after N1-N3.
+  Fixed in f44bb0b:
+  - the int4 comparison in the joint test was on the wrong byte basis (the joint test truncates 32 of
+    384 positions);
+  - the sign-null wording overclaimed ("accounts for all" became "within 0.035; magnitudes, not
+    signs");
+  - the KL qualifier was missing (the ratio is below the criterion at 0.01);
+  - the worst-offset location is now taken at the binding step below r*_1: j = 1 20%, j < 4 49%,
+    j >= 16 13%, replacing the mean-safe-rank histogram (30%, 55%);
+  - uniform matches the bytes only up to rounding;
+  - rounding fixes.
+- `review_descriptives.json`: the location keys were renamed (index = offset j). The old `fraction_j1`
+  held j = 0.
