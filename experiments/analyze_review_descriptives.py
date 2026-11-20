@@ -17,6 +17,12 @@ From the Table 2 250M records (H = 32) and the extended-horizon 250M records (H 
 5. order_statistic_paired: observed minus Gaussian-null normalized r* at every tail count, with
    a sequence-cluster bootstrap CI on the paired per-probe difference (the null rows are
    regenerated with the R3 seed rule, so they are identical to R3's).
+6. order_statistic_shared_draw: R3's nulls draw fresh noise at every rank, which the suffix rule
+   punishes (the highest rank that fails by chance sets r*). Sensitivity: one standard-normal
+   vector (and one sign vector) per probe, shared across ranks, seed 63521 + probe index.
+   Also the standardized maximum and kurtosis of the observed rows.
+7. equal_norm_per_probe: per-probe agreement between truncation and each R2 null at k = 1
+   (Pearson correlation and mean absolute difference), from ``per_probe_r_star``.
 """
 from __future__ import annotations
 
@@ -96,6 +102,9 @@ def main() -> None:
         ROOT / "experiments/exp0_rank_variance/results_v4/exp0_v4_records.json",
         ROOT / "experiments/exp1_rank_variance_122m/results_v4/exp0_v4_records.json",
         ROOT / "experiments/exp2_rank_variance_250m/results_v4/exp0_v4_records.json"])
+    parser.add_argument("--null-results", type=Path, nargs="*", default=[
+        ROOT / "experiments/perturbation_null/null_30m.json",
+        ROOT / "experiments/perturbation_null/null_250m.json"])
     parser.add_argument("--d-c", type=int, default=512)
     parser.add_argument("--bootstrap-draws", type=int, default=10000)
     parser.add_argument("--output", type=Path, default=ROOT / "experiments/review_descriptives.json")
@@ -154,17 +163,65 @@ def main() -> None:
                           "observed_minus_null": float(diff.mean()),
                           "ci": cluster_ci(diff, seqs, args.bootstrap_draws, BOOTSTRAP_SEED + 200 + j)}
 
+    # 6. shared-draw order-statistic sensitivity
+    shared = {"gaussian": {k: np.empty(len(deltas)) for k in tail_counts},
+              "sign_randomized": {k: np.empty(len(deltas)) for k in tail_counts}}
+    std_max, kurt = [], []
+    for i, probe in enumerate(deltas):
+        rng = np.random.default_rng(order_null.SEED_BASE + i)
+        mean = probe.mean(axis=1, keepdims=True)
+        std = probe.std(axis=1, keepdims=True)
+        z = rng.standard_normal(probe.shape[1])
+        signs = rng.choice((-1.0, 1.0), size=probe.shape[1])
+        rows = {"gaussian": mean + std * z, "sign_randomized": mean + signs * (probe - mean)}
+        for name, values in rows.items():
+            for k in tail_counts:
+                shared[name][k][i] = r_star(values, ranks, k)
+        ok = std[:, 0] > 0
+        standardized = (probe[ok] - mean[ok]) / std[ok]
+        std_max.extend(standardized.max(axis=1).tolist())
+        kurt.extend((standardized ** 4).mean(axis=1).tolist())
+    shared_out = {}
+    for c, (name, table) in enumerate(shared.items()):
+        shared_out[name] = {}
+        for j, k in enumerate(tail_counts):
+            diff = (observed[k] - table[k]) / args.d_c
+            shared_out[name][str(k)] = {
+                "null": float(table[k].mean() / args.d_c), "observed_minus_null": float(diff.mean()),
+                "ci": cluster_ci(diff, seqs, args.bootstrap_draws, BOOTSTRAP_SEED + 300 + 10 * c + j)}
+    gaussian_max = np.random.default_rng(0).standard_normal((100000, deltas.shape[2]))
+    gaussian_max = ((gaussian_max - gaussian_max.mean(1, keepdims=True))
+                    / gaussian_max.std(1, keepdims=True)).max(1).mean()
+    row_shape = {"mean_standardized_max": float(np.mean(std_max)), "mean_kurtosis": float(np.mean(kurt)),
+                 "gaussian_reference_standardized_max": float(gaussian_max), "gaussian_reference_kurtosis": 3.0}
+
+    # 7. equal-norm nulls, per-probe agreement at k = 1
+    equal_norm = {}
+    for path in args.null_results:
+        null = json.loads(path.read_text())
+        per = null["per_probe_r_star"]
+        trunc = np.asarray(per["truncation"]["1"], dtype=np.float64) / null["d_c"]
+        equal_norm[str(path.relative_to(ROOT))] = {}
+        for name in ("null", "covariance_null"):
+            other = np.asarray(per[name]["1"], dtype=np.float64) / null["d_c"]
+            equal_norm[str(path.relative_to(ROOT))][name] = {
+                "pearson_r": float(np.corrcoef(trunc, other)[0, 1]),
+                "mean_abs_difference": float(np.abs(trunc - other).mean()),
+                "mean_difference": float((other - trunc).mean())}
+
     output = {
         "status": "complete",
         "analysis": "R10a post-hoc descriptives (not pre-registered)",
         "inputs_sha256": {str(p.relative_to(ROOT)): sha256(p)
-                          for p in [args.records_h32, args.records_h128, *args.v4_records]},
+                          for p in [args.records_h32, args.records_h128, *args.v4_records, *args.null_results]},
         "analysis_source_sha256": sha256(Path(__file__)),
         "epsilon_nats": EPSILON, "rank_grid_250m": ranks, "n_probes": len(deltas),
         "grid_floor_fraction": grid_floor, "horizon": horizon,
         "worst_offset_location_at_mean_safe_rank": location,
         "per_probe_ratio_k1_over_kH": per_probe,
         "order_statistic_paired": paired,
+        "order_statistic_shared_draw": shared_out, "observed_row_shape": row_shape,
+        "equal_norm_per_probe_k1": equal_norm,
     }
     args.output.write_text(json.dumps(output, indent=2) + "\n")
     print(json.dumps({k: output[k] for k in ("grid_floor_fraction", "per_probe_ratio_k1_over_kH")}, indent=1))
@@ -174,6 +231,7 @@ def main() -> None:
     print("location", location["fraction_j1"], location["fraction_j_le_4"], hist[:8].tolist())
     for k, row in paired.items():
         print(f"k={k} obs {row['observed']:.3f} null {row['gaussian_null']:.3f} diff {row['observed_minus_null']:+.3f} {row['ci']}")
+    print(json.dumps({"shared": shared_out, "shape": row_shape, "equal_norm": equal_norm}, indent=1))
 
 
 if __name__ == "__main__":

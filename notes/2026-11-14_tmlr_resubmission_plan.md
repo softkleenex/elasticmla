@@ -387,3 +387,59 @@ orders as the published v5 run, and checks them against the records (250M) or th
 3. **Quantization flips.** Under int8 and int4 at every position, record the fraction of positions whose greedy
    (argmax) token changes. This is the floor for R6's per-offset flip rate.
    - **Reading:** descriptive only.
+
+### R10a additions (post hoc, `experiments/review_descriptives.json`)
+
+- **Shared-draw R3 (one noise vector per probe, reused at every rank).**
+  - Gaussian null: k = 1 0.621, observed minus null 0.097 [0.086, 0.109], at the 0.10 threshold; k = 16 -0.099; k = 8 -0.071.
+  - Sign-randomized null: within 0.03 of observed at every k (k = 1 +0.027).
+  - Observed rows: standardized max 3.28 (Gaussian 2.12), kurtosis 11.3.
+- **R2 per-probe agreement at k = 1.**
+  - Pearson r with truncation:
+    - isotropic: 0.41 (30M), 0.45 (250M);
+    - covariance: 0.44 (30M), 0.48 (250M).
+  - Mean absolute difference: covariance 0.22 and 0.21; isotropic 0.29 and 0.34.
+
+### R10b results
+
+**30M (`experiments/low_rank_joint/low_rank_30m.json`, MPS, part 1 at k = H only)**
+
+- Reproduction: 100% of floor probes safe at rank 16; max |mean difference| 1.6e-6.
+- Extended mean-safe rate: 0.0377 [0.0324, 0.0434], against 0.0900 on the published grid. 82.0% of probes
+  are safe at rank 0, i.e. with all latent content of the token removed and only its RoPE key kept.
+- Ratio with the published k = 1 rate (0.741): 19.6.
+
+**250M (`experiments/low_rank_joint/low_rank_250m.json`, Kaggle T4, about 7 min)**
+
+- Reproduction: 100% agreement at every k; max |delta difference| at rank 16 is 1.5e-5.
+- Extended spectrum:
+
+  | k | Extended grid | 95% CI | Published grid | Probes at rank 0 |
+  |---|---|---|---|---|
+  | 32 | 0.0467 | [0.0386, 0.0550] | 0.0715 | 78.4% |
+  | 16 | 0.207 | | | |
+  | 8 | 0.379 | | | |
+  | 4 | 0.539 | | | |
+  | 2 | 0.648 | | | |
+  | 1 | 0.717 | | 0.718 | 2.1% |
+
+  Ratio 15.4.
+- **Rate-matched joint allocation (fraction of positions above epsilon):**
+
+  | Allocation | Own | Uniform | Shuffled | Own minus uniform |
+  |---|---|---|---|---|
+  | Mean-safe | 28.6% | 29.3% | 29.1% | -0.7 pp [-1.4, -0.1] |
+  | Worst-offset-safe | 4.4% | 9.7% | 11.2% | -5.4 pp [-6.3, -4.4] |
+
+  - Mean-safe, pre-registered reading: **within 5 pp of uniform.** The R5 fraction reflects the total rate, not
+    the mean criterion. The criterion does lower the sequence-mean change (0.102 against 0.134 uniform) and the
+    worst position (4.64 against 6.43).
+  - Worst-offset-safe, pre-registered reading: **places rate better than uniform.** Mean change -0.005 against
+    +0.008, max 0.41 against 1.15.
+- **Quantization greedy flips over all positions:** int8 0.065% [0.022, 0.109], int4 1.99% [1.64, 2.32].
+
+**Consequence for the framing.**
+- The mean criterion is nearly vacuous at H = 32: about 80% of tokens are mean-safe with no latent content at all.
+- The joint test should no longer be read as "a mean-safe allocation misleads specifically". Read it as "a
+  mean-loss check accepts an allocation that leaves 29% of positions over budget, as many as uniform
+  truncation at the same bytes". Only the worst-offset criterion buys position-level safety per byte.

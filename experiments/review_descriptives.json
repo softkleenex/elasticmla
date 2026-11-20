@@ -6,9 +6,11 @@
     "kaggle_output/review_reruns/spectrum250/spectrum250_A_extended/risk_capacity_v5_records.json": "168cf8873661a41dad8b6e5bef7deb240d4cd704877a1fedd47c54c970fe1ae2",
     "experiments/exp0_rank_variance/results_v4/exp0_v4_records.json": "acca0aea5be67f7c2f0f90d2905504c787d7adf5306ea17ceb1f74b81a750b38",
     "experiments/exp1_rank_variance_122m/results_v4/exp0_v4_records.json": "0ed88e820a06e76bba62fa7fcb9eaa09bdcff874a1134ebaa25db5564705231d",
-    "experiments/exp2_rank_variance_250m/results_v4/exp0_v4_records.json": "476dcc46540852309609834f5e3a55dc2745415bde15d5468915c89fbbad489b"
+    "experiments/exp2_rank_variance_250m/results_v4/exp0_v4_records.json": "476dcc46540852309609834f5e3a55dc2745415bde15d5468915c89fbbad489b",
+    "experiments/perturbation_null/null_30m.json": "3b10ff54abb4b15a233a66cb61f12f44bc336bf0b518b7cd18f281dc2fb81ac2",
+    "experiments/perturbation_null/null_250m.json": "7af91db8368dc7454d242b168e0e00cee6214203358789cd60b7eec50500f0af"
   },
-  "analysis_source_sha256": "18e4538dabcb143ec6cd4b9f9744f93b836a9f941cb6340375c098165d9cff98",
+  "analysis_source_sha256": "f5da785a404e2fbe63b9d062da0abf36bb26655d26a460b148f9f441205e1f28",
   "epsilon_nats": 0.1,
   "rank_grid_250m": [
     16,
@@ -288,6 +290,140 @@
         0.043863932291666664,
         0.0653076171875
       ]
+    }
+  },
+  "order_statistic_shared_draw": {
+    "gaussian": {
+      "32": {
+        "null": 0.0799560546875,
+        "observed_minus_null": -0.008504231770833334,
+        "ci": [
+          -0.015299479166666666,
+          -0.0010579427083333333
+        ]
+      },
+      "16": {
+        "null": 0.3197428385416667,
+        "observed_minus_null": -0.09855143229166667,
+        "ci": [
+          -0.10774739583333333,
+          -0.0892333984375
+        ]
+      },
+      "8": {
+        "null": 0.4569905598958333,
+        "observed_minus_null": -0.07096354166666667,
+        "ci": [
+          -0.082275390625,
+          -0.060138956705729184
+        ]
+      },
+      "4": {
+        "null": 0.5401204427083334,
+        "observed_minus_null": 0.0015055338541666667,
+        "ci": [
+          -0.007120768229166667,
+          0.0096435546875
+        ]
+      },
+      "2": {
+        "null": 0.5921630859375,
+        "observed_minus_null": 0.057291666666666664,
+        "ci": [
+          0.048828125,
+          0.06563313802083333
+        ]
+      },
+      "1": {
+        "null": 0.6207275390625,
+        "observed_minus_null": 0.09708658854166667,
+        "ci": [
+          0.08585611979166667,
+          0.10852152506510415
+        ]
+      }
+    },
+    "sign_randomized": {
+      "32": {
+        "null": 0.08390299479166667,
+        "observed_minus_null": -0.012451171875,
+        "ci": [
+          -0.019368489583333332,
+          -0.0054931640625
+        ]
+      },
+      "16": {
+        "null": 0.23518880208333334,
+        "observed_minus_null": -0.013997395833333334,
+        "ci": [
+          -0.021931966145833332,
+          -0.005859375
+        ]
+      },
+      "8": {
+        "null": 0.372802734375,
+        "observed_minus_null": 0.013224283854166666,
+        "ci": [
+          0.0035400390625,
+          0.022908528645833332
+        ]
+      },
+      "4": {
+        "null": 0.509765625,
+        "observed_minus_null": 0.0318603515625,
+        "ci": [
+          0.01883850097656251,
+          0.043987019856770816
+        ]
+      },
+      "2": {
+        "null": 0.620361328125,
+        "observed_minus_null": 0.029093424479166668,
+        "ci": [
+          0.015462239583333334,
+          0.041788736979166664
+        ]
+      },
+      "1": {
+        "null": 0.6912027994791666,
+        "observed_minus_null": 0.026611328125,
+        "ci": [
+          0.012776692708333334,
+          0.042236328125
+        ]
+      }
+    }
+  },
+  "observed_row_shape": {
+    "mean_standardized_max": 3.280671865156645,
+    "mean_kurtosis": 11.331796052415003,
+    "gaussian_reference_standardized_max": 2.1195924416552283,
+    "gaussian_reference_kurtosis": 3.0
+  },
+  "equal_norm_per_probe_k1": {
+    "experiments/perturbation_null/null_30m.json": {
+      "null": {
+        "pearson_r": 0.4054471631305146,
+        "mean_abs_difference": 0.2887369791666667,
+        "mean_difference": -0.17496744791666666
+      },
+      "covariance_null": {
+        "pearson_r": 0.43700452387707084,
+        "mean_abs_difference": 0.22127278645833334,
+        "mean_difference": -0.0034993489583333335
+      }
+    },
+    "experiments/perturbation_null/null_250m.json": {
+      "null": {
+        "pearson_r": 0.44873341672887074,
+        "mean_abs_difference": 0.3432210286458333,
+        "mean_difference": -0.2837320963541667
+      },
+      "covariance_null": {
+        "pearson_r": 0.4756867983040855,
+        "mean_abs_difference": 0.21390787760416666,
+        "mean_difference": -0.014933268229166666
+      }
     }
   }
 }
