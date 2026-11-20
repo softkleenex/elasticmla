@@ -1,76 +1,60 @@
-# ElasticMLA: Contextual Tail-Rate Allocation for Multi-Head Latent Attention
+# Mean-Safe Is Not Tail-Safe: Token-Wise Latent Capacity in Multi-Head Latent Attention
 
-Working repository for the ElasticMLA project: token-wise variable-width latent caching for
-Multi-Head Latent Attention (MLA), a formal rate-allocation theory for the resulting
-risk-capacity spectrum, and a rigorously audited, pre-registered evaluation of a learned
-contextual router against random, shuffled, and simple causal-heuristic baselines at three model
-scales (30M, 122M, 250M parameters).
+Working repository for a measurement paper on token-wise latent capacity in Multi-Head Latent Attention
+(MLA). The paper asks how much of a token's cached latent is needed for its future losses to stay
+within budget, on average versus at every future position. It also includes a pre-registered,
+byte-exact case study of a learned contextual router over a variable-width packed cache, at three
+model scales (30M, 122M, 250M parameters) plus the public DeepSeek-V2-Lite.
 
-**Start here:** `manuscript/draft.md` is the paper (source of truth); `manuscript/latex/main.pdf`
-is a compiled LaTeX version (regenerate via `uv run python manuscript/convert_to_latex.py &&
-cd manuscript/latex && tectonic main.tex` after editing the markdown). Its headline claims, in
-order of how robust they are:
+**Start here:** `manuscript/draft.md` is the paper (source of truth). `manuscript/latex/main.pdf` is
+the compiled version and `manuscript/latex_tmlr/main.pdf` the anonymized TMLR version. Regenerate
+them with `uv run python manuscript/convert_to_latex.py [--style tmlr]` and then `tectonic main.tex`.
 
-1. **Risk-capacity spectrum (robust, three scales, does not involve the router) -- but the
-   headline rates are basis-dependent, and we show this rather than hide it.** In the model's own
-   saliency-ordered coordinate axes, required latent rate rises monotonically from ~8-9% of full
-   width at a mean-loss criterion to ~72-74% at a worst-offset criterion, with a nearly
-   scale-invariant tail-capacity premium (0.651/0.647/0.646); the mean/tail gap comes from pervasive
-   cancellation across the reuse horizon, not rare spikes. A basis ablation then shows rotating the
-   latent axes cuts the worst-offset rate to ~22-24% at every scale (about 50 points, paired
-   intervals far from zero), i.e. most of the reported tail requirement is a cost of axis alignment,
-   not of the latent code itself -- *which* rotation barely matters, only rotating at all does. We
-   tried to generalize this as a correction to the wider KV-cache-compression literature's
-   measurement convention; it does **not** generalize cleanly to public GPT-2 checkpoints
-   (coord/pca 1.06-1.30x there vs. 1.65-3.22x on our own models), a negative result we report rather than
-   suppress (see `notes/low_rank_does_not_mean_compressible.md`). **On the public, production-trained
-   MLA model DeepSeek-V2-Lite** (`d_c`=512) the coordinate-basis spectrum and cancellation signature
-   replicate (8.22% -> 78.65%, premium 0.704; 2.10x, 96.6%), but rotation removes only ~11 points,
-   not ~50: the tail requirement is real, the large basis effect is specific to our small models
-   (`notes/public_mla_deepseek_v2_lite.md`, `experiments/analyze_public_mla_spectrum.py`).
-2. **Router beats random matched-budget allocation (real, but tier-grid-dependent).** True at
-   30M and 122M; fails with a coarse tier grid at 250M and succeeds again with a finer grid at
-   250M -- diagnosed and reported as a tier-resolution confound, not spun as a clean scale trend.
-3. **At equal bytes the router beats position/type heuristics but only ties token identity.**
-   Holding each causal rule to exactly the router's per-sequence bytes: 6 router wins, 8 ties,
-   2 losses (both at 250M-coarse) over 16 scale-heuristic comparisons. A frequency-smoothed
-   per-token lookup table ties the router, so context beyond the current token is not shown to
-   help. (An earlier, non-byte-matched comparison reported 3 wins / 9 losses; it is withdrawn.)
-4. **Decode latency was 168-201x slower for the packed path; two fixes cut this to ~2.4x
-   (measured on T4, fixed).** Persistent cache bytes (67.4%/59.6% of full MLA) were always real;
-   peak memory is essentially unchanged (an earlier 3.5-4.2% reduction was a harness artifact). The latency regression was root-caused first to three unvectorized per-token Python loops
-   (168-201x -> ~3x), then to the cache repacking its whole history on every decode step and
-   re-running its validation guards per step (~3x -> 2.4x, paired T4 measurement, decode output
-   bit-identical). The residual is the dense reconstruction before each attention call, which is
-   inherent to keeping the persistent representation packed -- see
-   `notes/measured_cache_memory_latency.md` for all three stages.
+Headline claims (epsilon = 0.1 nat, horizon H = 32, saliency-ordered coordinate basis), each with
+its main caveat:
+
+1. **The gap.**
+   - Keeping each of a token's next 32 losses within budget needs 72-79% of the latent.
+   - Keeping their mean within budget needs almost nothing: on a grid extended to rate 0, 82% (30M)
+     and 78% (250M) of tokens are mean-safe with all latent content removed (pre-registered R10b).
+   - The ratio is at least 6.5 at every budget from 0.05 to 0.5 nat; about 4.5 under KL at 0.05 nat;
+     6.2 in GPT-2's per-head KV cache. At the mean-safe rate, about 75% of tokens flip a greedy
+     prediction.
+   - The ratio depends on H: 2.3 at H = 4, 23 at H = 128. The worst-offset rate is stable (0.55-0.74).
+2. **What it reflects.**
+   - Per-offset loss changes are dispersed around a near-zero mean, heavy-tailed, and largest just
+     after the token.
+   - Gaussian draws matched to each row's mean and spread give 0.62-0.66 against the observed 0.72.
+     A sign-randomized null with one draw shared across ranks matches within 0.03 at every tail level.
+   - Equal-norm noise shaped like the latent (exploratory) costs as much on average, but not per token.
+     Isotropic noise of equal norm costs 0.18-0.28 less.
+3. **The consequence.** Applied jointly at 250M:
+   - Mean-safe rates pass a mean check (+0.10 nat) while 28.6% of positions exceed the budget. That is
+     as many as uniform truncation at equal bytes (29.3%), so the fraction reflects total rate, not
+     the criterion.
+   - Worst-offset-safe rates leave 4.4%, against 9.7% for uniform truncation at their bytes.
+4. **Basis caveat.** Rotating to principal directions removes about 50 points of the worst-offset
+   requirement in our small models but only 11 in DeepSeek-V2-Lite.
+5. **Router case study.**
+   - The router beats exact-byte random placement in 3 of 4 pre-registered configurations, but does
+     no better than a per-token lookup table.
+   - int8 latent quantization (0.50 of the bytes, about zero loss) dominates it on bytes.
+   - The packed cache gives no peak-memory or throughput gain and decodes 2.4x slower.
 
 ## Current status snapshot
 
-**2026-10-20: a pre-submission code review found and fixed real errors** -- a 384 -> 512 gap in the
-250M rank grid (250M max rate 76.03% -> 71.78%, premium 0.689 -> 0.646), a causal-heuristic
-comparison that was not byte-matched (Section 5.4 reversed), and a benchmark-harness artifact
-behind the reported peak-memory reduction -- plus several missing disclosures. Everything affected
-was rerun (Kaggle T4 / local MPS) and the manuscript, notes and figures updated. Full account:
-`notes/code_review_2026-10_corrections.md`. The paragraph below describes the state before it.
+**2026-11-20.**
+- The paper was desk-rejected by TMLR (#13801, 2026-11-08) for clarity of writing. It has been
+  rewritten as a measurement paper for resubmission in January 2027.
+- Pre-registered analyses R1-R10 and an internal four-reviewer critique are in
+  `notes/2026-11-14_tmlr_resubmission_plan.md`. A verified related-work sweep is in
+  `notes/2026-11-16_related_work_sweep.md`.
+- The DeepSeek-V2-Lite nulls and joint test (R8) failed their reproduction check and are reported as
+  exploratory.
+- The earlier October 2026 code-review corrections are in `notes/code_review_2026-10_corrections.md`.
 
-As of commit `10f1580` (see `git log` for the latest): working tree clean, 107/108 unit tests pass
-locally (the 108th, `test_token_type_uses_only_current_id`, needs network access to download the
-GPT-2 BPE vocab via `tiktoken` on first use and fails only when offline -- not a code issue). No
-cloud resources (Lightning studios/jobs, Kaggle kernels) are left running. An independent "naive
-fresh reviewer" pass (no prior context, spawned as a sub-agent) re-derived 15+ numbers from raw
-JSON and found one real P0 tally bug and one real P1 CI-rounding mismatch in the manuscript; both
-are fixed. Since then, further work (see `git log --oneline` for the 14 commits from `f465c34` to
-`10f1580`) added: an in-place packed-cache append cutting decode latency further (~3x -> 2.4x);
-horizon-length and pair-interaction tests of the theory memo's falsifiable predictions; and a full
-basis-dependence ablation showing the reported tail-capacity rates are substantially an axis-
-alignment artifact, stress-tested against (and not confirmed on) public GPT-2 checkpoints. See
-`notes/submission_readiness_roadmap.md` for exactly what is done, what remains, and the
-recommended next action -- read that file first if resuming work in a new session. **As of this
-commit, nothing in this repository has been submitted to any external venue (no arXiv, no
-conference/workshop, no OpenReview).** Those commits were pushed to `origin/master` on 2026-10-17
-after a fresh `tectonic` rebuild: 15 pages, no LaTeX errors, no overfull boxes, and every page
-spot-checked for table/figure layout.
+Nothing has been submitted anywhere except the desk-rejected TMLR submission. No cloud resources
+are left running.
 
 ## Repository layout
 
@@ -148,6 +132,29 @@ them and refuses to run (or the corresponding audit script refuses to pass) if p
 not match. Cite `experiments/fresh_confirmation_manifest.json` and the per-scale
 `*_audit.json` / `*_replay_audit*.json` files as evidence that a reported number is what it claims
 to be, not just the raw result JSON.
+
+## Resubmission analyses (R1-R10, `notes/2026-11-14_tmlr_resubmission_plan.md`)
+
+Pre-registered unless marked post hoc. Each script hashes its inputs and checks that it reproduces
+the published per-probe records before reporting anything.
+
+- `analyze_perturbation_null.py` (R2): equal-norm isotropic and covariance-shaped nulls.
+  Results: `experiments/perturbation_null/`.
+- `analyze_order_statistic_null.py` (R3): Gaussian and sign-randomized order-statistic nulls.
+  Result: `order_statistic_null.json`.
+- `analyze_latent_quantization.py` (R4/R5): int8/int4 latent quantization and the joint safe-rate
+  allocation. Results: `experiments/latent_quantization/`. The byte fractions stored there use 2/d_c
+  for the fp16 scale; the correct value is 1/d_c (fixed in the script, 2026-11-20).
+- `analyze_metric_and_bitwidth.py` (R6/R7): KL and greedy-flip spectra; bit width as the rate axis.
+  Results: `experiments/metric_bitwidth/`.
+- `analyze_public_mla_null.py` (R8, exploratory): the R2/R5 analyses on DeepSeek-V2-Lite.
+- `analyze_gpt2_kv_spectrum.py` (R9): GPT-2 per-head KV spectrum.
+- `analyze_low_rank_and_matched_joint.py` (R10b): rate grid extended to 0, rate-matched joint
+  references, quantization flips. Results: `experiments/low_rank_joint/`.
+- `analyze_review_descriptives.py` (R10a, post hoc): grid-floor shares, horizon dependence,
+  location of the worst offset, shared-draw nulls. Result: `review_descriptives.json`.
+
+The 250M runs go through Kaggle via `code/kaggle_review_reruns/push.py`.
 
 ## Environment
 
