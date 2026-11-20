@@ -320,3 +320,70 @@ exploratory. They are still valid paired comparisons within the run, because the
   -0.030 [-0.056, -0.005]. TCP: truncation 0.701, isotropic 0.647, covariance 0.718. Same direction as 30M and 250M.
 - R5, joint mean-safe at the published r*: sequence mean +0.051 [0.045, 0.058], 22.1% of positions > epsilon,
   max position +4.22. Max-safe: -0.001, 2.2%, +0.44.
+
+## Fourth round (2026-11-20): internal critical review, R10 (pre-registered before running)
+
+Four review subagents (claims/clarity, methods/statistics, related work, number audit) read the draft at
+`32cc541`. Their must-fix items, and what each one needs:
+
+- Most mean-safe rates sit at the smallest grid rank (16): 87/83/81% of probes at 30M/122M/250M. Under the max
+  criterion it is 3-6%. So the mean-safe rates are upper bounds and the ratio is a lower bound. Fix: a text fix,
+  plus R10b-1 below.
+- The ratio depends on the horizon H; the worst-offset rate does not (R10a). Fix: a text fix.
+- The R3 null draws fresh noise at every rank. With one draw shared across ranks, the k = 1 gap is 0.097
+  instead of 0.055. The Gaussian null also misses k = 16 and k = 8 by more than 0.10. Fix: a text fix, plus a
+  post-hoc sensitivity analysis (R10a).
+- The R2 reading at k = H cannot fail on this grid. The conclusion leans on the exploratory covariance null.
+  Fix: text only.
+- The R5 joint test has no reference at matched bytes. Fix: R10b-2 below.
+- R4 byte accounting: `analyze_latent_quantization.py` added `2/d_c` for the fp16 scale. The correct value is
+  `1/d_c`: a 2-byte scale over a 2*d_c-byte latent. Fix: correct the formula. The draft quotes the analytic
+  values: int8 0.504 / 0.502 and int4 0.254 / 0.252 at 30M / 250M. The stored JSONs are kept as run.
+  The loss numbers are unaffected.
+
+### R10a. Post-hoc descriptives (offline; NOT pre-registered, reported as descriptive)
+
+`experiments/analyze_review_descriptives.py` -> `experiments/review_descriptives.json` covers:
+- grid-floor fractions;
+- r* against horizon H' (the first H' offsets of the H = 32 records, and of the H = 128 records);
+- the location of the worst offset at the mean-safe rank;
+- quantiles of the per-probe ratio;
+- the R3 Gaussian null paired per probe, with a CI at every k.
+
+To be added: an R3 sensitivity analysis with one draw shared across ranks.
+
+### R10b. Low-rank grid extension and rate-matched joint allocation (250M Kaggle T4; 30M MPS for part 1 at k = H)
+
+Script: `experiments/analyze_low_rank_and_matched_joint.py`. It runs on the same windows, positions and channel
+orders as the published v5 run, and checks them against the records (250M) or the summary (30M).
+
+1. **Low ranks.** Each probe is truncated (all layers) at r in {0, 1, 2, 4, 8}, and its 32 offset deltas are
+   recorded. Rank 16 is rerun as a reproduction check.
+   - **Stop rule:** at every available k, the per-probe indicator "upper-tail mean at rank 16 <= epsilon" must
+     agree with the stored deltas (250M) or the stored `signed_mean` (30M, k = H) on >= 99% of probes.
+   - **Extended r*:**
+     - If the stored r*_k > 16, it is unchanged: lower ranks cannot change a suffix rule above them.
+     - If the stored r*_k = 16, the new r*_k is the smallest r in {0, 1, 2, 4, 8, 16} such that every rank from
+       r to 16 satisfies epsilon.
+   - **Report:** for each k, the mean normalized r* on the extended grid, the fraction at the new floor (r = 0),
+     and the k = 1 / k = H ratio.
+   - **Reading (descriptive; no threshold):** the ratio on the extended grid replaces "about ten times" as the
+     point estimate. The old number is described as a lower bound if the new ratio is larger.
+2. **Rate-matched joint allocation (250M; same procedure and metrics as R5).** Two references for each of the
+   mean-safe (k = H) and worst-offset-safe (k = 1) allocations:
+   - (a) **uniform:** every probe position in a sequence gets the same rank, equal to that sequence's mean
+     allocated rank rounded to the nearest integer;
+   - (b) **shuffled:** the sequence's own per-probe ranks permuted across its probe positions, with seed
+     73521 + sequence index.
+
+   - **Reading (pre-registered)**, applied to the fraction of positions above epsilon (paired by sequence,
+     cluster bootstrap):
+     - If the mean-safe allocation is within +/- 5 percentage points of uniform at the same bytes, the R5 figure
+       reflects the total rate, not the criterion.
+     - If it is lower by more than 5 pp, the per-token criterion places rate better than uniform but still leaves
+       the stated fraction.
+     - If it is higher by more than 5 pp, it is reported as worse than uniform.
+   - The same rule applies to the worst-offset-safe allocation.
+3. **Quantization flips.** Under int8 and int4 at every position, record the fraction of positions whose greedy
+   (argmax) token changes. This is the floor for R6's per-offset flip rate.
+   - **Reading:** descriptive only.
