@@ -10,7 +10,7 @@
     "experiments/perturbation_null/null_30m.json": "3b10ff54abb4b15a233a66cb61f12f44bc336bf0b518b7cd18f281dc2fb81ac2",
     "experiments/perturbation_null/null_250m.json": "7af91db8368dc7454d242b168e0e00cee6214203358789cd60b7eec50500f0af"
   },
-  "analysis_source_sha256": "f5da785a404e2fbe63b9d062da0abf36bb26655d26a460b148f9f441205e1f28",
+  "analysis_source_sha256": "b12d58db8a5d5ee0bf9bceb2aa3ded905b063c40c962eb354f4075d6a63ea5d0",
   "epsilon_nats": 0.1,
   "rank_grid_250m": [
     16,
@@ -191,7 +191,7 @@
     }
   },
   "worst_offset_location_at_mean_safe_rank": {
-    "offset_histogram_j1_first": [
+    "offset_histogram_index_is_j": [
       44,
       229,
       91,
@@ -225,9 +225,51 @@
       4,
       4
     ],
-    "fraction_j1": 0.057291666666666664,
-    "fraction_j_le_4": 0.5546875,
+    "fraction_j0": 0.057291666666666664,
+    "fraction_j1": 0.2981770833333333,
+    "fraction_j_lt_4": 0.5546875,
     "uniform_share_per_offset": 0.03125
+  },
+  "worst_offset_location_at_binding_step_below_k1_r_star": {
+    "offset_histogram_index_is_j": [
+      59,
+      149,
+      82,
+      75,
+      55,
+      45,
+      37,
+      32,
+      23,
+      17,
+      17,
+      17,
+      15,
+      10,
+      8,
+      6,
+      7,
+      7,
+      13,
+      10,
+      11,
+      4,
+      3,
+      7,
+      2,
+      4,
+      3,
+      8,
+      5,
+      3,
+      4,
+      8
+    ],
+    "n_probes": 746,
+    "fraction_j0": 0.07908847184986595,
+    "fraction_j1": 0.19973190348525469,
+    "fraction_j_lt_4": 0.48927613941018766,
+    "fraction_j_ge_16": 0.13270777479892762
   },
   "per_probe_ratio_k1_over_kH": {
     "q10": 3.2,

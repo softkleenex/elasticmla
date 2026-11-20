@@ -8,13 +8,14 @@ changes. We measure how much of the latent a token needs for its mean loss chang
 positions to stay under 0.1 nat (mean-safe), and for each of those changes to stay under 0.1 nat
 (worst-offset-safe). On three MLA models (30M-250M parameters) and the public DeepSeek-V2-Lite, in the
 latent's own coordinates, the worst-offset-safe rate is 72-79% of the latent width. The mean criterion
-is nearly free: about 80% of tokens in our models meet it with their latent content removed entirely,
-and on the two models with stored per-offset records the worst-offset rate is at least 6.5 times the
-mean-safe rate at every budget from 0.05 to 0.5 nat. The gap persists under KL divergence, in greedy
-prediction flips, and in GPT-2's per-head KV cache. Its size grows with
+is nearly free: in the two of our models where we extended the rate grid to zero, about 80% of tokens
+meet it with their latent content removed entirely, and the worst-offset rate is 15-20 times the
+mean-safe rate. On the coarser published grid the ratio is at least 6.5 at every budget from 0.05 to
+0.5 nat. The gap persists under KL divergence at budgets of 0.05-0.1 nat (but falls below our
+criterion at 0.01), in greedy prediction flips, and in GPT-2's per-head KV cache. Its size grows with
 the horizon, while the worst-offset rate stays above half the latent even for the next four
-predictions. It does not come from a few fragile tokens: it follows from the size and heavy-tailed
-shape of the per-offset loss changes, which peak just after the token. Applied jointly, mean-safe rates
+predictions. It does not come from a few fragile tokens: it is set by the magnitudes of the
+per-offset loss changes, not their signs, and these are heavy-tailed and peak just after the token. Applied jointly, mean-safe rates
 pass a mean-loss check while 29% of positions exceed the budget, as many as uniform truncation at equal
 bytes. Rotating the latent removes about half of the worst-offset requirement in our small models but
 little in DeepSeek-V2-Lite. A learned router with a byte-exact packed cache ties a per-token lookup at
@@ -32,7 +33,8 @@ knowing what "needs" means.
 A cached latent is read by every later query, so truncating it changes the loss at many future
 positions at once. A token can be safe in the sense that its average effect over the next $H$
 positions is small, or in the stricter sense that no single future position is harmed by more than a
-budget $\epsilon$. We call the first mean-safe and the second worst-offset-safe. Compression methods
+budget $\epsilon$. We call the first mean-safe and the second worst-offset-safe (tail-safe, in the title's
+shorthand); a token's latent capacity requirement is the smallest latent width that keeps it safe. Compression methods
 are usually evaluated in the first sense, by mean loss or perplexity. Work that looks past the mean
 usually frames the risk as rare, extreme cases: cache entries that matter to only a few queries [38],
 or requests whose quality degrades materially [62]. Measured per token, the two senses are far apart
@@ -50,19 +52,22 @@ per-position test of what a mean-loss evaluation misses. Our contributions are:
 
 - **The gap and its robustness** (Sections 5.1-5.2). On three MLA models spanning an 8x parameter range
   and on DeepSeek-V2-Lite, at $\epsilon=0.1$ nat and $H=32$, the worst-offset-safe rate is 72-79% of the
-  latent width in its own coordinates. The mean-safe rate is 7-9% on our published grid; extending the
-  grid to zero lowers it to about 4%, with about 80% of tokens mean-safe at rate 0. The worst-offset
-  rate is at least 6.5 times the mean-safe rate at every budget from 0.05 to 0.5 nat, about 4.5 times
-  under KL divergence at 0.05 nat, and 6.2 times in GPT-2's per-head KV cache. The ratio grows with
+  latent width in its own coordinates. The mean-safe rate is 7-9% on our published grid, which starts at
+  rate 16; extending the grid to zero at 30M and 250M lowers it to about 4%, with about 80% of tokens
+  mean-safe at rate 0, and puts the ratio at 15-20. On the published grid the ratio is at least 6.5 at
+  every budget from 0.05 to 0.5 nat; it is about 4.5 under KL divergence at 0.05 nat (2.4-2.6 at 0.01)
+  and 6.2 in GPT-2's per-head KV cache. The ratio grows with
   the horizon $H$; the worst-offset rate barely does.
 - **What the gap does and does not reflect** (Sections 5.2-5.3). It is not a few fragile tokens: at the
   mean-safe rate 93-96% of tokens exceed the budget at some offset, because gains and losses cancel in
   the mean. Gaussian draws matched to each probe's mean and spread account for most of the worst-offset
   rate (0.62-0.66 against 0.72 at 250M); keeping each probe's absolute deviations while randomizing
-  their signs accounts for all of it. Equal-norm noise shaped like the latent (exploratory) costs about
+  their signs, with one draw per probe (post hoc), comes within 0.03 of it, so the magnitudes of the
+  changes, not their signs, carry the requirement. Equal-norm noise shaped like the latent (exploratory) costs about
   as much as truncation on average, isotropic noise less, and neither predicts which tokens need most.
-- **The consequence** (Section 5.4). Applied jointly at 250M, mean-safe rates pass a mean-loss check
-  (+0.10 nat) while 29% of positions exceed the budget, as many as uniform truncation at the same bytes.
+- **The consequence** (Section 5.4). Applied jointly to 32 of the 384 positions in each 250M sequence,
+  mean-safe rates pass a mean-loss check (+0.10 nat) while 29% of positions exceed the budget, as many
+  as uniform truncation at the same bytes.
   Worst-offset-safe rates leave 4.4% of positions over budget, half of what uniform truncation does at
   their bytes.
 - **A basis caveat** (Section 5.5). The coordinate-basis rates overstate what a principal-direction
@@ -105,19 +110,15 @@ RateQuant [54] allocates KV-cache bit widths by rate-distortion theory, and Kim 
 per-token memory of suffix-only cache policies in a sequential source-coding frame.
 Adaptive computation [26, 27] likewise learns where to spend a discrete budget.
 
-**Evaluation beyond the mean.** Average metrics can understate compression damage. Dutta et al.
-[34] find answer flips at matched accuracy and propose KL divergence and flips as metrics; perplexity
-misses losses on knowledge-intensive tasks [49] and, averaged over positions, at key tokens [35];
-perplexity evaluations may not exercise the compressed cache at all [36]; per-sample evaluation
-exposes task-specific limits [66]; and KV-cache compression benchmarks [50, 37] and long-context
-benchmarks [51] report strongly task- and instruction-dependent losses. Kang et al. [62] note that a
-small average loss can hide requests whose utility degrades materially, and certify eviction policies
-against a per-request risk target. For allocation, DefensiveKV [38] aggregates each entry's importance
-by its maximum over observed queries, a proxy for worst-case future importance, instead of the mean;
-CriticalKV [52] scores entries by worst-case output perturbation; and Haverbeck et al. [39] analyze
-compression risk in minimax terms. We do not claim the observation. What we add is measured per cached
-token across future offsets rather than per request: the size of the gap in MLA's latent, controls for
-what produces it, and a joint per-position test of what a mean-loss evaluation misses.
+**Evaluation beyond the mean.** Dutta et al. [34] find answer flips at matched accuracy and propose
+KL divergence and flips as metrics; perplexity misses losses on knowledge-intensive tasks [49] and at
+key tokens [35], may not exercise the compressed cache at all [36], and per-sample, benchmark and
+long-context evaluations expose task- and instruction-dependent losses [37, 50, 51, 66]. Kang et al.
+[62] certify eviction policies against a per-request risk target, because a small average loss can
+hide requests that degrade materially. For allocation, DefensiveKV [38] aggregates each entry's
+importance by its maximum over observed queries instead of the mean, CriticalKV [52] scores entries
+by worst-case output perturbation, and Haverbeck et al. [39] analyze compression risk in minimax terms.
+We do not claim the observation; we measure it per cached token across future offsets.
 
 Unlike the compression methods above, we keep every token and every head, and vary the *width* of
 each token's latent through a nested prefix, the same nesting idea as Matryoshka representations
@@ -264,8 +265,10 @@ on the published grid; to keep the increase under 0.1 nat at each of its next 32
 on DeepSeek-V2-Lite, meet the mean criterion there. Extending the grid below 16 at 30M and 250M
 (pre-registered; the rate-16 losses reproduce the published ones on every probe) lowers the
 mean-safe rate to 3.8% and 4.7%. For 82% and 78% of probes the mean criterion is met at rate 0, with
-all of the token's latent content removed and only its RoPE key kept. The worst-offset rate does not
-change (71.7% at 250M). On the extended grid the ratio is about 20 at 30M and 15 at 250M; on the
+all of the token's latent content removed: the token keeps its RoPE key, so it still receives
+attention, but contributes no content to keys or values. The worst-offset rate does not
+change (71.7% at 250M). On the extended grid the ratio is about 20 at 30M and 15 at 250M (at 30M
+against the published-grid worst-offset rate, which the extension could lower by at most 0.004); on the
 published grid it is 8.2 and 10.0, lower bounds. The premium at $\epsilon=0.10$ is 0.6507 (95% CI
 [0.6326, 0.6669]) at 30M, 0.6470 ([0.6283, 0.6652]) at 122M and 0.6464 ([0.6257, 0.6665]) at 250M
 (Figure 1(a)). The three intervals overlap, but the agreement is a statement about the upper tail: the
@@ -304,7 +307,7 @@ DeepSeek-V2-Lite at four budgets; at $\epsilon=0.10$ it reproduces Table 2 exact
 criterion for a large gap, a worst-offset rate at least 3 times the mean-safe rate, holds at every
 budget on both models, with ratios of 6.5-12.8 on the published grid. These ratios are lower bounds:
 the share of 250M probes whose mean criterion is met at the grid's smallest rate grows from 66% at
-$\epsilon=0.05$ to 81%, 95% and 100% at 0.10, 0.20 and 0.50, which is also why the ratio stops rising at
+$\epsilon=0.05$ to 81%, 95% and more than 99% at 0.10, 0.20 and 0.50, which is also why the ratio stops rising at
 0.50. The absolute premium is budget-specific: at 250M it falls from 0.733 at $\epsilon=0.05$ to 0.231
 at $\epsilon=0.50$.
 
@@ -321,12 +324,12 @@ at $\epsilon=0.50$.
 worst-offset criterion does not. Table 4 recomputes both rates at 250M with only the first $H'$
 offsets of each probe, and from the separate $H=128$ run (post hoc). The worst-offset rate rises
 slowly, from 0.547 at $H'=4$ to 0.743 at $H'=128$, while the mean-safe rate falls from 0.238 to 0.032,
-so the ratio grows from 2.3 to 23. The ten-fold gap is a value at $H=32$. What is stable across
-horizons is the worst-offset requirement itself: a token must keep more than half of its latent to
-be safe at each of even its next four predictions. The binding offsets come early. At each probe's
-mean-safe rate, the largest loss change falls at offset $j=1$ for 30% of probes and within the first
-four offsets for 55%, against 3% and 13% if the worst offset were uniform; excluding $j=0$ leaves the
-worst-offset rate almost unchanged (0.700).
+so the ratio grows from 2.3 to 23. Every ratio we quote is a value at $H=32$. What is stable across
+horizons is the worst-offset requirement itself: on average a token must keep more than half of its latent
+to be safe at each of even its next four predictions. The binding offsets come early. At the grid rate just
+below each probe's worst-offset-safe rate, where that criterion binds, the largest loss change falls at
+offset $j=1$ for 20% of probes and within the first four offsets for 49%, against 3% and 13% if the
+worst offset were uniform; excluding $j=0$ leaves the worst-offset rate almost unchanged (0.700).
 
 **Table 4.** Effect of the horizon at 250M (post hoc): mean suffix-safe rate under the mean ($k=H'$) and worst-offset ($k=1$) criteria using the first $H'$ offsets, with the share of probes whose mean criterion is met at the grid floor. Rows marked * come from the separate $H=128$ run, whose probe positions differ.
 
@@ -356,8 +359,9 @@ loss. These are lower bounds too (81% and 70% of probes at the floor). At $\delt
 KL, show the same pattern. At the loss-based mean-safe rate, 74.6% (30M) and 77.3% (250M) of probes
 change the greedy token at least once within 32 offsets (4.4% and 5.3% of all offsets); at the
 worst-offset-safe rate, 19.1% and 25.0% do. Flips are sensitive to near-ties: at 250M, dropping only
-the last 6.25% or 12.5% of the channels already flips 13.4% and 20.7% of probes. For reference, quantizing every latent at 250M to int4 changes 2.0% of greedy predictions and to int8
-0.07%, against 5.3% of offsets at the mean-safe rate and 1.0% at the worst-offset-safe rate.
+the last 6.25% or 12.5% of the channels already flips 13.4% and 20.7% of probes. As a rough floor, quantizing every latent at 250M to int4 changes 2.0% of greedy predictions and to
+int8 0.07% (all positions perturbed at once, so not directly comparable), against 5.3% of offsets at the
+mean-safe rate and 1.0% at the worst-offset-safe rate.
 
 **Bit width as the rate axis.** If the gap were specific to removing channels, it would vanish on
 another rate axis. Quantizing only the probe token's latent (pre-registered), the smallest safe bit
@@ -374,12 +378,14 @@ fresh noise at every rate, which the suffix rule penalizes, because the highest 
 chance sets $r^*$; the observed rows of adjacent rates are strongly correlated. Drawing one noise vector
 per probe and reusing it at every rate (post hoc) lowers the Gaussian null to 0.621 at $k=1$, 0.097
 [0.086, 0.109] below observed, at the pre-registered threshold. The observed rows are heavy-tailed:
-their standardized maximum averages 3.3 standard deviations (2.1 for 32 Gaussian draws) and their
-kurtosis 11.3 (3 for a Gaussian). A null that keeps each row's absolute deviations from its mean and
-randomizes only their signs, with one sign vector per probe, comes within 0.03 of the observed rate at
-every tail level. So the spectrum is fixed by the size and shape of the per-offset deviations, which
-are larger than Gaussian at a few offsets, concentrated early in the horizon; which offsets gain and
-which lose does not matter.
+averaged over all probes and rates, a row's standardized maximum is 3.3 standard deviations (2.1 for
+32 Gaussian draws) and its kurtosis 11.3 (3 for a Gaussian; noisy for 32 values). A null that keeps each row's absolute deviations from its mean and
+randomizes only their signs, with one sign vector per probe, comes within 0.035 of the observed rate at
+every tail level (0.027 [0.013, 0.042] at $k=1$; the observed rate stays slightly higher at $k\le8$).
+The spectrum is thus nearly reproduced from the magnitudes of the per-offset deviations alone, which
+are larger than Gaussian at a few offsets and concentrated early in the horizon: which offsets gain
+and which lose hardly matters. This identifies what the requirement depends on, not where the large
+deviations come from.
 
 **Equal-norm perturbations.** At 30M and 250M we replaced truncation by a perturbation of the same
 size, adding to the full latent, in all layers at once, a random vector with the norm of that layer's
@@ -394,7 +400,7 @@ the up-projections ignore, we also drew the perturbation from each layer's laten
 (exploratory). On average this null matches truncation at every tail level: at $k=1$ it needs 0.737
 and 0.703 (paired differences $-0.003$ [$-0.027$, $+0.019$] and $-0.015$ [$-0.034$, $+0.005$]). It does
 not match per token: the per-probe correlation of its worst-offset rate with truncation's is 0.44 and
-0.48, no higher than for isotropic noise (0.41 and 0.45), with a mean absolute difference of 0.22 of
+0.48, no higher than for isotropic noise (0.41 and 0.45), with a mean absolute difference of 0.21-0.22 of
 $d_c$. Equal-norm noise in typical latent directions is thus about as costly on average as
 truncation, but which directions are perturbed matters for each token. Section 5.5 shows the other
 side of this: in a rotated basis the same rate discards less, and the requirement falls.
@@ -437,18 +443,19 @@ offset, not for a few rare ones.
 ### 5.4 Joint application: what a mean-loss evaluation would report
 
 Every rate above is measured by truncating one token at a time. A pre-registered test at 250M applies
-them jointly. It truncates all 32 probe positions of each of the 24 evaluation sequences in every
-layer, each at its own mean-safe rate and then each at its own worst-offset-safe rate, and measures
-the loss change at every position after the first probe. As references at exactly the same bytes, a
-second pre-registered run gives every probe position the sequence's mean rate (uniform), or permutes
-the sequence's own rates across its probe positions (shuffled) (Table 6).
+them jointly. It truncates all 32 probe positions (of 384) of each of the 24 evaluation sequences in
+every layer, each at its own mean-safe rate and then each at its own worst-offset-safe rate, keeps the
+other positions at full width, and measures the loss change at every position after the first probe. As references at the same bytes, a second
+pre-registered run gives every probe position the sequence's mean rate, rounded (uniform; equal bytes
+up to rounding), or permutes the sequence's own rates across its probe positions (shuffled; exactly
+equal bytes). All three use the published-grid rates (Table 6).
 
 **Table 6.** Joint truncation of all 32 probe positions per sequence (250M, 24 sequences, $\epsilon=0.10$ nat). "Own" uses each position's own safe rate; "uniform" and "shuffled" spend the same rate sum. The maximum is the largest single-position loss change per sequence, averaged over sequences. Brackets: 95% sequence-bootstrap intervals.
 
 | Allocation | Mean probe rate | Sequence-mean loss change | Positions above $\epsilon$ | Maximum position change |
 |---|---:|---:|---:|---:|
 | Mean-safe, own | 0.071 $d_c$ | +0.102 [0.093, 0.111] | 28.6% [27.6, 29.7] | +4.64 [3.92, 5.60] |
-| Mean-safe, uniform | 0.071 $d_c$ | +0.134 [0.120, 0.149] | 29.3% [28.0, 30.8] | +6.43 [5.65, 7.33] |
+| Mean-safe, uniform | 0.071 $d_c$ | +0.134 [0.120, 0.148] | 29.3% [28.0, 30.8] | +6.43 [5.65, 7.33] |
 | Mean-safe, shuffled | 0.071 $d_c$ | +0.138 [0.123, 0.153] | 29.1% [27.8, 30.7] | +6.65 [5.80, 7.60] |
 | Worst-offset-safe, own | 0.718 $d_c$ | $-0.005$ [$-0.007$, $-0.004$] | 4.4% [3.8, 5.0] | +0.41 [0.32, 0.52] |
 | Worst-offset-safe, uniform | 0.718 $d_c$ | +0.008 [0.005, 0.010] | 9.7% [9.0, 10.4] | +1.15 [0.95, 1.37] |
@@ -459,14 +466,17 @@ within the pre-registered limit of $2\epsilon$, so a mean-loss evaluation would 
 Yet 28.6% of positions exceed the budget, and the worst position in a sequence loses 4.64 nat on
 average. That fraction is a property of the small total rate, not of how the mean criterion places it:
 uniform truncation at the same bytes leaves 29.3% of positions above $\epsilon$ (paired difference
-$-0.7$ points [$-1.4$, $-0.1$], within our pre-registered 5-point tolerance). The mean criterion does
+$-0.7$ points [$-1.4$, $-0.1$], within our pre-registered 5-point tolerance; the interval excludes zero,
+so the mean criterion is very slightly better than uniform, not worse). The mean criterion does
 place rate usefully for the mean and the maximum (+0.102 against +0.134 nat; 4.64 against 6.43). The
 worst-offset criterion places it usefully for positions: at its bytes it leaves 4.4% of positions above
 $\epsilon$, against 9.7% for uniform and 11.2% for shuffled placement (paired difference $-5.4$ points
-[$-6.3$, $-4.4$]), with a worst position of 0.41 nat. Worst-offset safety does not fully compose either:
+[$-6.3$, $-4.4$], past our 5-point threshold by its point estimate but not by its whole interval), with
+a worst position of 0.41 nat. Worst-offset safety does not fully compose either:
 each probe is individually safe at every offset, but jointly 4.4% of positions still exceed $\epsilon$.
-For comparison, int4 quantization of every latent leaves 5.5% of positions above $\epsilon$ at about a
-third of these bytes (Section 6).
+For comparison, int4 quantization of every latent at every position, at about a quarter of the bytes
+per compressed token, leaves 5.5% of positions above $\epsilon$ (Section 6); the two settings compress
+different numbers of positions, so this is a reference, not a matched comparison.
 
 The joint test on DeepSeek-V2-Lite, at its published per-probe rates, is exploratory for the same
 reason as its nulls. It shows the same pattern: the mean-safe allocation changes mean loss by 0.051 nat
@@ -559,20 +569,14 @@ fresh sequences (Appendix A).
 
 **Against quantization.** On the 24 windows of Table 2, per-token symmetric absmax quantization of
 the latent, without tuning (RoPE key in full precision, one fp16 scale per token and layer), costs
-almost nothing. int8 stores the latent in 0.504 (30M) and 0.502 (250M) of its fp16 bytes with mean loss
-changes of $-0.00002$ nat (95% CI [$-0.0001$, $+0.0001$]) and +0.00005 nat ([$-0.00001$, $+0.00011$]) and
-no position above $\epsilon$; int4 uses 0.254 and 0.252 with +0.0007 nat ([$-0.0010$, $+0.0022$]) and
-+0.0018 nat ([0.0001, 0.0035]) and 5.6% and 5.5% of positions above $\epsilon$. The router's packed
-cache stores 60-69% of full-MLA bytes at +0.10 to +0.18 nat. The byte fractions use different
-references (the latent alone for quantization; the whole cache, including the RoPE key, for the
-router), and both are fractions, so the comparison holds at either element size: int8 quantization
-dominates the router on bytes. This agrees with work on MLA latent quantization: SnapMLA [55] and
-DeepSeek-V3.2 [56] store the latent in FP8 (for the latter, the cache layout is documented in the
-FlashMLA repository, `github.com/deepseek-ai/FlashMLA`), and QuantMLA [57], RoLaQ [58], RAQ-MLA [59]
-and NVFP4-MLA [64] go to lower bit widths. We did not test quantizing the packed cache itself, nor
-allocating rank and bit width jointly as JoLT [60] does. The packed cache also brings no peak-memory or
-throughput gain: peak allocated memory is 99.3-99.7% of full MLA and decode is 2.4x slower per step
-(Appendix F).
+almost nothing. int8 stores the latent in 0.504 (30M) and 0.502 (250M) of its fp16 bytes, with mean
+loss changes within $\pm0.0001$ nat of zero and no position above $\epsilon$; int4 uses 0.254 and 0.252,
+with +0.0007 nat ([$-0.0010$, $+0.0022$]) and +0.0018 nat ([0.0001, 0.0035]) and 5.6% and 5.5% of
+positions above $\epsilon$. The router's packed cache stores 60-69% of full-MLA bytes (whole cache,
+including the RoPE key) at +0.10 to +0.18 nat, so int8 quantization dominates it on bytes, in line with
+work that stores the MLA latent in FP8 [55, 56] or fewer bits [57, 58, 59, 64]. We did not test
+quantizing the packed cache itself, or allocating rank and bit width jointly [60]. The packed cache
+also brings no peak-memory or throughput gain and decodes 2.4x slower per step (Appendix F).
 
 ## 7. Limitations
 
@@ -581,15 +585,13 @@ training run and one router seed each; intervals do not include training variabi
 is confounded with training budget. The external replication on DeepSeek-V2-Lite covers the
 spectrum, the budget sweep and the basis ablation on one checkpoint, one text distribution and 384
 probes; the router was not run on it, and its nulls and joint test are exploratory because the rerun
-missed the pre-registered reproduction check (Section 5.2). The GPT-2 check covers only the
+missed the pre-registered reproduction check (Appendix H). The GPT-2 check covers only the
 spectrum endpoints, in principal directions of a per-head KV cache. The extended low-rank grid was run
 at 30M and 250M only.
 
-**Horizon and grid.** The size of the gap is a value at $H=32$: the mean-safe rate falls as the horizon
-grows, and the ratio rises from 2.3 at $H'=4$ to 23 at $H=128$ (Table 4). The stable quantity is the
-worst-offset rate. On the published grid most mean-safe rates sit at its smallest rate, so published-grid
-ratios are lower bounds; on the extended grid most sit at zero, so even those are upper bounds on the
-mean-safe rate.
+**Horizon and grid.** Every ratio is a value at $H=32$ (Table 4); the stable quantity is the
+worst-offset rate. Most mean-safe rates sit at the smallest rate of whichever grid is used, so they are
+upper bounds and the ratios lower bounds.
 
 **Metric.** The gap is measured on next-token cross-entropy and, at 30M and 250M, on KL divergence
 and greedy flips. Under KL it is about half as large as under the signed loss, and at $\delta=0.01$
@@ -606,12 +608,10 @@ channels are uninformative in general.
 
 **What $r^*$ is.** Rank-loss curves are frequently nonmonotone (Appendix G), so $r^*$ is a
 conservative suffix rule on a discrete grid, not a smooth or uniquely identified intrinsic rank; at
-250M it raises the worst-offset rate from 0.693 under a first-crossing rule to 0.718 and leaves the
-mean-safe rate unchanged. It measures isolated single-token truncation; joint truncation interacts
+250M it raises the worst-offset rate from 0.693 under a first-crossing rule to 0.718 and barely changes
+the mean-safe rate (0.0715 against 0.0713). It measures isolated single-token truncation; joint truncation interacts
 locally (Appendix E), and the joint test of Section 5.4 covers one model and one placement of 32 probes
-per sequence. The probe truncates a position inside a full-attention forward pass rather than during
-decoding; a unit test (`tests/test_latent_quantization.py`) shows that this equals incremental cached
-decoding with that token's latent masked.
+per sequence.
 
 **Router and auditability.** The 250M-fine confirmation reused windows whose coarse-grid outcomes had
 been seen, the heuristic comparisons are exploratory, and we have not compared against eviction
@@ -622,14 +622,12 @@ the 250M and DeepSeek-V2-Lite raw records are kept and authenticated by hash.
 ## 8. Conclusion
 
 At $\epsilon=0.1$ nat and a 32-token horizon, keeping each of a token's next 32 losses within budget
-costs 72-79% of the MLA latent in its own coordinates. Keeping their mean within budget costs almost
-nothing: for about 80% of tokens in our models the mean criterion holds with the token's latent content
-removed entirely. The gap holds at every budget we tested, under KL divergence (about 4.5x at 0.05
-nat), with greedy flips, and in GPT-2's per-head KV cache, and almost every token shows it. Its size depends on the horizon, because the mean dilutes harm over the offsets
-while the worst-offset requirement stays above half the latent even for the next four predictions.
-The requirement follows from the size and heavy-tailed shape of the per-offset loss changes, which
-are largest just after the token. In our small models a rotated basis removes much of it; in
-DeepSeek-V2-Lite it removes little.
+costs 72-79% of the MLA latent in its own coordinates, while keeping their mean within budget costs
+almost nothing. The gap holds at every loss budget we tested, under KL divergence at 0.05-0.1 nat,
+with greedy flips and in GPT-2's per-head KV cache, for almost every token. Its size grows with the
+horizon; the worst-offset requirement does not. It is carried by the magnitudes of the per-offset loss
+changes, not their signs. A rotated basis removes much of it in our small models but little in
+DeepSeek-V2-Lite.
 
 A mean-loss check of token-wise compression therefore says little about per-position safety: applied
 jointly, mean-safe rates pass it while 29% of positions exceed the budget. In practice, our learned
@@ -792,7 +790,7 @@ Quantization via Rate-Distortion Theory," arXiv:2605.06675, 2026.
 Pipelining," arXiv:2602.10718, 2026.
 
 [56] DeepSeek-AI, "DeepSeek-V3.2: Pushing the Frontier of Open Large Language Models,"
-arXiv:2512.02556, 2025.
+arXiv:2512.02556, 2025. FP8 latent-cache layout documented in `github.com/deepseek-ai/FlashMLA`.
 
 [57] Z. Su et al., "QuantMLA: Function-Aligned Dual-Path Quantization for Low-Bit MLA KV Caching,"
 arXiv:2609.36760, 2026.
@@ -1054,8 +1052,8 @@ are -0.781 points (95% CI [-1.617, +0.076]) and -1.156 points ([-3.849, +1.611])
 
 **Bit width as the rate axis.** In a pre-registered probe on the same 768 probes per model, we quantized only the
 probe token's latent, in every layer, at 1-6 and 8 bits (1 bit is the sign times the row's mean
-magnitude) and took the smallest safe bit width $b^*$ under the suffix rule at $\epsilon=0.10$ nat. The
-mean $b^*$ rises from 1.01 bits under the mean criterion to 2.85 (30M) and 2.78 (250M) at the worst
+magnitude) and took the smallest safe bit width $w^*$ under the suffix rule at $\epsilon=0.10$ nat. The
+mean $w^*$ rises from 1.01 bits under the mean criterion to 2.85 (30M) and 2.78 (250M) at the worst
 offset. These gaps, 1.84 and 1.77 bits, fall between our pre-registered thresholds for absent (at most
 1 bit) and present (at least 2 bits), so the reading is inconclusive; the mean criterion sits at the
 1-bit floor of the axis, so both gaps are lower bounds. Per-token quantization is far cheaper than
@@ -1070,7 +1068,9 @@ valid, because truncation and the nulls share its channel order; they point the 
 isotropic noise needs 0.103 less than truncation ([$-0.142$, $-0.066$]) and covariance-shaped noise
 0.030 less ([$-0.056$, $-0.005$]).
 
-**Probe positions.** Probe positions in our models may include position 0 (3 of 768 at 250M); the
+**Probe mechanics.** The probe truncates a position inside a full-attention forward pass rather than
+during decoding; a unit test (`tests/test_latent_quantization.py`) shows that this equals incremental
+cached decoding with that token's latent masked. Probe positions in our models may include position 0 (3 of 768 at 250M); the
 GPT-2 and DeepSeek-V2-Lite probes exclude it. Excluding offset 0 from the worst-offset criterion at
 250M changes the rate from 0.718 to 0.700.
 

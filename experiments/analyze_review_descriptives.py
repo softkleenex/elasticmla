@@ -11,8 +11,9 @@ From the Table 2 250M records (H = 32) and the extended-horizon 250M records (H 
 2. horizon: mean-safe (k = H') and worst-offset-safe (k = 1) mean normalized r* when only the
    first H' offsets are kept, H' in {4, 8, 16, 32} (from H = 32 records) and
    {32, 64, 128} (from H = 128 records), with the k = 1 / k = H' ratio.
-3. worst_offset_location: histogram of argmax_j delta_j at each probe's own mean-safe rank
-   (the allocation used in Section 5.4).
+3. worst_offset_location: histogram of argmax_j delta_j (index = offset j, j = 0 first) at each
+   probe's own mean-safe rank (the allocation used in Section 5.4), and at the grid rate just below
+   each probe's worst-offset-safe r* (the step where the worst-offset criterion binds).
 4. per_probe_ratio: quantiles of r*_1 / r*_H over probes.
 5. order_statistic_paired: observed minus Gaussian-null normalized r* at every tail count, with
    a sequence-cluster bootstrap CI on the paired per-probe difference (the null rows are
@@ -140,10 +141,22 @@ def main() -> None:
     argmax = np.array([int(np.argmax(deltas[p, rank_index[int(observed[32][p])]]))
                        for p in range(len(deltas))])
     hist = np.bincount(argmax, minlength=deltas.shape[2])
-    location = {"offset_histogram_j1_first": hist.tolist(),
-                "fraction_j1": float(hist[0] / hist.sum()),
-                "fraction_j_le_4": float(hist[:4].sum() / hist.sum()),
+    # Index i of the histogram is offset j = i (j = 0 is the prediction at the truncated position).
+    location = {"offset_histogram_index_is_j": hist.tolist(),
+                "fraction_j0": float(hist[0] / hist.sum()),
+                "fraction_j1": float(hist[1] / hist.sum()),
+                "fraction_j_lt_4": float(hist[:4].sum() / hist.sum()),
                 "uniform_share_per_offset": 1.0 / deltas.shape[2]}
+    # Same at the binding step of the worst-offset criterion: the grid rate just below r*_1,
+    # for probes whose r*_1 is above the grid floor.
+    binding = [int(np.argmax(deltas[p, rank_index[int(observed[1][p])] - 1]))
+               for p in range(len(deltas)) if observed[1][p] > ranks[0]]
+    bhist = np.bincount(binding, minlength=deltas.shape[2])
+    binding_location = {"offset_histogram_index_is_j": bhist.tolist(), "n_probes": len(binding),
+                        "fraction_j0": float(bhist[0] / bhist.sum()),
+                        "fraction_j1": float(bhist[1] / bhist.sum()),
+                        "fraction_j_lt_4": float(bhist[:4].sum() / bhist.sum()),
+                        "fraction_j_ge_16": float(bhist[16:].sum() / bhist.sum())}
 
     # 4. per-probe ratio
     ratio = observed[1] / observed[32]
@@ -218,6 +231,7 @@ def main() -> None:
         "epsilon_nats": EPSILON, "rank_grid_250m": ranks, "n_probes": len(deltas),
         "grid_floor_fraction": grid_floor, "horizon": horizon,
         "worst_offset_location_at_mean_safe_rank": location,
+        "worst_offset_location_at_binding_step_below_k1_r_star": binding_location,
         "per_probe_ratio_k1_over_kH": per_probe,
         "order_statistic_paired": paired,
         "order_statistic_shared_draw": shared_out, "observed_row_shape": row_shape,
@@ -228,7 +242,8 @@ def main() -> None:
     for h, row in {**horizon["from_h32_records"], **{f"{h}*": v for h, v in horizon["from_h128_records"].items()}}.items():
         print(f"H={h}: mean-safe {row['mean_safe']['mean']:.3f} worst {row['worst_offset_safe']['mean']:.3f} "
               f"ratio {row['ratio']:.2f} floor {row['fraction_mean_safe_at_grid_floor']:.2f}")
-    print("location", location["fraction_j1"], location["fraction_j_le_4"], hist[:8].tolist())
+    print("location", location["fraction_j1"], location["fraction_j_lt_4"], hist[:8].tolist())
+    print("binding", binding_location)
     for k, row in paired.items():
         print(f"k={k} obs {row['observed']:.3f} null {row['gaussian_null']:.3f} diff {row['observed_minus_null']:+.3f} {row['ci']}")
     print(json.dumps({"shared": shared_out, "shape": row_shape, "equal_norm": equal_norm}, indent=1))
