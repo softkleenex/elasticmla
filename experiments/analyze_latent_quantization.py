@@ -126,7 +126,9 @@ def main() -> None:
     for i, (name, qmax) in enumerate(QUANT_LEVELS.items()):
         delta = losses(lambda x, q=qmax: forward_quantized(model, x, q)) - baseline
         quantization[name] = {
-            "latent_bytes_fraction_of_fp16": (0.5 if name == "int8" else 0.25) + 2.0 / d_c,
+            # A 2-byte fp16 scale over a 2*d_c-byte fp16 latent adds 1/d_c. Results up to
+            # 2026-11-20 were written with 2/d_c (the scale counted twice); see the R10 note.
+            "latent_bytes_fraction_of_fp16": (0.5 if name == "int8" else 0.25) + 1.0 / d_c,
             "mean_loss_change_nats": clustered(delta.mean(axis=1), 64_000 + i),
             "fraction_of_positions_above_epsilon": float(np.mean(delta > epsilon)),
         }

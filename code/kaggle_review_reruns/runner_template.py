@@ -16,6 +16,7 @@ One template, one kernel per JOB (push.py substitutes the JOB line):
                published v5 run's orders, windows and records
   quant250     analyze_latent_quantization.py at 250M (pre-registered R4 and R5)
   metric250    analyze_metric_and_bitwidth.py at 250M (pre-registered R6 and R7)
+  lowrank250   analyze_low_rank_and_matched_joint.py at 250M (pre-registered R10b)
 
 Inputs are attached datasets: the review code dataset (code/, experiments/, inputs/),
 the 30M/122M inputs dataset and the 250M checkpoint dataset. Each result JSON is also
@@ -201,6 +202,18 @@ def metric250():
         emit("metric250", out)
 
 
+def lowrank250():
+    d = scale_dir("exp2_250m")
+    ref = next(p.parent for p in STAGE.rglob("risk_capacity_v5_records.json"))
+    out = WORK / "low_rank_250m.json"
+    if sh([sys.executable, "-B", ROOT / "experiments" / "analyze_low_rank_and_matched_joint.py",
+           "--checkpoint", d / "ckpt" / "latest.pt", "--data", d / "data" / "val.bin",
+           "--reference-summary", ref / "risk_capacity_v5_summary.json",
+           "--reference-records", ref / "risk_capacity_v5_records.json",
+           "--device", "cuda", "--output", out]):
+        emit("lowrank250", out)
+
+
 # transformers/datasets match uv.lock; accelerate is only needed for device_map here.
 PUBLIC_MLA_PINS = ["transformers==5.17.0", "datasets==5.0.1", "accelerate"]
 PUBLIC_MLA_RUNS = {
@@ -242,6 +255,6 @@ if __name__ == "__main__":
     pin_torch_for_p100()
     setup_repo()
     {"spectrum250": spectrum250, "basis250": basis250,
-     "benchmark": benchmark, "publickv": publickv, "null250": null250, "quant250": quant250, "metric250": metric250, "publicmla_null": publicmla_null,
+     "benchmark": benchmark, "publickv": publickv, "null250": null250, "quant250": quant250, "metric250": metric250, "lowrank250": lowrank250, "publicmla_null": publicmla_null,
      **{job: publicmla for job in PUBLIC_MLA_RUNS}}[JOB]()
     print("ALL DONE", flush=True)

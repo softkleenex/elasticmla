@@ -21,6 +21,15 @@ doubt, trust the manuscript over any single note here.
 
 ## Current, cited by the manuscript
 
+- `2026-11-14_tmlr_resubmission_plan.md` -- **read first for the 2027 TMLR resubmission.** The
+  November 2026 reframing as a measurement paper after the TMLR desk rejection (#13801, clarity):
+  pre-registrations, results and disclosed deviations for analyses R1-R9 (equal-norm and
+  order-statistic nulls, quantization, joint application test, KL/greedy flips, bit width, GPT-2
+  per-head KV, and the exploratory DeepSeek-V2-Lite nulls that failed their reproduction check).
+  Supersedes the claim framing in `submission_readiness_roadmap.md`.
+- `2026-11-16_related_work_sweep.md` -- verified related-work sweep (32 papers) and the resulting
+  novelty positioning (DynaKV and DefensiveKV are the closest prior work).
+
 - `code_review_2026-10_corrections.md` -- **read first.** The October 2026 pre-submission code
   review: a 250M rank-grid gap (changed the 250M spectrum, basis and horizon numbers), a
   non-byte-matched causal-heuristic comparison (Section 5.4 reversed: router 6 wins / 8 ties /

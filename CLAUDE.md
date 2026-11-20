@@ -18,7 +18,7 @@ has current status and the recommended next action — **read that first when re
 
 ```bash
 uv sync                                             # environment (Python 3.11)
-uv run python -m unittest discover -s tests         # full suite (119 tests, ~10s, CPU only;
+uv run python -m unittest discover -s tests         # full suite (133 tests, ~10s, CPU only;
                                                     # test_token_type_uses_only_current_id needs
                                                     # network on first run for the tiktoken vocab)
 uv run python -m unittest tests.test_tiered_router  # one module
